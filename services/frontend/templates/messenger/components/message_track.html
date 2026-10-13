@@ -1,0 +1,20 @@
+<!-- Track Card Component for Messenger -->
+<div class="track-card" id="demo-track-card">
+  <div class="track-cover">
+    <div class="track-cover-vinyl"></div>
+  </div>
+  <div class="track-details">
+    <div class="track-title">{{ title | default('Midnight Echoes') }}</div>
+    <div class="track-artist">{{ artist | default('The Boys Band') }}</div>
+    <div class="track-meta">
+      <span class="track-duration">{{ duration | default('3:42') }}</span>
+      <span style="font-size: 11px; color: rgba(255, 255, 255, 0.4);">• MP3 320kbps</span>
+    </div>
+  </div>
+  <button class="btn-track-play" onclick="toggleTrackPlayback(this)" title="Воспроизвести">
+    <svg viewBox="0 0 24 24" class="play-icon">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+  </button>
+</div>
+

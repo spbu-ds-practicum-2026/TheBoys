@@ -1,0 +1,98 @@
+<!-- Dialogs List Panel -->
+<section class="dialogs-panel glass-panel">
+  <!-- Panel Header -->
+  <div class="dialogs-header">
+    <h1 class="dialogs-title">Сообщения</h1>
+    <div class="dialogs-actions">
+      <button class="btn-glass btn-glass-icon" title="Новый диалог">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.2" fill="none">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- iOS Styled Search Bar -->
+  <div class="search-box">
+    <svg viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input type="text" class="glass-input search-input" placeholder="Поиск по диалогам...">
+  </div>
+
+  <!-- Dialogs Scrollable Stream -->
+  <div class="dialogs-list">
+    <!-- Dialog 1: Alice (Active) -->
+    <div class="dialog-item active" data-chat-id="1" onclick="selectDialog(this, 'Алиса Смирнова', 'online')">
+      <div class="avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+        АС
+        <span class="status-indicator"></span>
+      </div>
+      <div class="dialog-content">
+        <div class="dialog-top">
+          <span class="dialog-name">Алиса Смирнова</span>
+          <span class="dialog-time">19:42</span>
+        </div>
+        <div class="dialog-bottom">
+          <span class="dialog-preview">🎵 Midnight Echoes — The Boys Band</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dialog 2: Oleg -->
+    <div class="dialog-item" data-chat-id="2" onclick="selectDialog(this, 'Олег Иванов', 'online')">
+      <div class="avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+        ОИ
+        <span class="status-indicator"></span>
+      </div>
+      <div class="dialog-content">
+        <div class="dialog-top">
+          <span class="dialog-name">Олег Иванов</span>
+          <span class="dialog-time">19:30</span>
+        </div>
+        <div class="dialog-bottom">
+          <span class="dialog-preview">Слушай, а трек синхронизируется?</span>
+          <span class="dialog-unread">2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dialog 3: Pavel -->
+    <div class="dialog-item" data-chat-id="3" onclick="selectDialog(this, 'Павел Григорьев', 'offline')">
+      <div class="avatar" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+        ПГ
+        <span class="status-indicator offline"></span>
+      </div>
+      <div class="dialog-content">
+        <div class="dialog-top">
+          <span class="dialog-name">Павел Григорьев</span>
+          <span class="dialog-time">18:12</span>
+        </div>
+        <div class="dialog-bottom">
+          <span class="dialog-preview">Схему БД зафиксировал, отправляю в репо</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dialog 4: Artem -->
+    <div class="dialog-item" data-chat-id="4" onclick="selectDialog(this, 'Артём Еременко', 'online')">
+      <div class="avatar" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+        АЕ
+        <span class="status-indicator"></span>
+      </div>
+      <div class="dialog-content">
+        <div class="dialog-top">
+          <span class="dialog-name">Артём Еременко</span>
+          <span class="dialog-time">17:55</span>
+        </div>
+        <div class="dialog-bottom">
+          <span class="dialog-preview">Docker Compose стенд поднят и работает</span>
+          <span class="dialog-unread">1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
