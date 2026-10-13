@@ -9,6 +9,9 @@ async def test_messenger_page_loads():
         response = await client.get("/")
         assert response.status_code == 200
         assert "Boysic" in response.text
+        assert "Плеер" in response.text
+        assert "Чаты" in response.text
+        assert "Импорт своей музыки" in response.text
         assert "Midnight Echoes" in response.text
         assert "Алиса Смирнова" in response.text
 

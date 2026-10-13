@@ -1,0 +1,73 @@
+<!-- Spatial Music Import Placeholder Screen -->
+<div class="placeholder-stage glass-panel">
+  <div class="placeholder-container">
+    <div class="placeholder-header">
+      <div class="placeholder-badge">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>
+        </svg>
+        <span>Хранилище треков</span>
+      </div>
+      <h1 class="placeholder-title">Импорт своей музыки</h1>
+      <p class="placeholder-desc">Загрузка MP3 в отказоустойчивое хранилище с автоматическим парсингом тегов и репликацией</p>
+    </div>
+
+    <!-- Spatial Upload Dropzone -->
+    <div class="import-dropzone-card" onclick="simulateFileUpload()">
+      <div class="import-icon-orb">
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+
+      <div class="import-drop-text">Перетащите MP3-файл сюда или нажмите для выбора</div>
+      <div class="import-drop-subtext">Поддерживаются аудиофайлы MP3 до 30 МБ</div>
+
+      <div class="import-chips-row">
+        <span class="import-chip">MP3 Only</span>
+        <span class="import-chip">до 30 МБ</span>
+        <span class="import-chip">Авто-теги Mutagen</span>
+        <span class="import-chip">2 копии репликации</span>
+      </div>
+    </div>
+
+    <!-- Pipeline Visualizer -->
+    <div class="import-pipeline-card">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-info">
+          <div class="step-title">Загрузка в узел</div>
+          <div class="step-desc">POST /tracks/upload на живой узел приложения</div>
+        </div>
+      </div>
+
+      <div class="pipeline-arrow">→</div>
+
+      <div class="pipeline-step">
+        <div class="step-num">2</div>
+        <div class="step-info">
+          <div class="step-title">Фоновый воркер</div>
+          <div class="step-desc">Извлечение ID3 тегов (название, автор, длина)</div>
+        </div>
+      </div>
+
+      <div class="pipeline-arrow">→</div>
+
+      <div class="pipeline-step">
+        <div class="step-num">3</div>
+        <div class="step-info">
+          <div class="step-title">Репликация трека</div>
+          <div class="step-desc">Сохранение на storage-1 и storage-2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notice footer -->
+    <div class="placeholder-footer-note">
+      <span class="cluster-dot"></span>
+      <span>После загрузки трек сразу появится в каталоге и его можно будет отправлять в чат карточкой</span>
+    </div>
+  </div>
+</div>

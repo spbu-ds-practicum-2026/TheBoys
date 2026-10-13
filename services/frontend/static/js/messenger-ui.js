@@ -163,25 +163,67 @@ const CHATS_STORE = {
 let currentActiveChatId = 1;
 let isCurrentTrackPlaying = false;
 
-// 1. Navigation Tab Switching (Диалоги vs Параметры)
+// 1. Navigation Tab Switching (Плеер, Чаты, Импорт, Параметры)
 function switchNavTab(tabName) {
-  const btnChats = document.getElementById('btn-tab-chats');
-  const btnSettings = document.getElementById('btn-tab-settings');
-  const viewChats = document.getElementById('view-chats');
-  const viewSettings = document.getElementById('view-settings');
+  const tabs = ['player', 'chats', 'import', 'settings'];
+  
+  tabs.forEach(name => {
+    const btn = document.getElementById(`btn-tab-${name}`);
+    const view = document.getElementById(`view-${name}`);
 
-  if (!btnChats || !btnSettings || !viewChats || !viewSettings) return;
+    if (name === tabName) {
+      if (btn) btn.classList.add('active');
+      if (view) view.style.display = 'flex';
+    } else {
+      if (btn) btn.classList.remove('active');
+      if (view) view.style.display = 'none';
+    }
+  });
 
+  // If opening chats, ensure active chat is focused and scrolled
   if (tabName === 'chats') {
-    btnChats.classList.add('active');
-    btnSettings.classList.remove('active');
-    viewChats.style.display = 'flex';
-    viewSettings.style.display = 'none';
-  } else if (tabName === 'settings') {
-    btnSettings.classList.add('active');
-    btnChats.classList.remove('active');
-    viewChats.style.display = 'none';
-    viewSettings.style.display = 'flex';
+    const flow = document.getElementById('spatial-messages-flow');
+    if (flow) flow.scrollTop = flow.scrollHeight;
+  }
+}
+
+// Interactive helper for player console placeholder
+let isConsolePlaying = false;
+function toggleConsolePlay(button) {
+  const vinyl = document.querySelector('.turntable-vinyl');
+  const svg = button.querySelector('svg');
+  isConsolePlaying = !isConsolePlaying;
+
+  if (isConsolePlaying) {
+    if (vinyl) vinyl.style.animationPlayState = 'running';
+    button.style.boxShadow = '0 0 24px rgba(56, 189, 248, 0.8)';
+    svg.innerHTML = `
+      <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
+      <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
+    `;
+  } else {
+    if (vinyl) vinyl.style.animationPlayState = 'paused';
+    button.style.boxShadow = 'var(--shadow-ice-glow)';
+    svg.innerHTML = `
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    `;
+  }
+}
+
+// Interactive helper for import dropzone placeholder
+function simulateFileUpload() {
+  const textEl = document.querySelector('.import-drop-text');
+  const origText = textEl ? textEl.textContent : '';
+  if (textEl) {
+    textEl.textContent = '⏳ Файл выбран: track_demo_320kbps.mp3 (запуск извлечения тегов mutagen)...';
+    textEl.style.color = 'var(--slate-ice-light)';
+    setTimeout(() => {
+      textEl.textContent = '✅ Теги извлечены: "Midnight Echoes — The Boys Band" (готово к репликации)';
+      setTimeout(() => {
+        textEl.textContent = origText;
+        textEl.style.color = 'var(--text-pure)';
+      }, 3500);
+    }, 1500);
   }
 }
 
