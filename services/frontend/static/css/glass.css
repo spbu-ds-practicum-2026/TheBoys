@@ -1,66 +1,73 @@
 /* ==========================================================================
-   Spatial Liquid Glass Design System (VisionOS / Dynamic Concept)
-   Palette: Warm Peach, Sunset Orange, Pure White, Deep Obsidian Black
+   Boysic — Ultra-Transparent Liquid Glass Design System
+   Palette: Slate-Ice Blue (Серо-голубой), Pure White, Obsidian Canvas
    ========================================================================== */
 
 :root {
   /* Fonts */
   --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", -apple-system-subheadline, sans-serif;
 
-  /* Pure Obsidian & Monochrome Foundation */
-  --bg-deep: #08080a;
-  --bg-canvas: #0d0d11;
+  /* Obsidian & Pure Monochrome Canvas */
+  --bg-space: #07080b;
+  --bg-deep: #0a0c10;
   --text-pure: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.72);
-  --text-subtle: rgba(255, 255, 255, 0.44);
-  --text-dim: rgba(255, 255, 255, 0.22);
+  --text-bright: #f1f5f9;
+  --text-muted: rgba(241, 245, 249, 0.72);
+  --text-subtle: rgba(241, 245, 249, 0.45);
+  --text-dim: rgba(241, 245, 249, 0.25);
 
-  /* Warm Peach & Sunset Orange Accents */
-  --accent-orange: #ff5524;
-  --accent-peach: #ff9d79;
-  --accent-peach-glow: rgba(255, 157, 121, 0.28);
-  --accent-orange-glow: rgba(255, 85, 36, 0.35);
+  /* Slate-Ice Blue Palette (Серо-голубой) */
+  --slate-ice-light: #7dd3fc;
+  --slate-ice-primary: #38bdf8;
+  --slate-ice-deep: #0284c7;
+  --slate-cool-gray: #94a3b8;
+  --slate-cool-dark: #475569;
   
+  /* Slate-Ice Glow & Tints */
+  --ice-glow: rgba(56, 189, 248, 0.35);
+  --ice-glow-subtle: rgba(56, 189, 248, 0.12);
+  --ice-border: rgba(56, 189, 248, 0.38);
+
   /* Gradients */
-  --gradient-sunset: linear-gradient(135deg, #ff4c1e 0%, #ff8f66 100%);
-  --gradient-peach-soft: linear-gradient(135deg, rgba(255, 157, 121, 0.16) 0%, rgba(255, 85, 36, 0.05) 100%);
-  --gradient-bubble: linear-gradient(135deg, #f2491b 0%, #ff8359 100%);
+  --gradient-ice-accent: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  --gradient-ice-bubble: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  --gradient-ice-soft: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(2, 132, 199, 0.05) 100%);
+  --gradient-slate-pill: linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0%, rgba(56, 189, 248, 0.06) 100%);
 
-  /* Spatial Liquid Glass Surfaces */
-  --glass-bg-subtle: rgba(20, 20, 26, 0.55);
-  --glass-bg-card: rgba(26, 26, 34, 0.68);
-  --glass-bg-capsule: rgba(32, 32, 42, 0.78);
-  --glass-bg-input: rgba(255, 255, 255, 0.06);
-  --glass-bg-hover: rgba(255, 255, 255, 0.1);
-  --glass-bg-active: rgba(255, 255, 255, 0.15);
+  /* Ultra-Transparent Frosted Glass Materials */
+  --glass-surface-translucent: rgba(255, 255, 255, 0.035);
+  --glass-surface-panel: rgba(18, 22, 30, 0.52);
+  --glass-surface-elevated: rgba(22, 28, 40, 0.65);
+  --glass-surface-active: rgba(56, 189, 248, 0.12);
+  --glass-surface-input: rgba(255, 255, 255, 0.05);
+  --glass-surface-hover: rgba(255, 255, 255, 0.08);
 
-  /* Hairline Borders & Specular Edges */
-  --glass-border: 1px solid rgba(255, 255, 255, 0.08);
-  --glass-border-peach: 1px solid rgba(255, 157, 121, 0.32);
-  --glass-border-light: 1px solid rgba(255, 255, 255, 0.16);
-  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  /* Glossy Specular Edges & Borders */
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-border-light: 1px solid rgba(255, 255, 255, 0.18);
+  --glass-border-ice: 1px solid rgba(56, 189, 248, 0.35);
+  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
   --glass-specular-bottom: inset 0 -1px 0 0 rgba(0, 0, 0, 0.4);
 
-  /* Physics & Blur */
-  --glass-blur: blur(28px) saturate(170%);
-  --glass-blur-deep: blur(36px) saturate(190%);
-  --shadow-spatial: 0 20px 50px -10px rgba(0, 0, 0, 0.75), 0 10px 20px -5px rgba(0, 0, 0, 0.5);
-  --shadow-capsule: 0 12px 36px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --shadow-peach: 0 8px 24px -2px rgba(255, 85, 36, 0.45);
+  /* Deep Blur & Realistic Refraction Physics */
+  --glass-blur-deep: blur(32px) saturate(200%);
+  --glass-blur-standard: blur(24px) saturate(180%);
+  --shadow-glass-card: 0 20px 50px -10px rgba(0, 0, 0, 0.8), 0 10px 20px -5px rgba(0, 0, 0, 0.6);
+  --shadow-ice-glow: 0 8px 24px -2px rgba(56, 189, 248, 0.45);
 
   /* Radii */
   --r-sm: 10px;
   --r-md: 16px;
   --r-lg: 24px;
   --r-xl: 32px;
-  --r-capsule: 9999px;
+  --r-pill: 9999px;
 
   /* Transitions */
   --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Reset */
+/* Reset & Base */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -69,7 +76,7 @@
 
 body {
   font-family: var(--font-family);
-  background-color: var(--bg-deep);
+  background-color: var(--bg-space);
   color: var(--text-pure);
   width: 100vw;
   height: 100vh;
@@ -79,51 +86,51 @@ body {
   user-select: none;
 }
 
-/* Spatial Ambient Glow (A single warm peach aura, serene & disciplined) */
+/* Atmospheric Ambient Slate-Ice Light (Clean, Minimalist, High-Tech) */
 .spatial-ambient {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
-  background: radial-gradient(circle at 50% -20%, #17151c 0%, #08080a 75%);
+  background: radial-gradient(circle at 50% -10%, #111726 0%, #07080b 80%);
 }
 
-.ambient-peach-lens {
+.ambient-ice-lens {
   position: absolute;
-  top: -120px;
+  top: -150px;
   left: 50%;
   transform: translateX(-50%);
-  width: 600px;
-  height: 400px;
+  width: 750px;
+  height: 450px;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(255, 120, 70, 0.16) 0%, rgba(255, 157, 121, 0.05) 50%, transparent 75%);
-  filter: blur(80px);
-  animation: lensBreathe 14s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.14) 0%, rgba(148, 163, 184, 0.05) 55%, transparent 75%);
+  filter: blur(90px);
+  animation: iceBreath 16s ease-in-out infinite alternate;
 }
 
-@keyframes lensBreathe {
-  0% { transform: translateX(-50%) scale(0.95); opacity: 0.8; }
-  100% { transform: translateX(-48%) scale(1.08); opacity: 1; }
+@keyframes iceBreath {
+  0% { transform: translateX(-50%) scale(0.96); opacity: 0.75; }
+  100% { transform: translateX(-48%) scale(1.06); opacity: 1; }
 }
 
 /* Glass Utility Classes */
-.glass-capsule {
-  background: var(--glass-bg-capsule);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+.glass-panel {
+  background: var(--glass-surface-panel);
+  backdrop-filter: var(--glass-blur-deep);
+  -webkit-backdrop-filter: var(--glass-blur-deep);
   border: var(--glass-border);
-  box-shadow: var(--shadow-capsule), var(--glass-specular-top);
-  border-radius: var(--r-capsule);
+  box-shadow: var(--shadow-glass-card), var(--glass-specular-top);
+  border-radius: var(--r-lg);
 }
 
-.glass-card {
-  background: var(--glass-bg-card);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+.glass-capsule {
+  background: rgba(18, 22, 32, 0.65);
+  backdrop-filter: var(--glass-blur-deep);
+  -webkit-backdrop-filter: var(--glass-blur-deep);
   border: var(--glass-border);
-  box-shadow: var(--shadow-spatial), var(--glass-specular-top);
-  border-radius: var(--r-lg);
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.7), var(--glass-specular-top);
+  border-radius: var(--r-pill);
 }
 
 /* Tactile Buttons */
@@ -136,9 +143,9 @@ body {
   font-size: 13.5px;
   font-weight: 500;
   color: var(--text-muted);
-  background: var(--glass-bg-input);
+  background: var(--glass-surface-input);
   border: var(--glass-border);
-  border-radius: var(--r-capsule);
+  border-radius: var(--r-pill);
   cursor: pointer;
   transition: all 0.2s var(--ease-smooth);
   outline: none;
@@ -146,8 +153,8 @@ body {
 
 .tactile-btn:hover {
   color: var(--text-pure);
-  background: var(--glass-bg-hover);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--glass-surface-hover);
+  border-color: rgba(255, 255, 255, 0.22);
   transform: translateY(-1px);
 }
 
@@ -155,31 +162,31 @@ body {
   transform: translateY(0) scale(0.97);
 }
 
-.tactile-btn-accent {
-  background: var(--gradient-sunset);
+.tactile-btn-ice {
+  background: var(--gradient-ice-accent);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: var(--shadow-peach), var(--glass-specular-top);
+  box-shadow: var(--shadow-ice-glow), var(--glass-specular-top);
 }
 
-.tactile-btn-accent:hover {
+.tactile-btn-ice:hover {
   filter: brightness(1.1);
-  box-shadow: 0 10px 28px -2px rgba(255, 85, 36, 0.6);
+  box-shadow: 0 10px 28px -2px rgba(56, 189, 248, 0.6);
   transform: translateY(-1px);
 }
 
-/* Custom Scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: var(--r-capsule);
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-pill);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 157, 121, 0.4);
+  background: rgba(56, 189, 248, 0.45);
 }

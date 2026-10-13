@@ -1,8 +1,8 @@
 /**
- * Boysic Messenger — Spatial Island UI & Real Interactive Logic
+ * Boysic Messenger — Ultra-Transparent Liquid Glass & Interactive Engine
  */
 
-// In-Memory Chat State & Mock Database
+// Global State Store
 const CHATS_STORE = {
   1: {
     id: 1,
@@ -10,7 +10,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети (узел app-2)',
     avatarText: 'АС',
-    avatarBg: 'var(--gradient-sunset)',
+    avatarBg: 'var(--gradient-ice-accent)',
     listening: 'Midnight Echoes',
     messages: [
       {
@@ -55,7 +55,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети (узел app-1)',
     avatarText: 'ОИ',
-    avatarBg: '#1c1c24',
+    avatarBg: '#141824',
     listening: null,
     messages: [
       {
@@ -69,16 +69,23 @@ const CHATS_STORE = {
         id: 'msg-2-2',
         sender: 'incoming',
         type: 'text',
-        text: 'Слушай, а трек синхронизируется между окнами?',
+        text: 'Слушай, а трек синхронизируется между вкладками?',
         time: '19:30'
       },
       {
         id: 'msg-2-3',
         sender: 'outgoing',
         type: 'text',
-        text: 'Да! Плеер вынесен в независимый глобальный компонент, поэтому музыка играет непрерывно при любых переходах.',
+        text: 'Да! Плеер вынесен в независимый глобальный модуль и играет бесшовно через общий аудио-движок.',
         time: '19:32',
         delivered: true
+      },
+      {
+        id: 'msg-2-4',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Супер, проверяю адаптивность интерфейса на экранах разной ширины 👍',
+        time: '19:34'
       }
     ]
   },
@@ -88,7 +95,7 @@ const CHATS_STORE = {
     status: 'offline',
     statusText: 'был(а) в сети 45 мин назад',
     avatarText: 'ПГ',
-    avatarBg: '#141418',
+    avatarBg: '#10141e',
     listening: null,
     messages: [
       {
@@ -102,14 +109,14 @@ const CHATS_STORE = {
         id: 'msg-3-2',
         sender: 'incoming',
         type: 'text',
-        text: 'Схему БД зафиксировал, отправляю в репо',
+        text: 'Поле direct_key = min_id:max_id для личных диалогов, и монотонный seq.',
         time: '18:12'
       },
       {
         id: 'msg-3-3',
         sender: 'outgoing',
         type: 'text',
-        text: 'Отлично! Тогда монотонный seq для каждого диалога генерируем строго в транзакции.',
+        text: 'Отлично! Тогда seq генерируем строго в транзакции диалога для защиты от гонок.',
         time: '18:15',
         delivered: true
       }
@@ -121,14 +128,14 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети (узел app-1)',
     avatarText: 'АЕ',
-    avatarBg: '#201a18',
-    listening: 'Neon Sunset',
+    avatarBg: '#121c2a',
+    listening: 'Neon Sunset Drive',
     messages: [
       {
         id: 'msg-4-1',
         sender: 'incoming',
         type: 'text',
-        text: 'Docker Compose стенд поднят и работает! Nginx балансирует трафик между app-1 и app-2.',
+        text: 'Docker Compose стенд поднят! Nginx балансирует трафик между app-1 и app-2.',
         time: '17:50'
       },
       {
@@ -146,7 +153,7 @@ const CHATS_STORE = {
         id: 'msg-4-3',
         sender: 'incoming',
         type: 'text',
-        text: 'Запустил тест Т-1 на доставку сообщения на чужой узел — прошло за 0.3 секунды.',
+        text: 'Запустил сценарий Т-1 на доставку сообщения на другой узел — уложились в 300 мс!',
         time: '17:55'
       }
     ]
@@ -178,38 +185,53 @@ function switchNavTab(tabName) {
   }
 }
 
-// 2. Chat Switching & Dynamic Rendering
-function selectSpatialDialog(element, userName, status, initials) {
-  const chatId = parseInt(element.getAttribute('data-chat-id'), 10);
-  if (!chatId || !CHATS_STORE[chatId]) return;
+// 2. Guaranteed Chat Switching Function
+function selectChat(chatId) {
+  const targetId = parseInt(chatId, 10);
+  if (!targetId || !CHATS_STORE[targetId]) return;
 
-  currentActiveChatId = chatId;
-  const chatData = CHATS_STORE[chatId];
+  currentActiveChatId = targetId;
+  const chatData = CHATS_STORE[targetId];
 
-  // Update active style in left deck
-  document.querySelectorAll('.deck-item').forEach(item => item.classList.remove('active'));
-  element.classList.add('active');
+  // Update .active class on the list items
+  document.querySelectorAll('.deck-item').forEach(item => {
+    const itemChatId = parseInt(item.getAttribute('data-chat-id'), 10);
+    if (itemChatId === targetId) {
+      item.classList.add('active');
+      // Clear unread badge
+      const badge = item.querySelector('.deck-item-badge');
+      if (badge) {
+        badge.remove();
+        updateUnreadCounterBadge();
+      }
+    } else {
+      item.classList.remove('active');
+    }
+  });
 
-  // Clear unread badge on click
-  const badge = element.querySelector('.deck-item-badge');
-  if (badge) {
-    badge.remove();
-    updateUnreadCounterBadge();
-  }
-
-  // Render recipient header
+  // Re-render chat header
   renderChatHeader(chatData);
 
-  // Render conversation messages
+  // Re-render chat messages
   renderChatMessages(chatData);
 
-  // Update input placeholder
+  // Update composer input placeholder
   const input = document.getElementById('composer-input');
   if (input) {
-    input.placeholder = `Написать сообщение ${chatData.name.split(' ')[0]}...`;
+    const firstName = chatData.name.split(' ')[0];
+    input.placeholder = `Написать сообщение ${firstName}...`;
     input.focus();
   }
 }
+
+// Legacy alias to support any remaining onclick references
+window.selectSpatialDialog = function(element, userName, status, initials) {
+  const chatId = element ? element.getAttribute('data-chat-id') : null;
+  if (chatId) {
+    selectChat(chatId);
+  }
+};
+window.selectChat = selectChat;
 
 // Helper: Render Chat Header
 function renderChatHeader(chat) {
@@ -250,7 +272,7 @@ function renderChatMessages(chat) {
   const flow = document.getElementById('spatial-messages-flow');
   if (!flow) return;
 
-  // Clear flow
+  // Clear messages container
   flow.innerHTML = '';
 
   // Timeline pill
@@ -259,7 +281,7 @@ function renderChatMessages(chat) {
   timelinePill.textContent = 'Сегодня';
   flow.appendChild(timelinePill);
 
-  // Append each message from store
+  // Render all messages in sequence
   chat.messages.forEach(msg => {
     const row = document.createElement('div');
     row.className = `msg-row ${msg.sender}`;
@@ -316,7 +338,7 @@ function renderChatMessages(chat) {
     flow.appendChild(row);
   });
 
-  // Typing indicator if online
+  // Typing indicator if recipient is currently online
   if (chat.status === 'online') {
     const typing = document.createElement('div');
     typing.className = 'typing-capsule';
@@ -330,11 +352,11 @@ function renderChatMessages(chat) {
     flow.appendChild(typing);
   }
 
-  // Scroll to bottom
+  // Smooth scroll to bottom
   flow.scrollTop = flow.scrollHeight;
 }
 
-// 3. Send Message
+// 3. Send Message Handler
 function handleSendSpatialMessage(event) {
   event.preventDefault();
   const input = document.getElementById('composer-input');
@@ -357,10 +379,10 @@ function handleSendSpatialMessage(event) {
     delivered: true
   };
 
-  // Add to store
+  // Push to local store
   chat.messages.push(newMsg);
 
-  // Append to DOM
+  // Append to current stream
   const flow = document.getElementById('spatial-messages-flow');
   const typingBubble = document.getElementById('spatial-typing-bubble');
 
@@ -388,7 +410,7 @@ function handleSendSpatialMessage(event) {
   input.value = '';
   flow.scrollTop = flow.scrollHeight;
 
-  // Update preview & time in left deck list
+  // Update preview & time in left deck
   const activeDeckItem = document.querySelector(`.deck-item[data-chat-id="${chat.id}"]`);
   if (activeDeckItem) {
     const previewEl = activeDeckItem.querySelector('.deck-item-preview');
@@ -398,7 +420,23 @@ function handleSendSpatialMessage(event) {
   }
 }
 
-// 4. Quick Filter Chips
+// 4. Search Filter
+function handleSearchDialogs(query) {
+  const term = (query || '').toLowerCase().trim();
+  const items = document.querySelectorAll('.deck-item');
+
+  items.forEach(item => {
+    const name = item.querySelector('.deck-item-name')?.textContent.toLowerCase() || '';
+    const preview = item.querySelector('.deck-item-preview')?.textContent.toLowerCase() || '';
+    if (!term || name.includes(term) || preview.includes(term)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+
+// 5. Quick Filter Chips
 function filterDialogs(btn, filterType) {
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
@@ -421,7 +459,7 @@ function filterDialogs(btn, filterType) {
   });
 }
 
-// Helper: Update total unread badge in top navbar
+// Helper: Recalculate Total Unread Badge in Top Island
 function updateUnreadCounterBadge() {
   const badges = document.querySelectorAll('.deck-item-badge');
   let total = 0;
@@ -440,7 +478,7 @@ function updateUnreadCounterBadge() {
   }
 }
 
-// 5. Sound Module Playback Demo
+// 6. Sound Module Playback Demo
 function toggleSpatialTrack(button) {
   const card = button.closest('.sound-module-card') || document.getElementById('demo-sound-module');
   if (!card) return;
@@ -461,20 +499,18 @@ function toggleSpatialTrack(button) {
   }
 }
 
-// 6. Settings Toggles (Physics & Lens)
+// 7. Settings Toggles (Physics & Lens)
 function toggleSpatialBlur(checkbox) {
   const root = document.documentElement;
   if (checkbox.checked) {
-    root.style.setProperty('--glass-blur', 'blur(28px) saturate(170%)');
-    root.style.setProperty('--glass-blur-deep', 'blur(36px) saturate(190%)');
+    root.style.setProperty('--glass-blur-deep', 'blur(32px) saturate(200%)');
   } else {
-    root.style.setProperty('--glass-blur', 'blur(0px) saturate(100%)');
     root.style.setProperty('--glass-blur-deep', 'blur(0px) saturate(100%)');
   }
 }
 
 function toggleSpatialLens(checkbox) {
-  const lens = document.querySelector('.ambient-peach-lens');
+  const lens = document.querySelector('.ambient-ice-lens');
   if (lens) {
     lens.style.display = checkbox.checked ? 'block' : 'none';
   }
@@ -491,10 +527,7 @@ function escapeHtml(string) {
   return String(string).replace(/[&<>"']/g, s => entityMap[s]);
 }
 
-// Initial Boot
+// Initial Boot: Set Alice (Chat 1) as active on page load
 document.addEventListener('DOMContentLoaded', () => {
-  const flow = document.getElementById('spatial-messages-flow');
-  if (flow) {
-    flow.scrollTop = flow.scrollHeight;
-  }
+  selectChat(1);
 });

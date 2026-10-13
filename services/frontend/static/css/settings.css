@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Settings Module — Spatial Bento Grid Layout
-   Palette: Peach, Sunset Orange, White, Obsidian Black
+   Boysic Settings — Ultra-Transparent Glass Bento Grid
+   Palette: Slate-Ice Blue, Pure White, Obsidian
    ========================================================================== */
 
 .bento-settings-stage {
@@ -40,7 +40,7 @@
   gap: 16px;
 }
 
-/* 1. Large Profile Hero Card (Span 12) */
+/* 1. Profile Hero Card (Span 12) */
 .bento-card-profile {
   grid-column: span 12;
   display: flex;
@@ -56,28 +56,28 @@
 }
 
 .profile-hero-avatar {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: var(--gradient-sunset);
+  background: var(--gradient-ice-accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
   border: 2px solid rgba(255, 255, 255, 0.25);
-  box-shadow: var(--shadow-peach);
+  box-shadow: var(--shadow-ice-glow);
 }
 
 .profile-hero-name {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-pure);
 }
 
 .profile-hero-handle {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text-subtle);
   margin-top: 2px;
 }
@@ -88,46 +88,37 @@
   gap: 6px;
   margin-top: 6px;
   padding: 3px 10px;
-  border-radius: var(--r-capsule);
-  background: var(--gradient-peach-soft);
-  border: 1px solid var(--accent-peach-glow);
-  color: var(--accent-peach);
+  border-radius: var(--r-pill);
+  background: var(--gradient-ice-soft);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--slate-ice-light);
   font-size: 11.5px;
   font-weight: 600;
 }
 
-/* 2. Bento Card: Appearance (Span 6) */
+/* 2. Bento Card: Half (Span 6) */
 .bento-card-half {
   grid-column: span 6;
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-/* 3. Bento Card: Cluster Info (Span 6) */
-.bento-card-cluster {
-  grid-column: span 6;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .bento-card-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--text-pure);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .bento-card-title svg {
-  width: 18px;
-  height: 18px;
-  stroke: var(--accent-peach);
+  width: 17px;
+  height: 17px;
+  stroke: var(--slate-ice-primary);
   stroke-width: 2;
   fill: none;
 }
@@ -139,7 +130,7 @@
   justify-content: space-between;
   padding: 11px 14px;
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.06);
   transition: background 0.2s ease;
 }
@@ -154,18 +145,18 @@
 }
 
 .bento-label-primary {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-pure);
 }
 
 .bento-label-secondary {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-subtle);
   margin-top: 1px;
 }
 
-/* Minimalist Tactile Switch */
+/* Spatial Switch */
 .spatial-switch {
   position: relative;
   display: inline-block;
@@ -185,7 +176,7 @@
   inset: 0;
   background-color: rgba(255, 255, 255, 0.12);
   transition: all 0.3s var(--ease-elastic);
-  border-radius: var(--r-capsule);
+  border-radius: var(--r-pill);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -203,16 +194,16 @@
 }
 
 input:checked + .spatial-switch-slider {
-  background: var(--gradient-sunset);
+  background: var(--gradient-ice-accent);
   border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 12px rgba(255, 85, 36, 0.4);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
 }
 
 input:checked + .spatial-switch-slider:before {
   transform: translateX(18px);
 }
 
-/* 4. Bottom Danger/Sign Out Bar (Span 12) */
+/* Footer / Sign Out */
 .bento-card-footer {
   grid-column: span 12;
   display: flex;
