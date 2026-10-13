@@ -1,74 +1,80 @@
-<!-- Active Chat Panel -->
-<section class="chat-panel glass-panel">
-  <!-- Chat Header -->
-  <header class="chat-header">
-    <div class="chat-header-info">
-      <div class="avatar" id="active-chat-avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+<!-- Chat Canvas Stage (Right Spatial Module) -->
+<section class="chat-canvas glass-card">
+  <!-- 1. Floating Chat Canvas Header -->
+  <header class="chat-canvas-header">
+    <div class="chat-recipient-info">
+      <div class="chat-recipient-avatar" id="active-recipient-avatar">
         АС
-        <span class="status-indicator"></span>
       </div>
-      <div class="chat-header-details">
-        <span class="chat-header-name" id="active-chat-name">Алиса Смирнова</span>
-        <span class="chat-header-status online" id="active-chat-status">
+      <div class="chat-recipient-details">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="chat-recipient-name" id="active-recipient-name">Алиса Смирнова</span>
+          <!-- Dynamic listening indicator -->
+          <span class="listening-ticker">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+            <span>Midnight Echoes</span>
+          </span>
+        </div>
+        <span class="chat-recipient-status online" id="active-recipient-status">
           <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-          в сети
+          в сети (узел app-2)
         </span>
       </div>
     </div>
 
     <!-- Header Actions -->
-    <div class="chat-header-actions">
-      <button class="btn-glass btn-glass-icon" title="Поиск в чате">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+    <div style="display: flex; gap: 8px;">
+      <button class="tactile-btn" style="padding: 7px 12px;" title="Поиск сообщений">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </button>
-      <button class="btn-glass btn-glass-icon" title="Детали диалога">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-          <circle cx="12" cy="12" r="1"></circle>
-          <circle cx="12" cy="5" r="1"></circle>
-          <circle cx="12" cy="19" r="1"></circle>
+      <button class="tactile-btn" style="padding: 7px 12px;" title="Действия">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="12" cy="12" r="1.5"></circle>
+          <circle cx="12" cy="5" r="1.5"></circle>
+          <circle cx="12" cy="19" r="1.5"></circle>
         </svg>
       </button>
     </div>
   </header>
 
-  <!-- Messages Stream -->
-  <div class="messages-container" id="messages-stream">
+  <!-- 2. Messages Stream Flow -->
+  <div class="chat-messages-flow" id="spatial-messages-flow">
     <!-- Date Badge -->
-    <div class="date-separator">
-      <span class="date-badge">Сегодня</span>
-    </div>
+    <div class="chat-timeline-pill">Сегодня</div>
 
     <!-- Incoming Message 1 -->
-    <div class="message-row incoming">
-      <div class="message-bubble">
-        Привет! Послушай новый трек, мы только что залили его в реплицированное хранилище!
-        <div class="message-footer">
-          <span class="message-time">19:40</span>
+    <div class="msg-row incoming">
+      <div class="msg-bubble">
+        Привет! Послушай новый трек — он только что отреплицировался на storage-2 и доступен для стриминга.
+        <div class="msg-meta">
+          <span>19:40</span>
         </div>
       </div>
     </div>
 
-    <!-- Incoming Message 2: Track Card -->
-    <div class="message-row incoming">
-      <div class="message-bubble" style="padding: 6px;">
+    <!-- Incoming Message 2: Sound Module -->
+    <div class="msg-row incoming">
+      <div class="msg-bubble" style="padding: 5px;">
         {% include "messenger/components/message_track.html" %}
-        <div class="message-footer" style="padding: 0 10px 4px 0;">
-          <span class="message-time">19:41</span>
+        <div class="msg-meta" style="padding: 2px 10px 4px 0;">
+          <span>19:41</span>
         </div>
       </div>
     </div>
 
     <!-- Outgoing Message 1 -->
-    <div class="message-row outgoing">
-      <div class="message-bubble">
-        Ого, звучит очень круто! И прямо в карточке играет, без прерывания переписки.
-        <div class="message-footer">
-          <span class="message-time">19:42</span>
-          <!-- Delivered Double Check SVG -->
-          <svg class="message-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <div class="msg-row outgoing">
+      <div class="msg-bubble">
+        Звук отличный! Плеер играет прямо из карточки, и воспроизведение не прерывается.
+        <div class="msg-meta">
+          <span>19:42</span>
+          <!-- Delivered Double Check Mark -->
+          <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
             <path d="M18 6L7 17l-5-5"></path>
             <path d="M22 10l-7.5 7.5L13 16"></path>
           </svg>
@@ -77,12 +83,12 @@
     </div>
 
     <!-- Outgoing Message 2 -->
-    <div class="message-row outgoing">
-      <div class="message-bubble">
-        Доставка между узлами приложения отработала мгновенно 👍
-        <div class="message-footer">
-          <span class="message-time">19:43</span>
-          <svg class="message-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <div class="msg-row outgoing">
+      <div class="msg-bubble">
+        Межузловая пересылка через <code>POST /internal/deliver</code> отработала за 18 миллисекунд.
+        <div class="msg-meta">
+          <span>19:43</span>
+          <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
             <path d="M18 6L7 17l-5-5"></path>
             <path d="M22 10l-7.5 7.5L13 16"></path>
           </svg>
@@ -90,42 +96,39 @@
       </div>
     </div>
 
-    <!-- Typing Indicator Bubble -->
-    <div class="typing-bubble" id="typing-indicator" title="Алиса печатает...">
+    <!-- Typing Indicator -->
+    <div class="typing-capsule" id="spatial-typing-bubble" title="Собеседник печатает...">
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
     </div>
   </div>
 
-  <!-- Bottom Floating Input Area -->
-  <footer class="chat-input-wrapper">
-    <form class="chat-input-box" id="message-form" onsubmit="handleSendMessage(event)">
-      <!-- Attach Button -->
-      <button type="button" class="btn-glass btn-glass-icon" style="width: 32px; height: 32px;" title="Прикрепить трек">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-          <path d="M9 18V5l12-2v13"></path>
-          <circle cx="6" cy="18" r="3"></circle>
-          <circle cx="18" cy="16" r="3"></circle>
-        </svg>
-      </button>
+  <!-- 3. UNEXPECTED FLOATING COMPOSER CAPSULE -->
+  <form class="floating-composer-island" id="spatial-composer-form" onsubmit="handleSendSpatialMessage(event)">
+    <!-- Attach Track / Audio Action -->
+    <button type="button" class="composer-attach-btn" title="Отправить трек из каталога">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
+      </svg>
+    </button>
 
-      <!-- Message Text Field -->
-      <input 
-        type="text" 
-        id="chat-input" 
-        class="chat-input-field" 
-        placeholder="Сообщение..." 
-        autocomplete="off"
-      >
+    <!-- Message Text Field -->
+    <input 
+      type="text" 
+      id="composer-input" 
+      class="composer-input-field" 
+      placeholder="Написать сообщение Алисе..." 
+      autocomplete="off"
+    >
 
-      <!-- Send Button -->
-      <button type="submit" class="btn-send" title="Отправить">
-        <svg viewBox="0 0 24 24">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-        </svg>
-      </button>
-    </form>
-  </footer>
+    <!-- Sunset Send Action Orb -->
+    <button type="submit" class="composer-send-orb" title="Отправить (Enter)">
+      <svg viewBox="0 0 24 24">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </form>
 </section>
-

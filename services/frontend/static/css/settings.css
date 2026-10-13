@@ -1,234 +1,224 @@
 /* ==========================================================================
-   Settings Module — Apple iOS Style Settings
+   Settings Module — Spatial Bento Grid Layout
+   Palette: Peach, Sunset Orange, White, Obsidian Black
    ========================================================================== */
 
-.settings-panel {
+.bento-settings-stage {
   flex: 1;
-  height: 100%;
-  overflow-y: auto;
-  padding: 32px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  max-width: 800px;
+  width: 100%;
+  max-width: 1100px;
   margin: 0 auto;
-}
-
-.settings-title {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.6px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.settings-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-/* Profile Card */
-.settings-profile-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 24px;
-}
-
-.profile-large-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #ff512f, #dd2476);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  font-weight: 700;
-  color: #fff;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 24px rgba(221, 36, 118, 0.35);
-}
-
-.profile-info {
-  flex: 1;
-}
-
-.profile-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.profile-handle {
-  font-size: 14px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
-}
-
-.profile-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  background: rgba(48, 209, 88, 0.15);
-  border: 1px solid rgba(48, 209, 88, 0.3);
-  color: var(--accent-emerald);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* Settings Group */
-.settings-group {
+  overflow-y: auto;
+  padding: 10px 10px 40px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 20px;
 }
 
-.settings-group-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-tertiary);
-  margin-left: 12px;
-}
-
-.settings-box {
-  background: var(--glass-surface-base);
-  backdrop-filter: var(--glass-blur-strength);
-  -webkit-backdrop-filter: var(--glass-blur-strength);
-  border: var(--glass-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--glass-shadow-soft), var(--glass-highlight-top);
-}
-
-/* Settings Row */
-.settings-row {
+.bento-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  transition: background var(--transition-fast);
+  padding: 0 4px;
 }
 
-.settings-row:last-child {
-  border-bottom: none;
+.bento-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-pure);
+  letter-spacing: -0.4px;
 }
 
-.settings-row-interactive {
-  cursor: pointer;
+.bento-header-desc {
+  font-size: 13px;
+  color: var(--text-subtle);
+  margin-top: 2px;
 }
 
-.settings-row-interactive:hover {
-  background: var(--glass-surface-hover);
+/* Bento Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
 }
 
-.settings-row-left {
+/* 1. Large Profile Hero Card (Span 12) */
+.bento-card-profile {
+  grid-column: span 12;
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  padding: 22px 28px;
 }
 
-.settings-icon-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
+.profile-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-hero-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--gradient-sunset);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
   color: #fff;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: var(--shadow-peach);
 }
 
-.settings-icon-badge svg {
+.profile-hero-name {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-pure);
+}
+
+.profile-hero-handle {
+  font-size: 13.5px;
+  color: var(--text-subtle);
+  margin-top: 2px;
+}
+
+.profile-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-capsule);
+  background: var(--gradient-peach-soft);
+  border: 1px solid var(--accent-peach-glow);
+  color: var(--accent-peach);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* 2. Bento Card: Appearance (Span 6) */
+.bento-card-half {
+  grid-column: span 6;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 3. Bento Card: Cluster Info (Span 6) */
+.bento-card-cluster {
+  grid-column: span 6;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bento-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-pure);
+  margin-bottom: 4px;
+}
+
+.bento-card-title svg {
   width: 18px;
   height: 18px;
-  stroke: currentColor;
+  stroke: var(--accent-peach);
   stroke-width: 2;
   fill: none;
 }
 
-.badge-blue { background: linear-gradient(135deg, #0a84ff, #0056b3); }
-.badge-purple { background: linear-gradient(135deg, #bf5af2, #7a23b3); }
-.badge-green { background: linear-gradient(135deg, #30d158, #1c7c34); }
-.badge-orange { background: linear-gradient(135deg, #ff9f0a, #b36b00); }
-.badge-red { background: linear-gradient(135deg, #ff453a, #b31d14); }
-.badge-gray { background: linear-gradient(135deg, #8e8e93, #48484a); }
+/* Bento Item Row */
+.bento-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.2s ease;
+}
 
-.settings-row-text {
+.bento-item-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.bento-item-label {
   display: flex;
   flex-direction: column;
 }
 
-.settings-row-title {
-  font-size: 15px;
+.bento-label-primary {
+  font-size: 13.5px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-pure);
 }
 
-.settings-row-desc {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
+.bento-label-secondary {
+  font-size: 11.5px;
+  color: var(--text-subtle);
+  margin-top: 1px;
 }
 
-.settings-row-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
-
-/* iOS Toggle Switch */
-.ios-switch {
+/* Minimalist Tactile Switch */
+.spatial-switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 30px;
+  width: 44px;
+  height: 26px;
 }
 
-.ios-switch input {
+.spatial-switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.ios-slider {
+.spatial-switch-slider {
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: rgba(255, 255, 255, 0.16);
-  transition: all var(--transition-bounce);
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: all 0.3s var(--ease-elastic);
+  border-radius: var(--r-capsule);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.ios-slider:before {
+.spatial-switch-slider:before {
   position: absolute;
   content: "";
-  height: 24px;
-  width: 24px;
+  height: 20px;
+  width: 20px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
-  transition: all var(--transition-bounce);
+  background-color: #ffffff;
+  transition: all 0.3s var(--ease-elastic);
   border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-input:checked + .ios-slider {
-  background: var(--accent-emerald);
-  box-shadow: 0 0 12px rgba(48, 209, 88, 0.4);
+input:checked + .spatial-switch-slider {
+  background: var(--gradient-sunset);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 12px rgba(255, 85, 36, 0.4);
 }
 
-input:checked + .ios-slider:before {
-  transform: translateX(20px);
+input:checked + .spatial-switch-slider:before {
+  transform: translateX(18px);
 }
 
+/* 4. Bottom Danger/Sign Out Bar (Span 12) */
+.bento-card-footer {
+  grid-column: span 12;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+}

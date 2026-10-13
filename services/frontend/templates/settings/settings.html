@@ -1,172 +1,160 @@
-<!-- Settings Panel (Apple iOS Style) -->
-<div class="settings-panel">
-  <div>
-    <h1 class="settings-title">Настройки</h1>
-    <p class="settings-subtitle">Управление профилем, интерфейсом и параметрами подключения</p>
-  </div>
-
-  <!-- Profile Card -->
-  <div class="settings-box settings-profile-card">
-    <div class="profile-large-avatar">ДБ</div>
-    <div class="profile-info">
-      <div class="profile-name">Дмитрий Бызов</div>
-      <div class="profile-handle">@byzov • Разработчик WebSocket & UI</div>
-      <div class="profile-badge">
-        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-        В сети (узел app-1)
-      </div>
-    </div>
-    <button class="btn-glass" style="font-size: 13px;">Изменить</button>
-  </div>
-
-  <!-- Appearance Section -->
-  <div class="settings-group">
-    <div class="settings-group-label">Внешний вид и эффекты</div>
-    <div class="settings-box">
-      <!-- Row: Liquid Glass Blur -->
-      <div class="settings-row">
-        <div class="settings-row-left">
-          <div class="settings-icon-badge badge-blue">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
-            </svg>
-          </div>
-          <div class="settings-row-text">
-            <span class="settings-row-title">Эффект жидкого стекла (Blur)</span>
-            <span class="settings-row-desc">Глубокое размытие и преломление света</span>
-          </div>
-        </div>
-        <div class="settings-row-right">
-          <label class="ios-switch">
-            <input type="checkbox" checked id="toggle-blur" onchange="toggleBlurEffect(this)">
-            <span class="ios-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Row: Animated Background Orbs -->
-      <div class="settings-row">
-        <div class="settings-row-left">
-          <div class="settings-icon-badge badge-purple">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"></circle>
-              <circle cx="12" cy="12" r="4"></circle>
-            </svg>
-          </div>
-          <div class="settings-row-text">
-            <span class="settings-row-title">Анимированный фон</span>
-            <span class="settings-row-desc">Плавающие цветные сферы подсветки</span>
-          </div>
-        </div>
-        <div class="settings-row-right">
-          <label class="ios-switch">
-            <input type="checkbox" checked id="toggle-orbs" onchange="toggleOrbs(this)">
-            <span class="ios-slider"></span>
-          </label>
-        </div>
-      </div>
+<!-- Spatial Bento Grid Settings -->
+<div class="bento-settings-stage">
+  <!-- Header -->
+  <div class="bento-header">
+    <div>
+      <h1 class="bento-header-title">Параметры системы</h1>
+      <p class="bento-header-desc">Управление профилем, визуальной физикой стекла и состоянием распределённого узла</p>
     </div>
   </div>
 
-  <!-- Notifications Section -->
-  <div class="settings-group">
-    <div class="settings-group-label">Уведомления и звуки</div>
-    <div class="settings-box">
-      <div class="settings-row">
-        <div class="settings-row-left">
-          <div class="settings-icon-badge badge-orange">
-            <svg viewBox="0 0 24 24">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
+  <div class="bento-grid">
+    <!-- 1. Hero Profile Card -->
+    <div class="glass-card bento-card-profile">
+      <div class="profile-hero-left">
+        <div class="profile-hero-avatar">ДБ</div>
+        <div>
+          <div class="profile-hero-name">Дмитрий Бызов</div>
+          <div class="profile-hero-handle">@byzov • Разработчик WebSocket & UI</div>
+          <div class="profile-hero-tag">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;"></span>
+            Подключен к app-1
           </div>
-          <div class="settings-row-text">
-            <span class="settings-row-title">Звуки сообщений</span>
-            <span class="settings-row-desc">Фирменный мягкий клик при доставке</span>
-          </div>
-        </div>
-        <div class="settings-row-right">
-          <label class="ios-switch">
-            <input type="checkbox" checked>
-            <span class="ios-slider"></span>
-          </label>
         </div>
       </div>
+      <button class="tactile-btn" style="font-size: 13px;">Редактировать профиль</button>
+    </div>
 
-      <div class="settings-row">
-        <div class="settings-row-left">
-          <div class="settings-icon-badge badge-green">
-            <svg viewBox="0 0 24 24">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            </svg>
-          </div>
-          <div class="settings-row-text">
-            <span class="settings-row-title">Индикатор «Печатает...»</span>
-            <span class="settings-row-desc">Показывать анимацию набора текста</span>
-          </div>
+    <!-- 2. Bento Card: Glass Physics & Appearance -->
+    <div class="glass-card bento-card-half">
+      <div class="bento-card-title">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        <span>Визуальная среда и стекло</span>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">Размытие жидкого стекла</span>
+          <span class="bento-label-secondary">Эффект преломления и матового стекла</span>
         </div>
-        <div class="settings-row-right">
-          <label class="ios-switch">
-            <input type="checkbox" checked>
-            <span class="ios-slider"></span>
-          </label>
+        <label class="spatial-switch">
+          <input type="checkbox" checked id="spatial-toggle-blur" onchange="toggleSpatialBlur(this)">
+          <span class="spatial-switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">Персиковая линза подсветки</span>
+          <span class="bento-label-secondary">Мягкий теплый световой градиент в фоне</span>
         </div>
+        <label class="spatial-switch">
+          <input type="checkbox" checked id="spatial-toggle-lens" onchange="toggleSpatialLens(this)">
+          <span class="spatial-switch-slider"></span>
+        </label>
       </div>
     </div>
-  </div>
 
-  <!-- Distributed Cluster Section -->
-  <div class="settings-group">
-    <div class="settings-group-label">Параметры распределённого узла</div>
-    <div class="settings-box">
-      <div class="settings-row">
-        <div class="settings-row-left">
-          <div class="settings-icon-badge badge-gray">
-            <svg viewBox="0 0 24 24">
-              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-              <line x1="6" y1="6" x2="6.01" y2="6"></line>
-              <line x1="6" y1="18" x2="6.01" y2="18"></line>
-            </svg>
-          </div>
-          <div class="settings-row-text">
-            <span class="settings-row-title">Текущий узел приложения</span>
-            <span class="settings-row-desc">Автоматическая балансировка через nginx</span>
-          </div>
-        </div>
-        <div class="settings-row-right">
-          <span class="glass-pill" style="padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--accent-blue);">app-1</span>
-        </div>
+    <!-- 3. Bento Card: Audio & Delivery Haptics -->
+    <div class="glass-card bento-card-half">
+      <div class="bento-card-title">
+        <svg viewBox="0 0 24 24">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <span>Звуки и отклик доставки</span>
       </div>
 
-      <div class="settings-row">
-        <div class="settings-row-left">
-          <div class="settings-icon-badge badge-blue">
-            <svg viewBox="0 0 24 24">
-              <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
-              <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
-              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-              <line x1="12" y1="20" x2="12.01" y2="20"></line>
-            </svg>
-          </div>
-          <div class="settings-row-text">
-            <span class="settings-row-title">WebSocket транспорт</span>
-            <span class="settings-row-desc">Синхронизация seq и сессий</span>
-          </div>
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">Звуковой клик при получении</span>
+          <span class="bento-label-secondary">Мягкий сигнал при приходе сообщений</span>
         </div>
-        <div class="settings-row-right">
-          <span style="font-size: 13px; color: var(--accent-emerald); font-weight: 500;">Активно (16 ms)</span>
+        <label class="spatial-switch">
+          <input type="checkbox" checked>
+          <span class="spatial-switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">Индикация «Печатает...»</span>
+          <span class="bento-label-secondary">Трансляция набора без записи в БД</span>
         </div>
+        <label class="spatial-switch">
+          <input type="checkbox" checked>
+          <span class="spatial-switch-slider"></span>
+        </label>
       </div>
     </div>
-  </div>
 
-  <!-- Sign out button -->
-  <div style="margin-top: 10px; text-align: center;">
-    <button class="btn-glass" style="color: var(--accent-coral); border-color: rgba(255, 69, 58, 0.3); width: 100%; padding: 12px;">
-      Выйти из аккаунта
-    </button>
+    <!-- 4. Bento Card: Distributed Cluster State -->
+    <div class="glass-card bento-card-half">
+      <div class="bento-card-title">
+        <svg viewBox="0 0 24 24">
+          <rect x="2" y="2" width="20" height="8" rx="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+        <span>Узлы приложения (FastAPI)</span>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">Текущий узел приложения</span>
+          <span class="bento-label-secondary">Балансировка через nginx round-robin</span>
+        </div>
+        <span class="tactile-btn" style="color: var(--accent-peach); font-weight: 700; padding: 4px 10px;">app-1</span>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">WebSocket соединение</span>
+          <span class="bento-label-secondary">Синхронизация last_seq и сессий</span>
+        </div>
+        <span style="font-size: 12.5px; color: var(--accent-peach); font-weight: 600;">18 ms (RTT)</span>
+      </div>
+    </div>
+
+    <!-- 5. Bento Card: Audio Storage Nodes -->
+    <div class="glass-card bento-card-half">
+      <div class="bento-card-title">
+        <svg viewBox="0 0 24 24">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        </svg>
+        <span>Репликация хранилища (2 копии)</span>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">storage-1 & storage-2</span>
+          <span class="bento-label-secondary">Каждый MP3 трек реплицирован на двух узлах</span>
+        </div>
+        <span style="font-size: 12px; color: #fff; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 9999px;">Синхронно</span>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary">Фоновые воркеры</span>
+          <span class="bento-label-secondary">Очередь задач в PostgreSQL (lease/heartbeat)</span>
+        </div>
+        <span style="font-size: 12.5px; color: var(--text-pure); font-weight: 600;">worker-1, worker-2</span>
+      </div>
+    </div>
+
+    <!-- 6. Footer / Sign out -->
+    <div class="glass-card bento-card-footer">
+      <div>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-pure);">Завершение сеанса</span>
+        <div style="font-size: 12px; color: var(--text-subtle);">Сессия будет удалена из таблицы <code>sessions</code> в PostgreSQL</div>
+      </div>
+      <button class="tactile-btn" style="color: var(--accent-orange); border-color: rgba(255, 85, 36, 0.35);">
+        Выйти из аккаунта
+      </button>
+    </div>
   </div>
 </div>
-

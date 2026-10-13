@@ -3,68 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TheBoys Messenger — Liquid Glass</title>
-  <!-- Apple Font Stack & Icons -->
+  <title>TheBoys Messenger — Spatial Glass</title>
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/messenger.css">
   <link rel="stylesheet" href="/static/css/settings.css">
 </head>
 <body>
-  <!-- Ambient Liquid Mesh Background -->
-  <div class="liquid-background">
-    <div class="liquid-orb orb-1"></div>
-    <div class="liquid-orb orb-2"></div>
-    <div class="liquid-orb orb-3"></div>
-    <div class="liquid-orb orb-4"></div>
+  <!-- Spatial Ambient Lens (Subtle Warm Peach & Sunset Glow) -->
+  <div class="spatial-ambient">
+    <div class="ambient-peach-lens"></div>
   </div>
 
-  <div class="app-container">
-    <!-- Floating iOS Nav Rail -->
-    <aside class="nav-rail glass-panel">
-      <!-- App Brand / Logo -->
-      <div class="nav-logo" title="TheBoys Messenger">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-        </svg>
+  <div class="spatial-app">
+    <!-- 1. TOP FLOATING DYNAMIC ISLAND -->
+    <header class="dynamic-island-nav glass-capsule">
+      <!-- Brand Capsule -->
+      <div class="brand-capsule" onclick="switchNavTab('chats')">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        <span class="brand-text">THE BOYS</span>
+        <span class="brand-dot"></span>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="nav-items">
-        <!-- Tab: Messenger -->
-        <button class="nav-btn active" id="tab-chats-btn" onclick="switchTab('chats')" title="Чаты">
+      <!-- Segmented Navigation Controls -->
+      <nav class="nav-segment-control">
+        <button class="nav-segment-btn active" id="btn-tab-chats" onclick="switchNavTab('chats')">
           <svg viewBox="0 0 24 24">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
-          <span class="nav-badge">3</span>
+          <span>Диалоги</span>
+          <span class="segment-counter">3</span>
         </button>
 
-        <!-- Tab: Settings -->
-        <button class="nav-btn" id="tab-settings-btn" onclick="switchTab('settings')" title="Настройки">
+        <button class="nav-segment-btn" id="btn-tab-settings" onclick="switchNavTab('settings')">
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
+          <span>Параметры</span>
         </button>
       </nav>
 
-      <!-- Current User Profile Avatar -->
-      <div class="nav-profile" onclick="switchTab('settings')" title="Дмитрий (@byzov)">
-        <div class="avatar">
-          ДБ
-          <span class="status-indicator"></span>
+      <!-- User Cluster & Node Pill -->
+      <div class="nav-user-cluster">
+        <div class="cluster-pill" title="Узел обслуживания">
+          <span class="cluster-dot"></span>
+          <span>app-1</span>
+        </div>
+
+        <div class="user-capsule-btn" onclick="switchNavTab('settings')" title="Профиль пользователя">
+          <div class="user-mini-avatar">ДБ</div>
+          <span class="user-mini-name">Дмитрий</span>
         </div>
       </div>
-    </aside>
+    </header>
 
-    <!-- Content Sections -->
-    <main style="flex: 1; height: 100%; display: flex; overflow: hidden;">
-      <!-- Chats Section -->
-      <section id="view-chats" class="messenger-stage" style="display: flex;">
+    <!-- 2. SPATIAL WORKSPACE STAGE -->
+    <main style="flex: 1; height: calc(100% - 74px); display: flex; overflow: hidden;">
+      <!-- Messenger Stage -->
+      <section id="view-chats" class="spatial-stage" style="display: flex;">
         {% include "messenger/dialogs_list.html" %}
         {% include "messenger/chat_window.html" %}
       </section>
 
-      <!-- Settings Section -->
+      <!-- Bento Settings Stage -->
       <section id="view-settings" style="display: none; width: 100%; height: 100%;">
         {% include "settings/settings.html" %}
       </section>
@@ -74,4 +79,3 @@
   <script src="/static/js/messenger-ui.js"></script>
 </body>
 </html>
-

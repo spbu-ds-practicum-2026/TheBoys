@@ -1,20 +1,27 @@
-<!-- Track Card Component for Messenger -->
-<div class="track-card" id="demo-track-card">
-  <div class="track-cover">
-    <div class="track-cover-vinyl"></div>
+<!-- Sound Module Card Component -->
+<div class="sound-module-card" id="demo-sound-module">
+  <div class="sound-module-vinyl">
+    <div class="vinyl-center"></div>
   </div>
-  <div class="track-details">
-    <div class="track-title">{{ title | default('Midnight Echoes') }}</div>
-    <div class="track-artist">{{ artist | default('The Boys Band') }}</div>
-    <div class="track-meta">
-      <span class="track-duration">{{ duration | default('3:42') }}</span>
-      <span style="font-size: 11px; color: rgba(255, 255, 255, 0.4);">• MP3 320kbps</span>
+
+  <div class="sound-module-info">
+    <div class="sound-module-title">{{ title | default('Midnight Echoes') }}</div>
+    <div class="sound-module-artist">{{ artist | default('The Boys Band') }} • {{ duration | default('3:42') }}</div>
+    
+    <!-- Tactile Frequency Waveform -->
+    <div class="sound-waveform">
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
+      <div class="wave-bar"></div>
     </div>
   </div>
-  <button class="btn-track-play" onclick="toggleTrackPlayback(this)" title="Воспроизвести">
-    <svg viewBox="0 0 24 24" class="play-icon">
+
+  <button class="sound-play-orb" onclick="toggleSpatialTrack(this)" title="Слушать трек">
+    <svg viewBox="0 0 24 24">
       <polygon points="5 3 19 12 5 21 5 3"></polygon>
     </svg>
   </button>
 </div>
-

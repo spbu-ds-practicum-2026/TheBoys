@@ -1,98 +1,104 @@
-<!-- Dialogs List Panel -->
-<section class="dialogs-panel glass-panel">
-  <!-- Panel Header -->
-  <div class="dialogs-header">
-    <h1 class="dialogs-title">Сообщения</h1>
-    <div class="dialogs-actions">
-      <button class="btn-glass btn-glass-icon" title="Новый диалог">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.2" fill="none">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
-    </div>
+<!-- Spatial Dialog Deck (Floating Left Module) -->
+<aside class="dialog-deck glass-card">
+  <!-- Deck Header -->
+  <div class="deck-header">
+    <span class="deck-title">Диалоги</span>
+    <button class="tactile-btn" style="padding: 6px 12px; font-size: 12px;" title="Новый диалог">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>Новый</span>
+    </button>
   </div>
 
-  <!-- iOS Styled Search Bar -->
-  <div class="search-box">
+  <!-- Search Capsule -->
+  <div class="deck-search">
     <svg viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="8"></circle>
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
-    <input type="text" class="glass-input search-input" placeholder="Поиск по диалогам...">
+    <input type="text" class="deck-search-input" placeholder="Поиск собеседника...">
   </div>
 
-  <!-- Dialogs Scrollable Stream -->
-  <div class="dialogs-list">
+  <!-- Quick Filter Chips -->
+  <div class="deck-filter-chips">
+    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">🎵 С треками</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'unread')">Непрочитанные (3)</button>
+  </div>
+
+  <!-- Dialog Stream -->
+  <div class="deck-list">
     <!-- Dialog 1: Alice (Active) -->
-    <div class="dialog-item active" data-chat-id="1" onclick="selectDialog(this, 'Алиса Смирнова', 'online')">
-      <div class="avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+    <div class="deck-item active" data-chat-id="1" onclick="selectSpatialDialog(this, 'Алиса Смирнова', 'online', 'АС')">
+      <div class="deck-item-avatar" style="background: var(--gradient-sunset);">
         АС
-        <span class="status-indicator"></span>
+        <span class="deck-presence-dot"></span>
       </div>
-      <div class="dialog-content">
-        <div class="dialog-top">
-          <span class="dialog-name">Алиса Смирнова</span>
-          <span class="dialog-time">19:42</span>
+      <div class="deck-item-body">
+        <div class="deck-item-top">
+          <span class="deck-item-name">Алиса Смирнова</span>
+          <span class="deck-item-time">19:42</span>
         </div>
-        <div class="dialog-bottom">
-          <span class="dialog-preview">🎵 Midnight Echoes — The Boys Band</span>
+        <div class="deck-item-bottom">
+          <span class="deck-item-preview">🎵 Midnight Echoes</span>
+          <span style="font-size: 11px; color: var(--accent-peach);">• Трек</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 2: Oleg -->
-    <div class="dialog-item" data-chat-id="2" onclick="selectDialog(this, 'Олег Иванов', 'online')">
-      <div class="avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+    <div class="deck-item" data-chat-id="2" onclick="selectSpatialDialog(this, 'Олег Иванов', 'online', 'ОИ')">
+      <div class="deck-item-avatar" style="background: #181820; border-color: rgba(255, 157, 121, 0.4);">
         ОИ
-        <span class="status-indicator"></span>
+        <span class="deck-presence-dot"></span>
       </div>
-      <div class="dialog-content">
-        <div class="dialog-top">
-          <span class="dialog-name">Олег Иванов</span>
-          <span class="dialog-time">19:30</span>
+      <div class="deck-item-body">
+        <div class="deck-item-top">
+          <span class="deck-item-name">Олег Иванов</span>
+          <span class="deck-item-time">19:30</span>
         </div>
-        <div class="dialog-bottom">
-          <span class="dialog-preview">Слушай, а трек синхронизируется?</span>
-          <span class="dialog-unread">2</span>
+        <div class="deck-item-bottom">
+          <span class="deck-item-preview">Слушай, а трек синхронизируется?</span>
+          <span class="deck-item-badge">2</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 3: Pavel -->
-    <div class="dialog-item" data-chat-id="3" onclick="selectDialog(this, 'Павел Григорьев', 'offline')">
-      <div class="avatar" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+    <div class="deck-item" data-chat-id="3" onclick="selectSpatialDialog(this, 'Павел Григорьев', 'offline', 'ПГ')">
+      <div class="deck-item-avatar" style="background: #121216;">
         ПГ
-        <span class="status-indicator offline"></span>
+        <span class="deck-presence-dot offline"></span>
       </div>
-      <div class="dialog-content">
-        <div class="dialog-top">
-          <span class="dialog-name">Павел Григорьев</span>
-          <span class="dialog-time">18:12</span>
+      <div class="deck-item-body">
+        <div class="deck-item-top">
+          <span class="deck-item-name">Павел Григорьев</span>
+          <span class="deck-item-time">18:12</span>
         </div>
-        <div class="dialog-bottom">
-          <span class="dialog-preview">Схему БД зафиксировал, отправляю в репо</span>
+        <div class="deck-item-bottom">
+          <span class="deck-item-preview">Схему БД зафиксировал</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 4: Artem -->
-    <div class="dialog-item" data-chat-id="4" onclick="selectDialog(this, 'Артём Еременко', 'online')">
-      <div class="avatar" style="background: linear-gradient(135deg, #fa709a, #fee140);">
+    <div class="deck-item" data-chat-id="4" onclick="selectSpatialDialog(this, 'Артём Еременко', 'online', 'АЕ')">
+      <div class="deck-item-avatar" style="background: #201a18; border-color: rgba(255, 85, 36, 0.35);">
         АЕ
-        <span class="status-indicator"></span>
+        <span class="deck-presence-dot"></span>
       </div>
-      <div class="dialog-content">
-        <div class="dialog-top">
-          <span class="dialog-name">Артём Еременко</span>
-          <span class="dialog-time">17:55</span>
+      <div class="deck-item-body">
+        <div class="deck-item-top">
+          <span class="deck-item-name">Артём Еременко</span>
+          <span class="deck-item-time">17:55</span>
         </div>
-        <div class="dialog-bottom">
-          <span class="dialog-preview">Docker Compose стенд поднят и работает</span>
-          <span class="dialog-unread">1</span>
+        <div class="deck-item-bottom">
+          <span class="deck-item-preview">Docker Compose стенд поднят</span>
+          <span class="deck-item-badge">1</span>
         </div>
       </div>
     </div>
   </div>
-</section>
-
+</aside>
