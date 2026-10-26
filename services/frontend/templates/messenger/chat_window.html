@@ -1,16 +1,14 @@
-<!-- Full-Width Chat Canvas Stage (Apple Spatial Liquid Glass) -->
-<section class="chat-canvas glass-panel" id="chat-canvas-main">
-  <!-- 1. Chat Canvas Header -->
+<!-- Discord & Telegram Hybrid Chat Stage (Strict Monochrome Black & White) -->
+<section class="chat-canvas" id="chat-canvas-main">
+  <!-- 1. Chat Header -->
   <header class="chat-canvas-header">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <!-- Quick Toggle for Slide-Out Drawer -->
-      <button class="header-drawer-btn" id="header-drawer-btn" onclick="toggleDialogsDrawer()" title="Открыть/скрыть панель диалогов (Ctrl+B)">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
+      <!-- Icon-Only Drawer Toggle Button (No Text Label) -->
+      <button class="header-drawer-btn" id="header-drawer-btn" onclick="toggleDialogsDrawer()" title="Скрыть/показать панель диалогов (Ctrl+B)">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <line x1="9" y1="3" x2="9" y2="21"></line>
         </svg>
-        <span class="header-drawer-label">Все диалоги</span>
         <span class="segment-counter header-unread-counter" style="display: inline-block;">3</span>
       </button>
 
@@ -22,7 +20,7 @@
         <div class="chat-recipient-details">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span class="chat-recipient-name" id="active-recipient-name">Алиса Смирнова</span>
-            <!-- Dynamic listening indicator -->
+            <!-- Monochrome track listening pill -->
             <span class="listening-ticker">
               <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
@@ -31,23 +29,23 @@
             </span>
           </div>
           <span class="chat-recipient-status online" id="active-recipient-status">
-            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+            <span class="recipient-presence-dot"></span>
             в сети (узел app-2)
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Header Actions -->
-    <div style="display: flex; gap: 8px;">
-      <button class="tactile-btn" style="padding: 6px 12px;" title="Поиск по переписке">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+    <!-- Header Tools (Search, Call, More Options) -->
+    <div style="display: flex; gap: 6px;">
+      <button class="tactile-btn header-tool-btn" title="Поиск по переписке">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </button>
-      <button class="tactile-btn" style="padding: 6px 12px;" title="Опции диалога">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+      <button class="tactile-btn header-tool-btn" title="Опции диалога">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="12" cy="12" r="1.5"></circle>
           <circle cx="12" cy="5" r="1.5"></circle>
           <circle cx="12" cy="19" r="1.5"></circle>
@@ -58,7 +56,7 @@
 
   <!-- 2. Messages Stream Flow -->
   <div class="chat-messages-flow" id="spatial-messages-flow">
-    <!-- Date Badge -->
+    <!-- Telegram Centered Date Pill -->
     <div class="chat-timeline-pill">Сегодня</div>
 
     <!-- Incoming Message 1 -->
@@ -99,7 +97,7 @@
     <!-- Outgoing Message 2 -->
     <div class="msg-row outgoing">
       <div class="msg-bubble">
-        Межузловая пересылка через <code>POST /internal/deliver</code> отработала за 18 миллисекунд.
+        Межузловая пересылка через POST /internal/deliver отработала за 18 миллисекунд.
         <div class="msg-meta">
           <span>19:43</span>
           <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
@@ -110,39 +108,44 @@
       </div>
     </div>
 
-    <!-- Typing Indicator -->
-    <div class="typing-capsule" id="spatial-typing-bubble" title="Собеседник печатает...">
+    <!-- Typing indicator capsule -->
+    <div class="typing-capsule" id="chat-typing-capsule">
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
+      <span style="font-size: 11.5px; color: var(--text-muted); margin-left: 6px;">печатает...</span>
     </div>
   </div>
 
-  <!-- 3. APPLE FLOATING COMPOSER CAPSULE -->
-  <form class="floating-composer-island" id="spatial-composer-form" onsubmit="handleSendSpatialMessage(event)">
-    <!-- Attach Track / Audio Action -->
-    <button type="button" class="composer-attach-btn" title="Отправить трек из каталога">
-      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
-        <path d="M9 18V5l12-2v13"></path>
-        <circle cx="6" cy="18" r="3"></circle>
-        <circle cx="18" cy="16" r="3"></circle>
-      </svg>
-    </button>
+  <!-- 3. Telegram & Discord Bottom Composer Bar -->
+  <div class="composer-container">
+    <div class="floating-composer-island">
+      <!-- Attachment Paperclip -->
+      <button class="composer-attach-btn" title="Прикрепить файл">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
 
-    <!-- Message Text Field -->
-    <input 
-      type="text" 
-      id="composer-input" 
-      class="composer-input-field" 
-      placeholder="Написать сообщение Алисе..." 
-      autocomplete="off"
-    >
+      <!-- Message Textarea/Input -->
+      <input type="text" class="composer-input-field" id="composer-input" placeholder="Написать сообщение Алисе..." onkeydown="handleComposerKey(event)">
 
-    <!-- Send Action Button -->
-    <button type="submit" class="composer-send-orb" title="Отправить (Enter)">
-      <svg viewBox="0 0 24 24">
-        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-      </svg>
-    </button>
-  </form>
+      <!-- Emoji Button -->
+      <button class="composer-emoji-btn" title="Вставить эмодзи">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+        </svg>
+      </button>
+
+      <!-- Send Button -->
+      <button class="composer-send-orb" onclick="sendSpatialMessage()" title="Отправить сообщение (Enter)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
 </section>

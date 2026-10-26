@@ -1,83 +1,95 @@
 /* ==========================================================================
-   Boysic — Modern Liquid Glass & Signature Orange Palette
-   Inspired by: Boysic Official Logo (Pure White + Signature #ff9900 Badge + Deep Obsidian)
+   Boysic — Discord & Telegram Dark Monochrome Edition
+   Strictly Black & White Palette: Deep Obsidian, Discord Dark & Pure White
    ========================================================================== */
 
 :root {
-  /* Apple Modern Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", -apple-system-subheadline, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  /* System Typography (Discord & Apple SF Pro) */
+  --font-family: -apple-system, BlinkMacSystemFont, "gg sans", "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
-  /* Signature Boysic Logo Colors (Warm Golden Orange, Zero Red) */
-  --boysic-orange: #ff9900;
-  --boysic-orange-hover: #ffa826;
-  --boysic-orange-deep: #e68a00;
-  --boysic-orange-glow: rgba(255, 153, 0, 0.4);
-  --boysic-orange-subtle: rgba(255, 153, 0, 0.12);
-  --boysic-orange-border: rgba(255, 153, 0, 0.35);
+  /* Pure Monochrome Palette */
+  --mono-0: #000000;         /* Pure Void */
+  --mono-50: #090a0c;        /* App Shell Dark */
+  --mono-100: #0e0f12;       /* Discord Left Rail */
+  --mono-150: #16171b;       /* Telegram/Discord Channel & Dialog List */
+  --mono-200: #1e1f24;       /* Discord Chat Canvas */
+  --mono-250: #25262c;       /* Incoming Message Bubble & Card */
+  --mono-300: #2f3138;       /* Hover Surface & Outgoing Bubble */
+  --mono-350: #3a3c44;       /* Active Hover Surface */
+  --mono-400: #4e5058;       /* Discord Icon Muted */
+  --mono-500: #6d737d;       /* Muted Subtle Text */
+  --mono-600: #949ba4;       /* Telegram/Discord Secondary Text */
+  --mono-700: #b5bac1;       /* Light Silver Secondary */
+  --mono-800: #e0e2e5;       /* High-contrast Near White */
+  --mono-900: #ffffff;       /* Pure White Text & Badges */
 
-  /* Legacy & Semantic Theme Aliases */
-  --solar-orange-primary: #ff9900;
-  --solar-orange-light: #ffa826;
-  --solar-amber-bright: #ffb733;
-  --gradient-solar-fire: linear-gradient(135deg, #ffa826 0%, #ff9900 60%, #e68a00 100%);
-  --gradient-solar-pill: linear-gradient(135deg, #ff9900 0%, #e68a00 100%);
-  --shadow-solar-card: 0 16px 40px -10px rgba(0, 0, 0, 0.8), 0 6px 16px -4px rgba(0, 0, 0, 0.5);
-  --shadow-solar-glow: 0 8px 28px -4px rgba(255, 153, 0, 0.35);
-  --shadow-solar-hover: 0 12px 36px -6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 153, 0, 0.25);
+  /* Semantic Theme Mapping */
+  --bg-void: var(--mono-50);
+  --bg-rail: var(--mono-100);
+  --bg-drawer: var(--mono-150);
+  --bg-canvas: var(--mono-200);
+  --bg-surface-0: var(--mono-150);
+  --bg-surface-1: var(--mono-200);
+  --bg-surface-2: var(--mono-250);
+  --bg-surface-3: var(--mono-300);
+  --bg-surface-input: var(--mono-250);
 
-  /* Deep Matte Obsidian Space (Clean, Minimalist, High Contrast) */
-  --bg-void: #070709;
-  --bg-space: #0b0c10;
-  --bg-canvas: #0f1016;
-  --bg-surface-0: rgba(17, 18, 25, 0.72);
-  --bg-surface-1: rgba(24, 26, 36, 0.65);
-  --bg-surface-2: rgba(32, 35, 48, 0.7);
-  --bg-surface-3: rgba(42, 46, 62, 0.75);
-  --bg-surface-input: rgba(12, 13, 18, 0.85);
-
-  /* Foreground & Text Hierarchy */
+  /* Typography Colors */
   --text-pure: #ffffff;
-  --text-bright: #f3f4f6;
-  --text-muted: #9ca3af;
-  --text-subtle: #6b7280;
-  --text-dim: #4b5563;
+  --text-bright: #f2f3f5;
+  --text-muted: #949ba4;
+  --text-subtle: #6d737d;
+  --text-dim: #4e5058;
 
-  /* Accent Status Colors */
-  --accent-mint: #10b981;
-  --accent-ice: #38bdf8;
-  --accent-amber: #f59e0b;
+  /* High-Contrast Accents (Black & White Only) */
+  --accent-white: #ffffff;
+  --accent-black: #000000;
+  --accent-mint: #ffffff;    /* Monochrome active presence */
+  --accent-amber: #e0e2e5;
+  --accent-ice: #d1d5db;
 
-  /* Boysic Gradients */
-  --gradient-boysic-primary: linear-gradient(135deg, #ffa826 0%, #ff9900 60%, #e68a00 100%);
-  --gradient-boysic-subtle: linear-gradient(135deg, rgba(255, 153, 0, 0.18) 0%, rgba(230, 138, 0, 0.06) 100%);
-  --gradient-boysic-pill: linear-gradient(135deg, rgba(255, 153, 0, 0.22) 0%, rgba(230, 138, 0, 0.12) 100%);
-  --gradient-dark-card: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.2) 100%);
+  /* Aliases for Full Compatibility */
+  --boysic-orange: #ffffff;
+  --boysic-orange-hover: #e0e2e5;
+  --boysic-orange-deep: #cccccc;
+  --boysic-orange-glow: rgba(255, 255, 255, 0.2);
+  --boysic-orange-subtle: rgba(255, 255, 255, 0.08);
+  --boysic-orange-border: rgba(255, 255, 255, 0.25);
+  --solar-orange-primary: #ffffff;
+  --solar-orange-light: #e0e2e5;
+  --solar-amber-bright: #ffffff;
+  --gradient-solar-fire: linear-gradient(180deg, #ffffff 0%, #d8dadf 100%);
+  --gradient-solar-pill: linear-gradient(180deg, #32343b 0%, #292a30 100%);
+  --shadow-solar-card: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-solar-glow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  --shadow-solar-hover: 0 8px 28px rgba(0, 0, 0, 0.8);
 
-  /* Apple Liquid Frosted Glass */
-  --glass-border: 1px solid rgba(255, 255, 255, 0.09);
-  --glass-border-light: 1px solid rgba(255, 255, 255, 0.16);
-  --glass-border-accent: 1px solid rgba(255, 153, 0, 0.38);
-  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
-  --glass-specular-bottom: inset 0 -1px 0 0 rgba(0, 0, 0, 0.6);
+  /* Gradients */
+  --gradient-mono-badge: linear-gradient(180deg, #ffffff 0%, #e6e6e6 100%);
+  --gradient-mono-bubble-out: linear-gradient(180deg, #32333a 0%, #28292f 100%);
+  --gradient-mono-bubble-in: linear-gradient(180deg, #25262c 0%, #1f2025 100%);
 
-  --glass-blur-deep: blur(28px) saturate(180%);
-  --glass-blur-standard: blur(20px) saturate(160%);
-  --shadow-card: 0 16px 40px -10px rgba(0, 0, 0, 0.8), 0 6px 16px -4px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 8px 28px -4px rgba(255, 153, 0, 0.35);
-  --shadow-hover: 0 12px 36px -6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 153, 0, 0.25);
+  /* Borders & Glass Specular */
+  --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-border-light: 1px solid rgba(255, 255, 255, 0.15);
+  --glass-border-accent: 1px solid rgba(255, 255, 255, 0.3);
+  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 
-  /* Modern Apple Radii */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 16px;
-  --r-lg: 22px;
-  --r-xl: 28px;
+  --glass-blur-deep: blur(20px);
+  --glass-blur-standard: blur(14px);
+
+  /* Radii */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
   --r-pill: 9999px;
 
-  /* Smooth Elastic Transitions */
+  /* Smooth Transitions */
   --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-discord: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Reset & Base */
@@ -89,7 +101,7 @@
 
 body {
   font-family: var(--font-family);
-  background-color: var(--bg-void);
+  background-color: var(--mono-50);
   color: var(--text-pure);
   width: 100vw;
   height: 100vh;
@@ -99,83 +111,70 @@ body {
   user-select: none;
 }
 
-/* Ambient Deep Obsidian Glow */
+/* Ambient Background (Monochrome Deep Obsidian Canvas) */
 .spatial-ambient {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  overflow: hidden;
   background: 
-    radial-gradient(circle at 50% 0%, rgba(255, 153, 0, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 10% 90%, rgba(255, 153, 0, 0.04) 0%, transparent 45%),
-    radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.03) 0%, transparent 45%),
-    #070709;
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.015) 0%, transparent 50%),
+    var(--mono-50);
 }
 
-/* Glass Utility Classes */
+/* Glass Panels in Monochrome */
 .glass-panel {
   background: var(--bg-surface-0);
-  backdrop-filter: var(--glass-blur-deep);
-  -webkit-backdrop-filter: var(--glass-blur-deep);
   border: var(--glass-border);
-  box-shadow: var(--shadow-card), var(--glass-specular-top);
-  border-radius: var(--r-xl);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border-radius: var(--r-lg);
   position: relative;
-  transition: transform 0.26s var(--ease-apple), 
-              box-shadow 0.26s var(--ease-apple), 
-              border-color 0.26s var(--ease-apple);
 }
 
 .glass-capsule {
   background: var(--bg-surface-0);
-  backdrop-filter: var(--glass-blur-deep);
-  -webkit-backdrop-filter: var(--glass-blur-deep);
   border: var(--glass-border);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--glass-specular-top);
   border-radius: var(--r-pill);
 }
 
-/* Tactile Modern Buttons */
+/* Tactile Modern Monochrome Buttons */
 .tactile-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   font-family: var(--font-family);
   font-size: 13px;
   font-weight: 600;
   color: var(--text-bright);
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--r-sm);
-  padding: 7px 16px;
+  padding: 6px 14px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), var(--glass-specular-top);
-  transition: all 0.22s var(--ease-apple);
+  transition: all 0.18s var(--ease-discord);
 }
 
 .tactile-btn:hover {
-  transform: translateY(-2px) scale(1.02);
-  background: var(--boysic-orange-subtle);
-  border-color: var(--boysic-orange-border);
-  color: #fff;
-  box-shadow: var(--shadow-hover);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 
 .tactile-btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.97);
 }
 
 .tactile-btn.active {
-  background: var(--gradient-boysic-primary);
-  color: #000;
+  background: #ffffff;
+  color: #000000;
   font-weight: 700;
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: var(--shadow-glow);
+  border-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);
 }
 
-/* Minimal Custom Scrollbar */
+/* Minimal Custom Scrollbar (Telegram / Discord dark scrollbar) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -186,10 +185,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: var(--r-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--boysic-orange);
+  background: rgba(255, 255, 255, 0.28);
 }

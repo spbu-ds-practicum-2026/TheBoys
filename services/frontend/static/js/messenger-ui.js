@@ -501,7 +501,7 @@ function filterDialogs(btn, filterType) {
   });
 }
 
-// Helper: Recalculate Total Unread Badge in Top Island
+// Helper: Recalculate Total Unread Badge across Navigation Rail & Header
 function updateUnreadCounterBadge() {
   const badges = document.querySelectorAll('.deck-item-badge');
   let total = 0;
@@ -509,15 +509,20 @@ function updateUnreadCounterBadge() {
     total += parseInt(b.textContent, 10) || 1;
   });
 
-  const segmentCounter = document.querySelector('.segment-counter');
-  if (segmentCounter) {
-    if (total > 0) {
-      segmentCounter.style.display = 'inline-block';
-      segmentCounter.textContent = total;
-    } else {
-      segmentCounter.style.display = 'none';
+  const railBadge = document.querySelector('.rail-badge');
+  const headerBadge = document.querySelector('.header-unread-counter');
+  const segmentCounters = document.querySelectorAll('.segment-counter');
+
+  [railBadge, headerBadge, ...segmentCounters].forEach(el => {
+    if (el) {
+      if (total > 0) {
+        el.style.display = 'inline-block';
+        el.textContent = total;
+      } else {
+        el.style.display = 'none';
+      }
     }
-  }
+  });
 }
 
 // 6. Sound Module Playback Demo
@@ -631,7 +636,7 @@ function escapeHtml(string) {
   return String(string).replace(/[&<>"']/g, s => entityMap[s]);
 }
 
-// 8. Slide-Out Left Drawer Controller (Apple Spatial Drawer)
+// 8. Slide-Out Left Drawer Controller (Discord / Telegram Style)
 let isDrawerOpen = localStorage.getItem('boysic_drawer_open') !== 'false';
 
 function applyDrawerState() {
@@ -654,10 +659,7 @@ function applyDrawerState() {
 
   if (headerBtn) {
     headerBtn.classList.toggle('drawer-active', isDrawerOpen);
-    const label = headerBtn.querySelector('.header-drawer-label');
-    if (label) {
-      label.textContent = isDrawerOpen ? 'Скрыть диалоги' : 'Все диалоги';
-    }
+    headerBtn.title = isDrawerOpen ? 'Скрыть панель (Ctrl+B)' : 'Показать панель (Ctrl+B)';
   }
 }
 
