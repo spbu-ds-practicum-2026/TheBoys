@@ -10,7 +10,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети (узел app-2)',
     avatarText: 'АС',
-    avatarBg: 'var(--gradient-ice-accent)',
+    avatarBg: 'var(--bg-surface-2)',
     listening: 'Midnight Echoes',
     messages: [
       {
@@ -55,7 +55,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети (узел app-1)',
     avatarText: 'ОИ',
-    avatarBg: '#141824',
+    avatarBg: 'var(--bg-surface-2)',
     listening: null,
     messages: [
       {
@@ -95,7 +95,7 @@ const CHATS_STORE = {
     status: 'offline',
     statusText: 'был(а) в сети 45 мин назад',
     avatarText: 'ПГ',
-    avatarBg: '#10141e',
+    avatarBg: 'var(--bg-surface-2)',
     listening: null,
     messages: [
       {
@@ -128,7 +128,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети (узел app-1)',
     avatarText: 'АЕ',
-    avatarBg: '#121c2a',
+    avatarBg: 'var(--bg-surface-2)',
     listening: 'Neon Sunset Drive',
     messages: [
       {
@@ -196,14 +196,14 @@ function toggleConsolePlay(button) {
 
   if (isConsolePlaying) {
     if (vinyl) vinyl.style.animationPlayState = 'running';
-    button.style.boxShadow = '0 0 24px rgba(56, 189, 248, 0.8)';
+    button.style.boxShadow = '0 0 10px rgba(226, 183, 20, 0.4)';
     svg.innerHTML = `
       <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
       <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
     `;
   } else {
     if (vinyl) vinyl.style.animationPlayState = 'paused';
-    button.style.boxShadow = 'var(--shadow-ice-glow)';
+    button.style.boxShadow = 'none';
     svg.innerHTML = `
       <polygon points="5 3 19 12 5 21 5 3"></polygon>
     `;
@@ -320,7 +320,7 @@ function renderChatMessages(chat) {
   // Timeline pill
   const timelinePill = document.createElement('div');
   timelinePill.className = 'chat-timeline-pill';
-  timelinePill.textContent = 'Сегодня';
+  timelinePill.textContent = '[ сегодня ]';
   flow.appendChild(timelinePill);
 
   // Render all messages in sequence

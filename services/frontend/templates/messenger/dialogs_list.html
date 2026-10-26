@@ -1,38 +1,38 @@
-<!-- Spatial Dialog Deck (Floating Left Module) -->
-<aside class="dialog-deck glass-panel">
+<!-- Typewriter Dialog Deck (Left Module) -->
+<aside class="dialog-deck">
   <!-- Deck Header -->
   <div class="deck-header">
-    <span class="deck-title">Диалоги</span>
-    <button class="tactile-btn" style="padding: 5px 12px; font-size: 12px;" title="Новый диалог">
-      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
+    <span class="deck-title">[ диалоги ]</span>
+    <button class="tactile-btn" style="padding: 4px 10px; font-size: 11px;" title="Новый диалог">
+      <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
-      <span>Новый</span>
+      <span>+диалог</span>
     </button>
   </div>
 
-  <!-- Search Capsule -->
+  <!-- Search Input -->
   <div class="deck-search">
     <svg viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="8"></circle>
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
-    <input type="text" class="deck-search-input" placeholder="Поиск диалогов..." oninput="handleSearchDialogs(this.value)">
+    <input type="text" class="deck-search-input" placeholder="поиск диалогов..." oninput="handleSearchDialogs(this.value)">
   </div>
 
   <!-- Quick Filter Chips -->
   <div class="deck-filter-chips">
-    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">🎵 С треками</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'unread')">Непрочитанные (3)</button>
+    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">[все]</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">[треки]</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'unread')">[новые (3)]</button>
   </div>
 
   <!-- Dialog Stream (Click to Switch Chats!) -->
   <div class="deck-list" id="dialogs-deck-list">
     <!-- Dialog 1: Alice (Active) -->
     <div class="deck-item active" data-chat-id="1" onclick="selectChat(1)">
-      <div class="deck-item-avatar" style="background: var(--gradient-ice-accent);">
+      <div class="deck-item-avatar">
         АС
         <span class="deck-presence-dot"></span>
       </div>
@@ -43,14 +43,14 @@
         </div>
         <div class="deck-item-bottom">
           <span class="deck-item-preview">🎵 Midnight Echoes</span>
-          <span style="font-size: 11px; color: var(--slate-ice-light);">• Трек</span>
+          <span style="font-size: 10px; color: var(--accent-amber);">[трек]</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 2: Oleg -->
     <div class="deck-item" data-chat-id="2" onclick="selectChat(2)">
-      <div class="deck-item-avatar" style="background: #141824; border-color: rgba(56, 189, 248, 0.4);">
+      <div class="deck-item-avatar">
         ОИ
         <span class="deck-presence-dot"></span>
       </div>
@@ -68,7 +68,7 @@
 
     <!-- Dialog 3: Pavel -->
     <div class="deck-item" data-chat-id="3" onclick="selectChat(3)">
-      <div class="deck-item-avatar" style="background: #10141e;">
+      <div class="deck-item-avatar">
         ПГ
         <span class="deck-presence-dot offline"></span>
       </div>
@@ -85,7 +85,7 @@
 
     <!-- Dialog 4: Artem -->
     <div class="deck-item" data-chat-id="4" onclick="selectChat(4)">
-      <div class="deck-item-avatar" style="background: #121c2a; border-color: rgba(56, 189, 248, 0.35);">
+      <div class="deck-item-avatar">
         АЕ
         <span class="deck-presence-dot"></span>
       </div>

@@ -1,16 +1,16 @@
 /* ==========================================================================
-   Boysic Settings — Ultra-Transparent Glass Bento Grid
-   Palette: Slate-Ice Blue, Pure White, Obsidian
+   Boysic Settings — Typewriter Bento Console
+   Palette: Carbon Obsidian, Matte Slate, Amber Gold & Ice Blue
    ========================================================================== */
 
 .bento-settings-stage {
   flex: 1;
   width: 100%;
   overflow-y: auto;
-  padding: 4px 6px 40px 6px;
+  padding: 4px 6px 30px 6px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .bento-header {
@@ -21,15 +21,16 @@
 }
 
 .bento-header-title {
-  font-size: 24px;
+  font-family: var(--font-family);
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-pure);
-  letter-spacing: -0.4px;
+  letter-spacing: 0.02em;
 }
 
 .bento-header-desc {
-  font-size: 13px;
-  color: var(--text-subtle);
+  font-size: 12px;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -37,7 +38,7 @@
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 /* 1. Profile Hero Card (Span 12) */
@@ -46,39 +47,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 28px;
+  padding: 18px 22px;
+  background: var(--bg-surface-0);
+  border: var(--border-subtle);
+  border-radius: var(--r-md);
 }
 
 .profile-hero-left {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
 }
 
 .profile-hero-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--gradient-ice-accent);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-sm);
+  background: var(--bg-surface-2);
+  border: 1px solid rgba(226, 183, 20, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-family: var(--font-family);
+  font-size: 16px;
   font-weight: 700;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  box-shadow: var(--shadow-ice-glow);
+  color: var(--accent-amber);
 }
 
 .profile-hero-name {
-  font-size: 18px;
+  font-family: var(--font-family);
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-pure);
 }
 
 .profile-hero-handle {
-  font-size: 13px;
-  color: var(--text-subtle);
+  font-size: 12px;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -86,39 +91,43 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
-  padding: 3px 10px;
-  border-radius: var(--r-pill);
-  background: var(--gradient-ice-soft);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: var(--slate-ice-light);
-  font-size: 11.5px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-xs);
+  background: var(--accent-amber-subtle);
+  border: 1px solid rgba(226, 183, 20, 0.25);
+  color: var(--accent-amber);
+  font-size: 11px;
   font-weight: 600;
 }
 
 /* 2. Bento Card: Half (Span 6) */
 .bento-card-half {
   grid-column: span 6;
-  padding: 18px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  background: var(--bg-surface-0);
+  border: var(--border-subtle);
+  border-radius: var(--r-md);
 }
 
 .bento-card-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14.5px;
-  font-weight: 600;
+  gap: 8px;
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text-pure);
   margin-bottom: 2px;
 }
 
 .bento-card-title svg {
-  width: 17px;
-  height: 17px;
-  stroke: var(--slate-ice-primary);
+  width: 15px;
+  height: 15px;
+  stroke: var(--accent-amber);
   stroke-width: 2;
   fill: none;
 }
@@ -128,15 +137,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 11px 14px;
-  border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.2s ease;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  background: var(--bg-surface-1);
+  border: var(--border-ultra-subtle);
+  transition: all 0.15s var(--ease-mechanical);
 }
 
 .bento-item-row:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--bg-surface-2);
+  border-color: var(--border-subtle);
 }
 
 .bento-item-label {
@@ -145,23 +155,23 @@
 }
 
 .bento-label-primary {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-pure);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-bright);
 }
 
 .bento-label-secondary {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-subtle);
   margin-top: 1px;
 }
 
-/* Spatial Switch */
+/* Typewriter Switch */
 .spatial-switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 26px;
+  width: 38px;
+  height: 22px;
 }
 
 .spatial-switch input {
@@ -174,33 +184,32 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: rgba(255, 255, 255, 0.12);
-  transition: all 0.3s var(--ease-elastic);
-  border-radius: var(--r-pill);
+  background-color: var(--bg-surface-3);
+  transition: all 0.2s var(--ease-mechanical);
+  border-radius: var(--r-xs);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .spatial-switch-slider:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
+  height: 16px;
+  width: 16px;
   left: 2px;
   bottom: 2px;
-  background-color: #ffffff;
-  transition: all 0.3s var(--ease-elastic);
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  background-color: var(--text-muted);
+  transition: all 0.2s var(--ease-mechanical);
+  border-radius: 2px;
 }
 
 input:checked + .spatial-switch-slider {
-  background: var(--gradient-ice-accent);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+  background: var(--accent-amber-subtle);
+  border-color: var(--accent-amber);
 }
 
 input:checked + .spatial-switch-slider:before {
-  transform: translateX(18px);
+  transform: translateX(16px);
+  background-color: var(--accent-amber);
 }
 
 /* Footer / Sign Out */
@@ -209,5 +218,8 @@ input:checked + .spatial-switch-slider:before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 14px 20px;
+  background: var(--bg-surface-0);
+  border: var(--border-subtle);
+  border-radius: var(--r-md);
 }
