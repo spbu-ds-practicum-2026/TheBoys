@@ -3,64 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boysic — Typewriter Terminal</title>
+  <title>Boysic — Solar Cosmic Glass</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/messenger.css">
   <link rel="stylesheet" href="/static/css/settings.css">
 </head>
 <body>
-  <!-- Ambient Matte Background Texture -->
-  <div class="spatial-ambient">
-    <div class="ambient-ice-lens"></div>
+  <!-- Cosmic Starfield & Black Hole Accretion Disk (Gargantua Lens) -->
+  <div class="spatial-ambient" id="cosmic-canvas">
+    <div class="starfield"></div>
+    <div class="black-hole-singularity" id="black-hole-singularity">
+      <div class="accretion-disk-glow"></div>
+      <div class="accretion-disk-beam"></div>
+      <div class="event-horizon"></div>
+    </div>
   </div>
 
+  <!-- Interactive Solar Cursor Glow (Toggleable in Settings) -->
+  <div id="solar-cursor-spotlight" class="solar-cursor-spotlight"></div>
+
   <div class="spatial-app">
-    <!-- 1. TOP TYPEWRITER NAVIGATION BAR -->
+    <!-- 1. TOP FLOATING DYNAMIC ISLAND (Apple Spatial Navigation) -->
     <header class="dynamic-island-nav glass-capsule">
       <!-- Brand Capsule -->
-      <div class="brand-capsule" onclick="switchNavTab('chats')" title="Boysic Terminal">
+      <div class="brand-capsule" onclick="switchNavTab('chats')" title="Boysic Space">
         <div class="brand-icon">
           <svg viewBox="0 0 24 24">
             <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
           </svg>
         </div>
-        <span class="brand-text">boysic</span>
+        <span class="brand-text">Boysic</span>
         <span class="brand-dot"></span>
-        <span class="brand-tag">v0.2</span>
+        <span class="brand-pill-tag">Solar OS</span>
       </div>
 
-      <!-- Segmented Navigation Controls: [плеер], [чаты], [импорт] -->
+      <!-- Segmented Navigation Controls: Плеер, Чаты, Импорт своей музыки -->
       <nav class="nav-segment-control">
         <!-- 1. Плеер -->
         <button class="nav-segment-btn" id="btn-tab-player" onclick="switchNavTab('player')" title="Аудиоплеер">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
             <circle cx="8" cy="18" r="3"/>
             <circle cx="18" cy="16" r="3"/>
             <path d="M11 18V4l10-2v14"/>
           </svg>
-          <span>плеер</span>
+          <span>Плеер</span>
         </button>
 
         <!-- 2. Чаты (Default Active) -->
         <button class="nav-segment-btn active" id="btn-tab-chats" onclick="switchNavTab('chats')" title="Мессенджер">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
           </svg>
-          <span>чаты</span>
+          <span>Чаты</span>
           <span class="segment-counter">3</span>
         </button>
 
         <!-- 3. Импорт своей музыки -->
         <button class="nav-segment-btn" id="btn-tab-import" onclick="switchNavTab('import')" title="Загрузка MP3 треков">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
             <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
             <path d="M12 12v9"/>
             <path d="m16 16-4-4-4 4"/>
           </svg>
-          <span>импорт mp3</span>
+          <span>Импорт треков</span>
         </button>
       </nav>
 
@@ -68,25 +76,25 @@
       <div class="nav-user-cluster">
         <div class="cluster-pill" title="Узел обслуживания кластера">
           <span class="cluster-dot"></span>
-          <span>node: app-1</span>
+          <span>app-1</span>
         </div>
 
-        <button class="tactile-btn" id="btn-tab-settings" onclick="switchNavTab('settings')" title="Параметры системы">
-          <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
+        <button class="tactile-btn" id="btn-tab-settings" onclick="switchNavTab('settings')" style="padding: 6px 14px; font-size: 12.5px;" title="Параметры системы">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
-          <span>параметры</span>
+          <span>Параметры</span>
         </button>
 
         <div class="user-capsule-btn" onclick="switchNavTab('settings')" title="Профиль: Дмитрий Бызов">
-          <div class="user-mini-avatar">дб</div>
-          <span class="user-mini-name">дмитрий</span>
+          <div class="user-mini-avatar">ДБ</div>
+          <span class="user-mini-name">Дмитрий</span>
         </div>
       </div>
     </header>
 
-    <!-- 2. MAIN STAGE (Dynamic Tabs Viewport) -->
+    <!-- 2. MAIN VIEWPORT (Dynamic Tabs Viewport) -->
     <main class="main-viewport">
       <!-- Tab 1: Плеер (Placeholder) -->
       <section id="view-player" class="spatial-stage" style="display: none; width: 100%; height: 100%;">
@@ -110,20 +118,20 @@
       </section>
     </main>
 
-    <!-- 3. MONKEYTYPE-INSPIRED COMMAND & STATUS BAR -->
+    <!-- 3. COSMIC TELEMETRY FOOTER -->
     <footer class="terminal-footer">
       <div class="footer-left">
-        <span class="footer-hotkey"><kbd>tab</kbd> + <kbd>enter</kbd> фокус ввода</span>
-        <span class="footer-hotkey"><kbd>esc</kbd> меню</span>
+        <span class="footer-hotkey"><kbd>tab</kbd> + <kbd>enter</kbd> фокус</span>
+        <span class="footer-hotkey"><kbd>esc</kbd> навигация</span>
         <span class="footer-dim">•</span>
-        <span class="footer-dim">russian 10k</span>
+        <span class="footer-tag">solar singularity: active</span>
       </div>
       <div class="footer-right">
         <span class="footer-tag"><span class="status-pulse-dot"></span> seq: total order</span>
         <span class="footer-dim">•</span>
         <span class="footer-tag">ws: connected</span>
         <span class="footer-dim">•</span>
-        <span class="footer-tag">ping: 11ms</span>
+        <span class="footer-tag">cluster: 2 nodes</span>
       </div>
     </footer>
   </div>

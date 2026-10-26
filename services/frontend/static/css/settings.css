@@ -1,16 +1,15 @@
 /* ==========================================================================
-   Boysic Settings — Typewriter Bento Console
-   Palette: Carbon Obsidian, Matte Slate, Amber Gold & Ice Blue
+   Boysic Settings — Solar Cosmic Bento Grid (Apple VisionOS Style)
    ========================================================================== */
 
 .bento-settings-stage {
   flex: 1;
   width: 100%;
   overflow-y: auto;
-  padding: 4px 6px 30px 6px;
+  padding: 6px 8px 30px 8px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .bento-header {
@@ -21,15 +20,14 @@
 }
 
 .bento-header-title {
-  font-family: var(--font-family);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-pure);
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
 }
 
 .bento-header-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -38,7 +36,26 @@
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 12px;
+  gap: 14px;
+}
+
+/* Base Glass Card */
+.glass-card {
+  background: var(--bg-surface-0);
+  backdrop-filter: var(--glass-blur-deep);
+  -webkit-backdrop-filter: var(--glass-blur-deep);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-solar-card), var(--glass-specular-top);
+  border-radius: var(--r-xl);
+  transition: transform 0.25s var(--ease-apple), 
+              box-shadow 0.25s var(--ease-apple), 
+              border-color 0.25s var(--ease-apple);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249, 115, 22, 0.35);
+  box-shadow: var(--shadow-solar-hover);
 }
 
 /* 1. Profile Hero Card (Span 12) */
@@ -47,42 +64,38 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 22px;
-  background: var(--bg-surface-0);
-  border: var(--border-subtle);
-  border-radius: var(--r-md);
+  padding: 22px 28px;
 }
 
 .profile-hero-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
 }
 
 .profile-hero-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--r-sm);
-  background: var(--bg-surface-2);
-  border: 1px solid rgba(226, 183, 20, 0.35);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gradient-solar-fire);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-family);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--accent-amber);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: var(--shadow-solar-glow);
 }
 
 .profile-hero-name {
-  font-family: var(--font-family);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-pure);
 }
 
 .profile-hero-handle {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -91,62 +104,59 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
-  padding: 2px 8px;
-  border-radius: var(--r-xs);
-  background: var(--accent-amber-subtle);
-  border: 1px solid rgba(226, 183, 20, 0.25);
-  color: var(--accent-amber);
-  font-size: 11px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  color: var(--solar-amber-bright);
+  font-size: 11.5px;
   font-weight: 600;
 }
 
 /* 2. Bento Card: Half (Span 6) */
 .bento-card-half {
   grid-column: span 6;
-  padding: 16px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: var(--bg-surface-0);
-  border: var(--border-subtle);
-  border-radius: var(--r-md);
+  gap: 12px;
 }
 
 .bento-card-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--font-family);
-  font-size: 13px;
+  gap: 10px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--text-pure);
   margin-bottom: 2px;
 }
 
 .bento-card-title svg {
-  width: 15px;
-  height: 15px;
-  stroke: var(--accent-amber);
+  width: 17px;
+  height: 17px;
+  stroke: var(--solar-orange-primary);
   stroke-width: 2;
   fill: none;
 }
 
-/* Bento Item Row */
+/* Bento Item Row with Tactile Micro-Hover */
 .bento-item-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 12px;
-  border-radius: var(--r-sm);
-  background: var(--bg-surface-1);
-  border: var(--border-ultra-subtle);
-  transition: all 0.15s var(--ease-mechanical);
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s var(--ease-apple);
 }
 
 .bento-item-row:hover {
-  background: var(--bg-surface-2);
-  border-color: var(--border-subtle);
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.3);
+  transform: translateX(2px);
 }
 
 .bento-item-label {
@@ -155,23 +165,23 @@
 }
 
 .bento-label-primary {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-bright);
 }
 
 .bento-label-secondary {
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--text-subtle);
   margin-top: 1px;
 }
 
-/* Typewriter Switch */
+/* Apple Spatial Switch */
 .spatial-switch {
   position: relative;
   display: inline-block;
-  width: 38px;
-  height: 22px;
+  width: 44px;
+  height: 26px;
 }
 
 .spatial-switch input {
@@ -184,42 +194,31 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: var(--bg-surface-3);
-  transition: all 0.2s var(--ease-mechanical);
-  border-radius: var(--r-xs);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: all 0.3s var(--ease-elastic);
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
 .spatial-switch-slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
+  height: 20px;
+  width: 20px;
   left: 2px;
   bottom: 2px;
-  background-color: var(--text-muted);
-  transition: all 0.2s var(--ease-mechanical);
-  border-radius: 2px;
+  background-color: #ffffff;
+  transition: all 0.3s var(--ease-elastic);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 input:checked + .spatial-switch-slider {
-  background: var(--accent-amber-subtle);
-  border-color: var(--accent-amber);
+  background: var(--gradient-solar-fire);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.45);
 }
 
 input:checked + .spatial-switch-slider:before {
-  transform: translateX(16px);
-  background-color: var(--accent-amber);
-}
-
-/* Footer / Sign Out */
-.bento-card-footer {
-  grid-column: span 12;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  background: var(--bg-surface-0);
-  border: var(--border-subtle);
-  border-radius: var(--r-md);
+  transform: translateX(18px);
 }

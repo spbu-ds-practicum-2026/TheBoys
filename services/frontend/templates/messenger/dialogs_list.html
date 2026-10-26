@@ -1,31 +1,34 @@
-<!-- Typewriter Dialog Deck (Left Module) -->
-<aside class="dialog-deck">
+<!-- Solar Cosmic Dialog Deck (Left Apple Module) -->
+<aside class="dialog-deck glass-panel">
   <!-- Deck Header -->
   <div class="deck-header">
-    <span class="deck-title">[ диалоги ]</span>
-    <button class="tactile-btn" style="padding: 4px 10px; font-size: 11px;" title="Новый диалог">
-      <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="deck-title">Диалоги</span>
+      <span class="brand-pill-tag">4</span>
+    </div>
+    <button class="tactile-btn" style="padding: 5px 12px; font-size: 12px;" title="Новый диалог">
+      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
-      <span>+диалог</span>
+      <span>Новый</span>
     </button>
   </div>
 
-  <!-- Search Input -->
+  <!-- Search Input Capsule -->
   <div class="deck-search">
     <svg viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="8"></circle>
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
-    <input type="text" class="deck-search-input" placeholder="поиск диалогов..." oninput="handleSearchDialogs(this.value)">
+    <input type="text" class="deck-search-input" placeholder="Поиск сообщений и контактов..." oninput="handleSearchDialogs(this.value)">
   </div>
 
   <!-- Quick Filter Chips -->
   <div class="deck-filter-chips">
-    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">[все]</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">[треки]</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'unread')">[новые (3)]</button>
+    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">🎵 С треками</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'unread')">Непрочитанные (3)</button>
   </div>
 
   <!-- Dialog Stream (Click to Switch Chats!) -->
@@ -43,7 +46,7 @@
         </div>
         <div class="deck-item-bottom">
           <span class="deck-item-preview">🎵 Midnight Echoes</span>
-          <span style="font-size: 10px; color: var(--accent-amber);">[трек]</span>
+          <span style="font-size: 11px; color: var(--solar-amber-bright); font-weight: 600;">• Трек</span>
         </div>
       </div>
     </div>

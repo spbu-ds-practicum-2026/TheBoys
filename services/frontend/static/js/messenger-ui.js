@@ -1,5 +1,5 @@
 /**
- * Boysic Messenger — Ultra-Transparent Liquid Glass & Interactive Engine
+ * Boysic Messenger — Solar Cosmic Glass & Apple Spatial Edition
  */
 
 // Global State Store
@@ -8,9 +8,9 @@ const CHATS_STORE = {
     id: 1,
     name: 'Алиса Смирнова',
     status: 'online',
-    statusText: 'в сети (узел app-2)',
+    statusText: 'в сети [узел app-2]',
     avatarText: 'АС',
-    avatarBg: 'var(--bg-surface-2)',
+    avatarBg: 'var(--gradient-solar-fire)',
     listening: 'Midnight Echoes',
     messages: [
       {
@@ -53,7 +53,7 @@ const CHATS_STORE = {
     id: 2,
     name: 'Олег Иванов',
     status: 'online',
-    statusText: 'в сети (узел app-1)',
+    statusText: 'в сети [узел app-1]',
     avatarText: 'ОИ',
     avatarBg: 'var(--bg-surface-2)',
     listening: null,
@@ -126,7 +126,7 @@ const CHATS_STORE = {
     id: 4,
     name: 'Артём Еременко',
     status: 'online',
-    statusText: 'в сети (узел app-1)',
+    statusText: 'в сети [узел app-1]',
     avatarText: 'АЕ',
     avatarBg: 'var(--bg-surface-2)',
     listening: 'Neon Sunset Drive',
@@ -180,7 +180,6 @@ function switchNavTab(tabName) {
     }
   });
 
-  // If opening chats, ensure active chat is focused and scrolled
   if (tabName === 'chats') {
     const flow = document.getElementById('spatial-messages-flow');
     if (flow) flow.scrollTop = flow.scrollHeight;
@@ -196,7 +195,7 @@ function toggleConsolePlay(button) {
 
   if (isConsolePlaying) {
     if (vinyl) vinyl.style.animationPlayState = 'running';
-    button.style.boxShadow = '0 0 10px rgba(226, 183, 20, 0.4)';
+    button.style.boxShadow = 'var(--shadow-solar-glow)';
     svg.innerHTML = `
       <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
       <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
@@ -216,7 +215,7 @@ function simulateFileUpload() {
   const origText = textEl ? textEl.textContent : '';
   if (textEl) {
     textEl.textContent = '⏳ Файл выбран: track_demo_320kbps.mp3 (запуск извлечения тегов mutagen)...';
-    textEl.style.color = 'var(--slate-ice-light)';
+    textEl.style.color = 'var(--solar-amber-bright)';
     setTimeout(() => {
       textEl.textContent = '✅ Теги извлечены: "Midnight Echoes — The Boys Band" (готово к репликации)';
       setTimeout(() => {
@@ -320,7 +319,7 @@ function renderChatMessages(chat) {
   // Timeline pill
   const timelinePill = document.createElement('div');
   timelinePill.className = 'chat-timeline-pill';
-  timelinePill.textContent = '[ сегодня ]';
+  timelinePill.textContent = 'Сегодня';
   flow.appendChild(timelinePill);
 
   // Render all messages in sequence
@@ -330,7 +329,7 @@ function renderChatMessages(chat) {
 
     if (msg.type === 'track') {
       row.innerHTML = `
-        <div class="msg-bubble" style="padding: 5px;">
+        <div class="msg-bubble" style="padding: 4px;">
           <div class="sound-module-card" id="sound-module-${msg.id}">
             <div class="sound-module-vinyl">
               <div class="vinyl-center"></div>
@@ -394,7 +393,6 @@ function renderChatMessages(chat) {
     flow.appendChild(typing);
   }
 
-  // Smooth scroll to bottom
   flow.scrollTop = flow.scrollHeight;
 }
 
@@ -421,10 +419,8 @@ function handleSendSpatialMessage(event) {
     delivered: true
   };
 
-  // Push to local store
   chat.messages.push(newMsg);
 
-  // Append to current stream
   const flow = document.getElementById('spatial-messages-flow');
   const typingBubble = document.getElementById('spatial-typing-bubble');
 
@@ -452,7 +448,6 @@ function handleSendSpatialMessage(event) {
   input.value = '';
   flow.scrollTop = flow.scrollHeight;
 
-  // Update preview & time in left deck
   const activeDeckItem = document.querySelector(`.deck-item[data-chat-id="${chat.id}"]`);
   if (activeDeckItem) {
     const previewEl = activeDeckItem.querySelector('.deck-item-preview');
@@ -527,32 +522,94 @@ function toggleSpatialTrack(button) {
   const playIcon = button.querySelector('svg');
   isCurrentTrackPlaying = !isCurrentTrackPlaying;
 
+  const vinyl = card.querySelector('.sound-module-vinyl');
+  const waveform = card.querySelector('.sound-waveform');
+
   if (isCurrentTrackPlaying) {
     card.classList.add('playing');
+    if (vinyl) vinyl.classList.add('spinning');
+    if (waveform) waveform.classList.add('pulsing');
     playIcon.innerHTML = `
       <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
       <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
     `;
   } else {
     card.classList.remove('playing');
+    if (vinyl) vinyl.classList.remove('spinning');
+    if (waveform) waveform.classList.remove('pulsing');
     playIcon.innerHTML = `
       <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"></polygon>
     `;
   }
 }
 
-// 7. Settings Toggles (Physics & Lens)
+// 7. Interactive Solar Cursor Spotlight & Settings
+let cursorGlowEnabled = localStorage.getItem('boysic_cursor_glow') !== 'false';
+
+function initCursorSpotlight() {
+  const spotlight = document.getElementById('solar-cursor-spotlight');
+  if (!spotlight) return;
+
+  if (!cursorGlowEnabled) {
+    spotlight.style.display = 'none';
+  }
+
+  let mouseX = window.innerWidth / 2;
+  let mouseY = window.innerHeight / 2;
+  let currentX = mouseX;
+  let currentY = mouseY;
+
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function animateSpotlight() {
+    if (cursorGlowEnabled && spotlight.style.display !== 'none') {
+      currentX += (mouseX - currentX) * 0.18;
+      currentY += (mouseY - currentY) * 0.18;
+      spotlight.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+    }
+    requestAnimationFrame(animateSpotlight);
+  }
+  requestAnimationFrame(animateSpotlight);
+}
+
+function toggleCursorGlow(checkbox) {
+  cursorGlowEnabled = checkbox.checked;
+  localStorage.setItem('boysic_cursor_glow', cursorGlowEnabled);
+  const spotlight = document.getElementById('solar-cursor-spotlight');
+  if (spotlight) {
+    spotlight.style.display = cursorGlowEnabled ? 'block' : 'none';
+  }
+}
+
+function toggleBlackHole(checkbox) {
+  const isEnabled = checkbox.checked;
+  localStorage.setItem('boysic_black_hole', isEnabled);
+  const canvas = document.getElementById('cosmic-canvas');
+  if (canvas) {
+    canvas.style.opacity = isEnabled ? '1' : '0.15';
+  }
+}
+
+function toggleHaptics(checkbox) {
+  const isEnabled = checkbox.checked;
+  localStorage.setItem('boysic_haptics', isEnabled);
+  document.body.classList.toggle('disable-tactile-lift', !isEnabled);
+}
+
 function toggleSpatialBlur(checkbox) {
   const root = document.documentElement;
   if (checkbox.checked) {
-    root.style.setProperty('--glass-blur-deep', 'blur(32px) saturate(200%)');
+    root.style.setProperty('--glass-blur-deep', 'blur(28px) saturate(190%)');
   } else {
     root.style.setProperty('--glass-blur-deep', 'blur(0px) saturate(100%)');
   }
 }
 
 function toggleSpatialLens(checkbox) {
-  const lens = document.querySelector('.ambient-ice-lens');
+  const lens = document.querySelector('.accretion-disk-glow');
   if (lens) {
     lens.style.display = checkbox.checked ? 'block' : 'none';
   }
@@ -569,7 +626,21 @@ function escapeHtml(string) {
   return String(string).replace(/[&<>"']/g, s => entityMap[s]);
 }
 
-// Initial Boot: Set Alice (Chat 1) as active on page load
+// Initial Boot: Set Alice (Chat 1) as active on page load & init cursor spotlight
 document.addEventListener('DOMContentLoaded', () => {
   selectChat(1);
+  initCursorSpotlight();
+
+  const savedCursorToggle = document.getElementById('spatial-toggle-cursor');
+  if (savedCursorToggle) {
+    savedCursorToggle.checked = cursorGlowEnabled;
+  }
+
+  const savedBlackHole = localStorage.getItem('boysic_black_hole');
+  const blackHoleToggle = document.getElementById('spatial-toggle-black-hole');
+  if (savedBlackHole !== null && blackHoleToggle) {
+    const isEnabled = savedBlackHole !== 'false';
+    blackHoleToggle.checked = isEnabled;
+    toggleBlackHole(blackHoleToggle);
+  }
 });

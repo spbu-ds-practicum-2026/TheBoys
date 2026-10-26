@@ -1,5 +1,5 @@
-<!-- Chat Canvas Stage (Typewriter Terminal Style) -->
-<section class="chat-canvas">
+<!-- Chat Canvas Stage (Apple Spatial Liquid Glass) -->
+<section class="chat-canvas glass-panel">
   <!-- 1. Chat Canvas Header -->
   <header class="chat-canvas-header">
     <div class="chat-recipient-info">
@@ -18,22 +18,22 @@
           </span>
         </div>
         <span class="chat-recipient-status online" id="active-recipient-status">
-          <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: currentColor;"></span>
-          в сети [узел app-2]
+          <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+          в сети (узел app-2)
         </span>
       </div>
     </div>
 
     <!-- Header Actions -->
-    <div style="display: flex; gap: 6px;">
-      <button class="tactile-btn" style="padding: 5px 10px;" title="Поиск по сообщениям">
-        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
+    <div style="display: flex; gap: 8px;">
+      <button class="tactile-btn" style="padding: 6px 12px;" title="Поиск по сообщениям">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </button>
-      <button class="tactile-btn" style="padding: 5px 10px;" title="Опции диалога">
-        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
+      <button class="tactile-btn" style="padding: 6px 12px;" title="Опции диалога">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="12" cy="12" r="1.5"></circle>
           <circle cx="12" cy="5" r="1.5"></circle>
           <circle cx="12" cy="19" r="1.5"></circle>
@@ -45,7 +45,7 @@
   <!-- 2. Messages Stream Flow -->
   <div class="chat-messages-flow" id="spatial-messages-flow">
     <!-- Date Badge -->
-    <div class="chat-timeline-pill">[ 26.10.2026 // сегодня ]</div>
+    <div class="chat-timeline-pill">Сегодня</div>
 
     <!-- Incoming Message 1 -->
     <div class="msg-row incoming">
@@ -61,7 +61,7 @@
     <div class="msg-row incoming">
       <div class="msg-bubble" style="padding: 4px;">
         {% include "messenger/components/message_track.html" %}
-        <div class="msg-meta" style="padding: 2px 8px 3px 0;">
+        <div class="msg-meta" style="padding: 2px 10px 4px 0;">
           <span>19:41</span>
         </div>
       </div>
@@ -104,11 +104,11 @@
     </div>
   </div>
 
-  <!-- 3. TYPEWRITER FLOATING COMPOSER -->
+  <!-- 3. APPLE FLOATING COMPOSER CAPSULE -->
   <form class="floating-composer-island" id="spatial-composer-form" onsubmit="handleSendSpatialMessage(event)">
     <!-- Attach Track / Audio Action -->
     <button type="button" class="composer-attach-btn" title="Отправить трек из каталога">
-      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
         <path d="M9 18V5l12-2v13"></path>
         <circle cx="6" cy="18" r="3"></circle>
         <circle cx="18" cy="16" r="3"></circle>
@@ -120,11 +120,11 @@
       type="text" 
       id="composer-input" 
       class="composer-input-field" 
-      placeholder="написать сообщение... [enter для отправки]" 
+      placeholder="Написать сообщение Алисе..." 
       autocomplete="off"
     >
 
-    <!-- Send Action -->
+    <!-- Sunset Send Action Orb -->
     <button type="submit" class="composer-send-orb" title="Отправить (Enter)">
       <svg viewBox="0 0 24 24">
         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
