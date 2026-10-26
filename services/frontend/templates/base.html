@@ -11,9 +11,19 @@
   <link rel="stylesheet" href="/static/css/messenger.css">
   <link rel="stylesheet" href="/static/css/settings.css">
 </head>
-<body>
-  <!-- Ambient Deep Obsidian Void -->
-  <div class="spatial-ambient"></div>
+<body data-active-tab="{{ active_tab|default('chats') }}">
+  <!-- Cosmic Starfield & Black Hole Accretion Disk (Gargantua Lens) -->
+  <div class="spatial-ambient" id="cosmic-canvas">
+    <div class="starfield"></div>
+    <div class="black-hole-singularity" id="black-hole-singularity">
+      <div class="accretion-disk-glow"></div>
+      <div class="accretion-disk-beam"></div>
+      <div class="event-horizon"></div>
+    </div>
+  </div>
+
+  <!-- Interactive Solar Cursor Glow (Toggleable in Settings) -->
+  <div id="solar-cursor-spotlight" class="solar-cursor-spotlight"></div>
 
   <!-- Discord & Telegram Hybrid App Shell -->
   <div class="hybrid-app-shell">
@@ -27,11 +37,10 @@
 
       <div class="rail-separator"></div>
 
-      <!-- Navigation Icon Group with Visible Labels (Telegram Style) & HTMX Support -->
+      <!-- Navigation Icon Group with Visible Labels (Telegram Style) -->
       <nav class="rail-nav-group">
         <!-- 1. Chats (Default Active) -->
-        <button class="rail-tab-btn active" id="btn-tab-chats" onclick="switchNavTab('chats')"
-                hx-get="/htmx/views/chats" hx-trigger="click" hx-target="#view-chats" hx-swap="none"
+        <button class="rail-tab-btn {% if active_tab == 'chats' or not active_tab %}active{% endif %}" id="btn-tab-chats" onclick="switchNavTab('chats')"
                 title="Chats" data-ru="Чаты" data-i18n-title="nav_chats">
           <span class="rail-pill-indicator"></span>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -41,8 +50,7 @@
         </button>
 
         <!-- 2. Player -->
-        <button class="rail-tab-btn" id="btn-tab-player" onclick="switchNavTab('player')"
-                hx-get="/htmx/views/player" hx-trigger="click" hx-target="#view-player" hx-swap="none"
+        <button class="rail-tab-btn {% if active_tab == 'player' %}active{% endif %}" id="btn-tab-player" onclick="switchNavTab('player')"
                 title="Player" data-ru="Плеер" data-i18n-title="nav_player">
           <span class="rail-pill-indicator"></span>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -54,8 +62,7 @@
         </button>
 
         <!-- 3. Import Music & Files -->
-        <button class="rail-tab-btn" id="btn-tab-import" onclick="switchNavTab('import')"
-                hx-get="/htmx/views/import" hx-trigger="click" hx-target="#view-import" hx-swap="none"
+        <button class="rail-tab-btn {% if active_tab == 'import' %}active{% endif %}" id="btn-tab-import" onclick="switchNavTab('import')"
                 title="Импорт / Import" data-ru="Импорт своей музыки" data-i18n-title="nav_import">
           <span class="rail-pill-indicator"></span>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -67,8 +74,7 @@
         </button>
 
         <!-- 4. Settings / Parameters -->
-        <button class="rail-tab-btn" id="btn-tab-settings" onclick="switchNavTab('settings')"
-                hx-get="/htmx/views/settings" hx-trigger="click" hx-target="#view-settings" hx-swap="none"
+        <button class="rail-tab-btn {% if active_tab == 'settings' %}active{% endif %}" id="btn-tab-settings" onclick="switchNavTab('settings')"
                 title="Параметры / Settings" data-ru="Параметры" data-i18n-title="nav_settings">
           <span class="rail-pill-indicator"></span>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -98,12 +104,12 @@
     <div class="hybrid-main-content">
       <main class="main-viewport">
         <!-- Tab 1: Плеер -->
-        <section id="view-player" class="spatial-stage" style="display: none; width: 100%; height: 100%;">
+        <section id="view-player" class="spatial-stage" style="display: {% if active_tab == 'player' %}flex{% else %}none{% endif %}; width: 100%; height: 100%;">
           {% include "player/player_placeholder.html" %}
         </section>
 
         <!-- Tab 2: Чаты -->
-        <section id="view-chats" class="spatial-stage" style="display: flex; width: 100%; height: 100%; position: relative;">
+        <section id="view-chats" class="spatial-stage" style="display: {% if active_tab == 'chats' or not active_tab %}flex{% else %}none{% endif %}; width: 100%; height: 100%; position: relative;">
           <!-- Slide-out Drawer (Icon-Only, Clean Typewriter) -->
           {% include "messenger/dialogs_list.html" %}
           <!-- Chat Canvas with Attachment & Typewriter Support -->
@@ -111,12 +117,12 @@
         </section>
 
         <!-- Tab 3: Импорт своей музыки -->
-        <section id="view-import" class="spatial-stage" style="display: none; width: 100%; height: 100%;">
+        <section id="view-import" class="spatial-stage" style="display: {% if active_tab == 'import' %}flex{% else %}none{% endif %}; width: 100%; height: 100%;">
           {% include "import/import_placeholder.html" %}
         </section>
 
         <!-- Tab 4: Параметры -->
-        <section id="view-settings" class="spatial-stage" style="display: none; width: 100%; height: 100%;">
+        <section id="view-settings" class="spatial-stage" style="display: {% if active_tab == 'settings' %}flex{% else %}none{% endif %}; width: 100%; height: 100%;">
           {% include "settings/settings.html" %}
         </section>
       </main>

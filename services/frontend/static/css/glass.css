@@ -44,10 +44,16 @@
   --glass-border-accent: 1px solid rgba(255, 255, 255, 0.28);
   --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 
-  /* Status Colors */
+  /* Status Colors & Solar Accents */
   --accent-mint: #22c55e;
   --accent-blue: #38bdf8;
   --accent-silver: #d1d5db;
+  --solar-amber-bright: #fbbf24;
+  --solar-orange-light: #fdba74;
+  --solar-orange-primary: #f97316;
+
+  /* Glass Filter Variable (Controlled in Settings) */
+  --glass-blur-deep: blur(28px) saturate(190%);
 
   /* Radii */
   --r-xs: 4px;
@@ -187,4 +193,130 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.28);
+}
+
+/* ==========================================================================
+   COSMIC STARFIELD & GARGANTUA ACCRETION DISK (Toggleable in Settings)
+   ========================================================================== */
+.spatial-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 120%, #151821 0%, #0e1014 65%, #08090c 100%);
+  transition: opacity 0.5s ease;
+}
+
+.starfield {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1.2px 1.2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.2px 1.2px at 40px 70px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.2px 1.2px at 160px 120px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 230px 180px, #fdba74, rgba(0,0,0,0)),
+    radial-gradient(1.2px 1.2px at 310px 90px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 380px 240px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
+    radial-gradient(1.2px 1.2px at 460px 170px, rgba(251,191,36,0.8), rgba(0,0,0,0)),
+    radial-gradient(1.2px 1.2px at 540px 290px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 620px 70px, rgba(255,255,255,0.85), rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 650px 650px;
+  opacity: 0.28;
+}
+
+.black-hole-singularity {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0.45;
+  transition: opacity 0.5s ease;
+}
+
+.accretion-disk-glow {
+  position: absolute;
+  width: 420px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, 
+    rgba(251, 191, 36, 0.45) 0%, 
+    rgba(249, 115, 22, 0.3) 40%, 
+    rgba(194, 65, 12, 0.12) 70%, 
+    transparent 85%);
+  filter: blur(28px);
+  transform: rotate(-14deg);
+  animation: accretionBreath 10s ease-in-out infinite alternate;
+}
+
+.accretion-disk-beam {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  border: 14px solid transparent;
+  border-top: 14px solid rgba(251, 191, 36, 0.4);
+  border-bottom: 12px solid rgba(249, 115, 22, 0.25);
+  filter: blur(12px);
+  transform: rotate(-14deg);
+  animation: beamPulse 8s ease-in-out infinite alternate;
+}
+
+.event-horizon {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: #06070a;
+  box-shadow: 
+    0 0 16px 3px rgba(251, 191, 36, 0.5),
+    0 0 45px 8px rgba(249, 115, 22, 0.3),
+    0 0 80px 20px rgba(194, 65, 12, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+@keyframes accretionBreath {
+  0% { transform: rotate(-14deg) scale(0.96); opacity: 0.75; filter: blur(24px); }
+  100% { transform: rotate(-12deg) scale(1.04); opacity: 0.95; filter: blur(30px); }
+}
+
+@keyframes beamPulse {
+  0% { transform: rotate(-14deg) scale(0.98); opacity: 0.65; }
+  100% { transform: rotate(-13deg) scale(1.02); opacity: 0.85; }
+}
+
+/* ==========================================================================
+   INTERACTIVE SOLAR CURSOR SPOTLIGHT
+   ========================================================================== */
+.solar-cursor-spotlight {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 320px;
+  margin-left: -160px;
+  margin-top: -160px;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, 
+    rgba(249, 115, 22, 0.14) 0%, 
+    rgba(251, 191, 36, 0.06) 38%, 
+    transparent 70%);
+  filter: blur(20px);
+  transition: opacity 0.3s ease;
+  will-change: transform;
+}
+
+/* Tactile Haptics Disable Option */
+body.disable-tactile-lift .tactile-btn:hover {
+  transform: none !important;
 }

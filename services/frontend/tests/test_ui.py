@@ -60,3 +60,30 @@ async def test_htmx_endpoints():
         resp_partial_import = await client.get("/htmx/views/import")
         assert resp_partial_import.status_code == 200
         assert "Import Music" in resp_partial_import.text or "Импорт своей музыки" in resp_partial_import.text
+
+@pytest.mark.asyncio
+async def test_full_views_and_cosmic_features():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Direct GET /settings loads base with settings view set to display: flex
+        resp_settings = await client.get("/settings")
+        assert resp_settings.status_code == 200
+        assert 'id="view-settings" class="spatial-stage" style="display: flex;' in resp_settings.text
+        assert 'id="spatial-toggle-cursor"' in resp_settings.text
+        assert 'id="spatial-toggle-black-hole"' in resp_settings.text
+        assert 'id="spatial-toggle-blur"' in resp_settings.text
+        assert 'id="spatial-toggle-haptics"' in resp_settings.text
+        assert 'id="cosmic-canvas"' in resp_settings.text
+        assert 'id="solar-cursor-spotlight"' in resp_settings.text
+
+        # 2. Direct GET /import loads base with import view set to display: flex
+        resp_import = await client.get("/import")
+        assert resp_import.status_code == 200
+        assert 'id="view-import" class="spatial-stage" style="display: flex;' in resp_import.text
+        assert 'id="import-dropzone-box"' in resp_import.text
+        assert 'id="import-pipeline-tracker"' in resp_import.text
+
+        # 3. Chat header must not contain redundant header action buttons
+        resp_chats = await client.get("/chats")
+        assert resp_chats.status_code == 200
+        assert "header-action-btn" not in resp_chats.text

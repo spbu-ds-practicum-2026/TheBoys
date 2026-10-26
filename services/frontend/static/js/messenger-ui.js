@@ -585,13 +585,14 @@ function updateDialogsListLanguage() {
 // ============================================================================
 function switchNavTab(tabName) {
   const tabs = ['player', 'chats', 'import', 'settings'];
+  const validTab = tabs.includes(tabName) ? tabName : 'chats';
   
   tabs.forEach(name => {
     const btn = document.getElementById(`btn-tab-${name}`);
     const secBtn = document.getElementById(`sec-btn-${name}`);
     const view = document.getElementById(`view-${name}`);
 
-    if (name === tabName) {
+    if (name === validTab) {
       if (btn) btn.classList.add('active');
       if (secBtn) secBtn.classList.add('active');
       if (view) view.style.display = 'flex';
@@ -602,12 +603,28 @@ function switchNavTab(tabName) {
     }
   });
 
-  if (tabName === 'chats') {
+  try {
+    const newPath = validTab === 'chats' ? '/' : `/${validTab}`;
+    if (window.location.pathname !== newPath) {
+      history.pushState({ tab: validTab }, '', newPath);
+    }
+  } catch (e) {
+    // Ignore history restrictions in isolated environments
+  }
+
+  if (validTab === 'chats') {
     const flow = document.getElementById('spatial-messages-flow');
     if (flow) flow.scrollTop = flow.scrollHeight;
   }
 }
 window.switchNavTab = switchNavTab;
+
+// Handle browser Back / Forward navigation
+window.addEventListener('popstate', () => {
+  const path = window.location.pathname.replace(/^\//, '');
+  const tab = ['player', 'chats', 'import', 'settings'].includes(path) ? path : 'chats';
+  switchNavTab(tab);
+});
 
 // ============================================================================
 // 5. Select & Render Chat
@@ -1308,11 +1325,134 @@ function escapeHtml(string) {
 }
 
 // ============================================================================
+// 10. Cosmic Settings Physics & Interactive Spotlight Controls
+// ============================================================================
+let cursorGlowEnabled = localStorage.getItem('boysic_cursor_glow') !== 'false';
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+let currentX = mouseX;
+let currentY = mouseY;
+
+function initCursorSpotlight() {
+  const spotlight = document.getElementById('solar-cursor-spotlight');
+  if (!spotlight) return;
+
+  spotlight.style.display = cursorGlowEnabled ? 'block' : 'none';
+
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function animateSpotlight() {
+    if (cursorGlowEnabled && spotlight) {
+      currentX += (mouseX - currentX) * 0.14;
+      currentY += (mouseY - currentY) * 0.14;
+      spotlight.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+    }
+    requestAnimationFrame(animateSpotlight);
+  }
+  requestAnimationFrame(animateSpotlight);
+}
+
+function toggleCursorGlow(checkbox) {
+  cursorGlowEnabled = checkbox.checked;
+  localStorage.setItem('boysic_cursor_glow', cursorGlowEnabled);
+  const spotlight = document.getElementById('solar-cursor-spotlight');
+  if (spotlight) {
+    spotlight.style.display = cursorGlowEnabled ? 'block' : 'none';
+  }
+}
+window.toggleCursorGlow = toggleCursorGlow;
+
+function toggleBlackHole(checkbox) {
+  const isEnabled = checkbox.checked;
+  localStorage.setItem('boysic_black_hole', isEnabled);
+  const canvas = document.getElementById('cosmic-canvas');
+  if (canvas) {
+    canvas.style.opacity = isEnabled ? '1' : '0.12';
+  }
+}
+window.toggleBlackHole = toggleBlackHole;
+
+function toggleHaptics(checkbox) {
+  const isEnabled = checkbox.checked;
+  localStorage.setItem('boysic_haptics', isEnabled);
+  document.body.classList.toggle('disable-tactile-lift', !isEnabled);
+}
+window.toggleHaptics = toggleHaptics;
+
+function toggleSpatialBlur(checkbox) {
+  const isEnabled = checkbox.checked;
+  localStorage.setItem('boysic_spatial_blur', isEnabled);
+  const root = document.documentElement;
+  if (isEnabled) {
+    root.style.setProperty('--glass-blur-deep', 'blur(28px) saturate(190%)');
+  } else {
+    root.style.setProperty('--glass-blur-deep', 'blur(0px) saturate(100%)');
+  }
+}
+window.toggleSpatialBlur = toggleSpatialBlur;
+
+function toggleSpatialLens(checkbox) {
+  const isEnabled = checkbox.checked;
+  localStorage.setItem('boysic_spatial_lens', isEnabled);
+  const lens = document.querySelector('.accretion-disk-glow');
+  if (lens) {
+    lens.style.display = isEnabled ? 'block' : 'none';
+  }
+}
+window.toggleSpatialLens = toggleSpatialLens;
+
+// ============================================================================
 // 11. Initial Boot
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
   setLanguage(currentLang);
   applyDrawerState();
+
+  const initialTab = document.body.getAttribute('data-active-tab') || 'chats';
+  switchNavTab(initialTab);
+
   selectChat(1);
   setupDragAndDrop();
+  initCursorSpotlight();
+
+  // Synchronize Settings UI toggles with persisted localStorage
+  const savedCursorToggle = document.getElementById('spatial-toggle-cursor');
+  if (savedCursorToggle) {
+    savedCursorToggle.checked = cursorGlowEnabled;
+  }
+
+  const savedBlackHole = localStorage.getItem('boysic_black_hole');
+  const blackHoleToggle = document.getElementById('spatial-toggle-black-hole');
+  if (blackHoleToggle) {
+    const isEnabled = savedBlackHole !== 'false';
+    blackHoleToggle.checked = isEnabled;
+    toggleBlackHole(blackHoleToggle);
+  }
+
+  const savedHaptics = localStorage.getItem('boysic_haptics');
+  const hapticsToggle = document.getElementById('spatial-toggle-haptics');
+  if (hapticsToggle) {
+    const isEnabled = savedHaptics !== 'false';
+    hapticsToggle.checked = isEnabled;
+    toggleHaptics(hapticsToggle);
+  }
+
+  const savedBlur = localStorage.getItem('boysic_spatial_blur');
+  const blurToggle = document.getElementById('spatial-toggle-blur');
+  if (blurToggle) {
+    const isEnabled = savedBlur !== 'false';
+    blurToggle.checked = isEnabled;
+    toggleSpatialBlur(blurToggle);
+  }
+
+  const savedLens = localStorage.getItem('boysic_spatial_lens');
+  const lensToggle = document.getElementById('spatial-toggle-lens');
+  if (lensToggle) {
+    const isEnabled = savedLens !== 'false';
+    lensToggle.checked = isEnabled;
+    toggleSpatialLens(lensToggle);
+  }
 });
