@@ -1,32 +1,46 @@
-<!-- Chat Canvas Stage (Apple Spatial Liquid Glass) -->
-<section class="chat-canvas glass-panel">
+<!-- Full-Width Chat Canvas Stage (Apple Spatial Liquid Glass) -->
+<section class="chat-canvas glass-panel" id="chat-canvas-main">
   <!-- 1. Chat Canvas Header -->
   <header class="chat-canvas-header">
-    <div class="chat-recipient-info">
-      <div class="chat-recipient-avatar" id="active-recipient-avatar">
-        АС
-      </div>
-      <div class="chat-recipient-details">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="chat-recipient-name" id="active-recipient-name">Алиса Смирнова</span>
-          <!-- Dynamic listening indicator -->
-          <span class="listening-ticker">
-            <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-            <span>Midnight Echoes</span>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <!-- Quick Toggle for Slide-Out Drawer -->
+      <button class="header-drawer-btn" id="header-drawer-btn" onclick="toggleDialogsDrawer()" title="Открыть/скрыть панель диалогов (Ctrl+B)">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+        <span class="header-drawer-label">Все диалоги</span>
+        <span class="segment-counter header-unread-counter" style="display: inline-block;">3</span>
+      </button>
+
+      <!-- Recipient Profile Info -->
+      <div class="chat-recipient-info">
+        <div class="chat-recipient-avatar" id="active-recipient-avatar">
+          АС
+        </div>
+        <div class="chat-recipient-details">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="chat-recipient-name" id="active-recipient-name">Алиса Смирнова</span>
+            <!-- Dynamic listening indicator -->
+            <span class="listening-ticker">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              </svg>
+              <span>Midnight Echoes</span>
+            </span>
+          </div>
+          <span class="chat-recipient-status online" id="active-recipient-status">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+            в сети (узел app-2)
           </span>
         </div>
-        <span class="chat-recipient-status online" id="active-recipient-status">
-          <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-          в сети (узел app-2)
-        </span>
       </div>
     </div>
 
     <!-- Header Actions -->
     <div style="display: flex; gap: 8px;">
-      <button class="tactile-btn" style="padding: 6px 12px;" title="Поиск по сообщениям">
+      <button class="tactile-btn" style="padding: 6px 12px;" title="Поиск по переписке">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -124,7 +138,7 @@
       autocomplete="off"
     >
 
-    <!-- Sunset Send Action Orb -->
+    <!-- Send Action Button -->
     <button type="submit" class="composer-send-orb" title="Отправить (Enter)">
       <svg viewBox="0 0 24 24">
         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>

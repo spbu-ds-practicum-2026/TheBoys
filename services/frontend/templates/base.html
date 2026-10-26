@@ -3,44 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boysic — Solar Cosmic Glass</title>
+  <title>Boysic — Modern Messenger & Player</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/messenger.css">
   <link rel="stylesheet" href="/static/css/settings.css">
 </head>
 <body>
-  <!-- Cosmic Starfield & Black Hole Accretion Disk (Gargantua Lens) -->
-  <div class="spatial-ambient" id="cosmic-canvas">
-    <div class="starfield"></div>
-    <div class="black-hole-singularity" id="black-hole-singularity">
-      <div class="accretion-disk-glow"></div>
-      <div class="accretion-disk-beam"></div>
-      <div class="event-horizon"></div>
-    </div>
-  </div>
-
-  <!-- Interactive Solar Cursor Glow (Toggleable in Settings) -->
-  <div id="solar-cursor-spotlight" class="solar-cursor-spotlight"></div>
+  <!-- Ambient Space Canvas -->
+  <div class="spatial-ambient"></div>
 
   <div class="spatial-app">
-    <!-- 1. TOP FLOATING DYNAMIC ISLAND (Apple Spatial Navigation) -->
+    <!-- 1. TOP FLOATING NAVIGATION BAR (Modern Apple Island) -->
     <header class="dynamic-island-nav glass-capsule">
-      <!-- Brand Capsule -->
-      <div class="brand-capsule" onclick="switchNavTab('chats')" title="Boysic Space">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+      <!-- Left: Drawer Toggle & Brand Badge -->
+      <div class="nav-brand-group">
+        <!-- Sidebar Drawer Toggle Button -->
+        <button class="drawer-toggle-btn" id="btn-toggle-drawer" onclick="toggleDialogsDrawer()" title="Скрыть/показать диалоги (Ctrl+B)">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <path d="M14 9l-3 3 3 3"></path>
           </svg>
+          <span class="drawer-toggle-text">Диалоги</span>
+        </button>
+
+        <!-- Official Brand Logo -->
+        <div class="brand-badge-container" onclick="switchNavTab('chats')" title="Boysic">
+          <img src="/static/img/logo.jpg" alt="Boysic" class="boysic-logo-img">
         </div>
-        <span class="brand-text">Boysic</span>
-        <span class="brand-dot"></span>
-        <span class="brand-pill-tag">Solar OS</span>
       </div>
 
-      <!-- Segmented Navigation Controls: Плеер, Чаты, Импорт своей музыки -->
+      <!-- Center: Segmented Navigation Controls: Плеер, Чаты, Импорт -->
       <nav class="nav-segment-control">
         <!-- 1. Плеер -->
         <button class="nav-segment-btn" id="btn-tab-player" onclick="switchNavTab('player')" title="Аудиоплеер">
@@ -101,9 +97,11 @@
         {% include "player/player_placeholder.html" %}
       </section>
 
-      <!-- Tab 2: Чаты (Messenger View) -->
-      <section id="view-chats" class="spatial-stage" style="display: flex; width: 100%; height: 100%;">
+      <!-- Tab 2: Чаты (Slide-Out Drawer & Full Width Canvas) -->
+      <section id="view-chats" class="spatial-stage" style="display: flex; width: 100%; height: 100%; position: relative;">
+        <!-- Slide-out Left Drawer -->
         {% include "messenger/dialogs_list.html" %}
+        <!-- Full-Width Chat Canvas -->
         {% include "messenger/chat_window.html" %}
       </section>
 
@@ -118,20 +116,20 @@
       </section>
     </main>
 
-    <!-- 3. COSMIC TELEMETRY FOOTER -->
+    <!-- 3. FOOTER TELEMETRY -->
     <footer class="terminal-footer">
       <div class="footer-left">
-        <span class="footer-hotkey"><kbd>tab</kbd> + <kbd>enter</kbd> фокус</span>
-        <span class="footer-hotkey"><kbd>esc</kbd> навигация</span>
+        <span class="footer-hotkey"><kbd>ctrl</kbd> + <kbd>b</kbd> выдвинуть диалоги</span>
+        <span class="footer-hotkey"><kbd>enter</kbd> отправить</span>
         <span class="footer-dim">•</span>
-        <span class="footer-tag">solar singularity: active</span>
+        <span class="footer-tag">Boysic Stream Engine</span>
       </div>
       <div class="footer-right">
         <span class="footer-tag"><span class="status-pulse-dot"></span> seq: total order</span>
         <span class="footer-dim">•</span>
         <span class="footer-tag">ws: connected</span>
         <span class="footer-dim">•</span>
-        <span class="footer-tag">cluster: 2 nodes</span>
+        <span class="footer-tag">node: app-1</span>
       </div>
     </footer>
   </div>

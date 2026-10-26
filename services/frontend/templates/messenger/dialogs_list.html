@@ -1,18 +1,29 @@
-<!-- Solar Cosmic Dialog Deck (Left Apple Module) -->
-<aside class="dialog-deck glass-panel">
-  <!-- Deck Header -->
-  <div class="deck-header">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span class="deck-title">Диалоги</span>
-      <span class="brand-pill-tag">4</span>
+<!-- Slide-Out Left Dialogs Drawer (Выдвигающаяся панель) -->
+<aside class="dialogs-drawer-panel glass-panel" id="dialogs-drawer">
+  <!-- Drawer Header -->
+  <div class="drawer-header">
+    <div class="drawer-title-group">
+      <span class="drawer-title">Диалоги</span>
+      <span class="drawer-badge" id="drawer-total-badge">4</span>
     </div>
-    <button class="tactile-btn" style="padding: 5px 12px; font-size: 12px;" title="Новый диалог">
-      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-      </svg>
-      <span>Новый</span>
-    </button>
+    
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <button class="tactile-btn" style="padding: 5px 10px; font-size: 11.5px;" title="Новый диалог">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Новый</span>
+      </button>
+
+      <!-- Close Drawer Button -->
+      <button class="drawer-close-btn" onclick="toggleDialogsDrawer(false)" title="Скрыть панель (Ctrl+B)">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <!-- Search Input Capsule -->
@@ -21,14 +32,14 @@
       <circle cx="11" cy="11" r="8"></circle>
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
-    <input type="text" class="deck-search-input" placeholder="Поиск сообщений и контактов..." oninput="handleSearchDialogs(this.value)">
+    <input type="text" class="deck-search-input" placeholder="Поиск диалогов..." oninput="handleSearchDialogs(this.value)">
   </div>
 
   <!-- Quick Filter Chips -->
   <div class="deck-filter-chips">
     <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">🎵 С треками</button>
     <button class="filter-chip" onclick="filterDialogs(this, 'unread')">Непрочитанные (3)</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">🎵 Треки</button>
   </div>
 
   <!-- Dialog Stream (Click to Switch Chats!) -->
@@ -46,7 +57,7 @@
         </div>
         <div class="deck-item-bottom">
           <span class="deck-item-preview">🎵 Midnight Echoes</span>
-          <span style="font-size: 11px; color: var(--solar-amber-bright); font-weight: 600;">• Трек</span>
+          <span style="font-size: 11px; color: var(--boysic-orange); font-weight: 600;">• Трек</span>
         </div>
       </div>
     </div>

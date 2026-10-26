@@ -263,6 +263,11 @@ function selectChat(chatId) {
     input.placeholder = `Написать сообщение ${firstName}...`;
     input.focus();
   }
+
+  // On compact viewports, auto-collapse drawer when user picks a chat
+  if (window.innerWidth <= 860 && typeof isDrawerOpen !== 'undefined' && isDrawerOpen) {
+    toggleDialogsDrawer(false);
+  }
 }
 
 // Legacy alias to support any remaining onclick references
@@ -626,8 +631,57 @@ function escapeHtml(string) {
   return String(string).replace(/[&<>"']/g, s => entityMap[s]);
 }
 
-// Initial Boot: Set Alice (Chat 1) as active on page load & init cursor spotlight
+// 8. Slide-Out Left Drawer Controller (Apple Spatial Drawer)
+let isDrawerOpen = localStorage.getItem('boysic_drawer_open') !== 'false';
+
+function applyDrawerState() {
+  const drawer = document.getElementById('dialogs-drawer');
+  const toggleBtn = document.getElementById('btn-toggle-drawer');
+  const headerBtn = document.getElementById('header-drawer-btn');
+
+  if (drawer) {
+    if (isDrawerOpen) {
+      drawer.classList.remove('drawer-collapsed');
+    } else {
+      drawer.classList.add('drawer-collapsed');
+    }
+  }
+
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('active', isDrawerOpen);
+    toggleBtn.setAttribute('aria-expanded', isDrawerOpen ? 'true' : 'false');
+  }
+
+  if (headerBtn) {
+    headerBtn.classList.toggle('drawer-active', isDrawerOpen);
+    const label = headerBtn.querySelector('.header-drawer-label');
+    if (label) {
+      label.textContent = isDrawerOpen ? 'Скрыть диалоги' : 'Все диалоги';
+    }
+  }
+}
+
+function toggleDialogsDrawer(forceState) {
+  if (typeof forceState === 'boolean') {
+    isDrawerOpen = forceState;
+  } else {
+    isDrawerOpen = !isDrawerOpen;
+  }
+  localStorage.setItem('boysic_drawer_open', isDrawerOpen);
+  applyDrawerState();
+}
+
+// Global Hotkeys: Ctrl+B / Cmd+B for Drawer Toggle
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B' || e.key === 'и' || e.key === 'И')) {
+    e.preventDefault();
+    toggleDialogsDrawer();
+  }
+});
+
+// Initial Boot: Set Alice (Chat 1) as active on page load, drawer state & init cursor spotlight
 document.addEventListener('DOMContentLoaded', () => {
+  applyDrawerState();
   selectChat(1);
   initCursorSpotlight();
 

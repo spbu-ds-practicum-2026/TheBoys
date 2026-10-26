@@ -1,67 +1,73 @@
 /* ==========================================================================
-   Boysic — Solar Cosmic Glass & Black Hole Design System (Apple Spatial Edition)
-   Palette: Solar Orange (#f97316), Accretion Gold (#fbbf24), Deep Terracotta (#c2410c),
-            Cosmic Obsidian (#07070a), Starfield Sparkles
+   Boysic — Modern Liquid Glass & Signature Orange Palette
+   Inspired by: Boysic Official Logo (Pure White + Signature #ff9900 Badge + Deep Obsidian)
    ========================================================================== */
 
 :root {
-  /* Apple Spatial Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", sans-serif;
-  --font-mono: 'JetBrains Mono', 'Space Mono', 'SF Mono', Menlo, Consolas, monospace;
+  /* Apple Modern Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", -apple-system-subheadline, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
-  /* Cosmic Void & Solar Obsidian Palette */
-  --bg-void: #060608;
-  --bg-space: #090a0f;
-  --bg-canvas: #0c0d14;
-  --bg-surface-0: rgba(15, 16, 23, 0.65);
-  --bg-surface-1: rgba(22, 24, 34, 0.6);
-  --bg-surface-2: rgba(30, 33, 46, 0.65);
-  --bg-surface-3: rgba(40, 44, 60, 0.7);
-  --bg-surface-hover: rgba(249, 115, 22, 0.08);
-  --bg-surface-active: rgba(249, 115, 22, 0.16);
-  --bg-surface-input: rgba(12, 13, 19, 0.75);
+  /* Signature Boysic Logo Colors (Warm Golden Orange, Zero Red) */
+  --boysic-orange: #ff9900;
+  --boysic-orange-hover: #ffa826;
+  --boysic-orange-deep: #e68a00;
+  --boysic-orange-glow: rgba(255, 153, 0, 0.4);
+  --boysic-orange-subtle: rgba(255, 153, 0, 0.12);
+  --boysic-orange-border: rgba(255, 153, 0, 0.35);
 
-  /* Rich Nuanced Orange & Solar Spectrum */
-  --solar-orange-light: #fdba74;
-  --solar-orange-primary: #f97316;
-  --solar-orange-deep: #ea580c;
-  --solar-terracotta: #c2410c;
-  --solar-amber-bright: #fbbf24;
-  --solar-gold-glow: #f59e0b;
-  --solar-cream: #fff7ed;
+  /* Legacy & Semantic Theme Aliases */
+  --solar-orange-primary: #ff9900;
+  --solar-orange-light: #ffa826;
+  --solar-amber-bright: #ffb733;
+  --gradient-solar-fire: linear-gradient(135deg, #ffa826 0%, #ff9900 60%, #e68a00 100%);
+  --gradient-solar-pill: linear-gradient(135deg, #ff9900 0%, #e68a00 100%);
+  --shadow-solar-card: 0 16px 40px -10px rgba(0, 0, 0, 0.8), 0 6px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-solar-glow: 0 8px 28px -4px rgba(255, 153, 0, 0.35);
+  --shadow-solar-hover: 0 12px 36px -6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 153, 0, 0.25);
 
-  /* Text & Foreground Hierarchy */
+  /* Deep Matte Obsidian Space (Clean, Minimalist, High Contrast) */
+  --bg-void: #070709;
+  --bg-space: #0b0c10;
+  --bg-canvas: #0f1016;
+  --bg-surface-0: rgba(17, 18, 25, 0.72);
+  --bg-surface-1: rgba(24, 26, 36, 0.65);
+  --bg-surface-2: rgba(32, 35, 48, 0.7);
+  --bg-surface-3: rgba(42, 46, 62, 0.75);
+  --bg-surface-input: rgba(12, 13, 18, 0.85);
+
+  /* Foreground & Text Hierarchy */
   --text-pure: #ffffff;
-  --text-bright: #f8fafc;
-  --text-muted: rgba(248, 250, 252, 0.72);
-  --text-subtle: rgba(248, 250, 252, 0.45);
-  --text-dim: rgba(248, 250, 252, 0.25);
+  --text-bright: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-subtle: #6b7280;
+  --text-dim: #4b5563;
 
-  /* Status Accents */
-  --accent-mint: #34d399;
+  /* Accent Status Colors */
+  --accent-mint: #10b981;
   --accent-ice: #38bdf8;
-  --accent-violet: #a78bfa;
+  --accent-amber: #f59e0b;
 
-  /* Solar Gradients */
-  --gradient-solar-fire: linear-gradient(135deg, #fbbf24 0%, #f97316 50%, #c2410c 100%);
-  --gradient-solar-soft: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(249, 115, 22, 0.08) 100%);
-  --gradient-solar-pill: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(194, 65, 12, 0.15) 100%);
-  --gradient-glass-border: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(249, 115, 22, 0.35) 50%, rgba(255, 255, 255, 0.05) 100%);
+  /* Boysic Gradients */
+  --gradient-boysic-primary: linear-gradient(135deg, #ffa826 0%, #ff9900 60%, #e68a00 100%);
+  --gradient-boysic-subtle: linear-gradient(135deg, rgba(255, 153, 0, 0.18) 0%, rgba(230, 138, 0, 0.06) 100%);
+  --gradient-boysic-pill: linear-gradient(135deg, rgba(255, 153, 0, 0.22) 0%, rgba(230, 138, 0, 0.12) 100%);
+  --gradient-dark-card: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.2) 100%);
 
   /* Apple Liquid Frosted Glass */
   --glass-border: 1px solid rgba(255, 255, 255, 0.09);
-  --glass-border-light: 1px solid rgba(255, 255, 255, 0.18);
-  --glass-border-solar: 1px solid rgba(249, 115, 22, 0.38);
-  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
-  --glass-specular-bottom: inset 0 -1px 0 0 rgba(0, 0, 0, 0.5);
+  --glass-border-light: 1px solid rgba(255, 255, 255, 0.16);
+  --glass-border-accent: 1px solid rgba(255, 153, 0, 0.38);
+  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  --glass-specular-bottom: inset 0 -1px 0 0 rgba(0, 0, 0, 0.6);
 
-  --glass-blur-deep: blur(28px) saturate(190%);
-  --glass-blur-standard: blur(20px) saturate(170%);
-  --shadow-solar-card: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 10px 20px -5px rgba(0, 0, 0, 0.6);
-  --shadow-solar-glow: 0 8px 30px -4px rgba(249, 115, 22, 0.45);
-  --shadow-solar-hover: 0 12px 36px -6px rgba(0, 0, 0, 0.9), 0 0 24px rgba(249, 115, 22, 0.3);
+  --glass-blur-deep: blur(28px) saturate(180%);
+  --glass-blur-standard: blur(20px) saturate(160%);
+  --shadow-card: 0 16px 40px -10px rgba(0, 0, 0, 0.8), 0 6px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 8px 28px -4px rgba(255, 153, 0, 0.35);
+  --shadow-hover: 0 12px 36px -6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 153, 0, 0.25);
 
-  /* Apple Rounded Geometry (VisionOS / Sequoia style) */
+  /* Modern Apple Radii */
   --r-xs: 6px;
   --r-sm: 10px;
   --r-md: 16px;
@@ -69,9 +75,9 @@
   --r-xl: 28px;
   --r-pill: 9999px;
 
-  /* Tactile Physics Transitions */
-  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Smooth Elastic Transitions */
   --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Reset & Base */
@@ -93,155 +99,32 @@ body {
   user-select: none;
 }
 
-/* ==========================================================================
-   COSMIC BACKGROUND: BLACK HOLE & STARFIELD (Gargantua Style)
-   ========================================================================== */
-
+/* Ambient Deep Obsidian Glow */
 .spatial-ambient {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 40%, #120e18 0%, #08080c 60%, #030305 100%);
-  transition: opacity 0.5s ease;
+  background: 
+    radial-gradient(circle at 50% 0%, rgba(255, 153, 0, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(255, 153, 0, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.03) 0%, transparent 45%),
+    #070709;
 }
 
-/* Dynamic Starfield with twinkling particles */
-.starfield {
-  position: absolute;
-  inset: 0;
-  background-image: 
-    radial-gradient(1px 1px at 15% 20%, rgba(255, 255, 255, 0.9) 100%, transparent),
-    radial-gradient(1.5px 1.5px at 30% 75%, rgba(251, 191, 36, 0.9) 100%, transparent),
-    radial-gradient(1px 1px at 45% 15%, rgba(255, 255, 255, 0.8) 100%, transparent),
-    radial-gradient(1.5px 1.5px at 60% 85%, rgba(249, 115, 22, 0.8) 100%, transparent),
-    radial-gradient(1px 1px at 75% 30%, rgba(255, 255, 255, 0.85) 100%, transparent),
-    radial-gradient(1.5px 1.5px at 85% 65%, rgba(255, 255, 255, 0.9) 100%, transparent),
-    radial-gradient(1px 1px at 92% 12%, rgba(251, 191, 36, 0.7) 100%, transparent),
-    radial-gradient(1px 1px at 8% 80%, rgba(255, 255, 255, 0.75) 100%, transparent),
-    radial-gradient(1.2px 1.2px at 50% 90%, rgba(249, 115, 22, 0.7) 100%, transparent),
-    radial-gradient(1px 1px at 22% 40%, rgba(255, 255, 255, 0.6) 100%, transparent),
-    radial-gradient(1.5px 1.5px at 68% 50%, rgba(255, 255, 255, 0.8) 100%, transparent);
-  background-size: 550px 550px;
-  opacity: 0.65;
-  animation: starTwinkle 8s infinite alternate ease-in-out;
-}
-
-@keyframes starTwinkle {
-  0% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 0.8; }
-  100% { opacity: 0.65; transform: scale(1.02); }
-}
-
-/* Central Black Hole (Singularity & Glowing Accretion Disk) */
-.black-hole-singularity {
-  position: absolute;
-  top: 36%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 580px;
-  height: 580px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-}
-
-/* Gravitational Accretion Disk (Interstellar Plasma Ring) */
-.accretion-disk-glow {
-  position: absolute;
-  width: 620px;
-  height: 220px;
-  border-radius: 50%;
-  transform: rotate(-14deg);
-  background: radial-gradient(ellipse at center, 
-    transparent 32%, 
-    rgba(251, 191, 36, 0.55) 44%, 
-    rgba(249, 115, 22, 0.45) 54%, 
-    rgba(194, 65, 12, 0.25) 68%, 
-    transparent 78%);
-  filter: blur(28px);
-  animation: accretionBreath 10s ease-in-out infinite alternate;
-}
-
-/* Bent Light Upper Beam */
-.accretion-disk-beam {
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  border: 18px solid transparent;
-  border-top: 18px solid rgba(251, 191, 36, 0.6);
-  border-bottom: 14px solid rgba(249, 115, 22, 0.4);
-  filter: blur(14px);
-  transform: rotate(-14deg);
-  animation: beamPulse 8s ease-in-out infinite alternate;
-}
-
-/* Event Horizon (Pure Black Center) */
-.event-horizon {
-  position: absolute;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: #020204;
-  box-shadow: 
-    0 0 20px 4px rgba(251, 191, 36, 0.75),
-    0 0 55px 12px rgba(249, 115, 22, 0.45),
-    0 0 100px 30px rgba(194, 65, 12, 0.25);
-  border: 1px solid rgba(251, 191, 36, 0.4);
-}
-
-@keyframes accretionBreath {
-  0% { transform: rotate(-14deg) scale(0.96); opacity: 0.85; filter: blur(26px); }
-  100% { transform: rotate(-12deg) scale(1.05); opacity: 1; filter: blur(32px); }
-}
-
-@keyframes beamPulse {
-  0% { transform: rotate(-14deg) scale(0.98); opacity: 0.75; }
-  100% { transform: rotate(-13deg) scale(1.03); opacity: 0.95; }
-}
-
-/* ==========================================================================
-   INTERACTIVE SOLAR CURSOR SPOTLIGHT
-   ========================================================================== */
-.solar-cursor-spotlight {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 340px;
-  height: 340px;
-  margin-left: -170px;
-  margin-top: -170px;
-  pointer-events: none;
-  z-index: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle at center, 
-    rgba(249, 115, 22, 0.16) 0%, 
-    rgba(251, 191, 36, 0.08) 38%, 
-    transparent 70%);
-  filter: blur(24px);
-  transition: opacity 0.3s ease;
-  will-change: transform;
-}
-
-/* ==========================================================================
-   APPLE LIQUID GLASS UTILITIES & TACTILE HOVER PHYSICS
-   ========================================================================== */
-
+/* Glass Utility Classes */
 .glass-panel {
   background: var(--bg-surface-0);
   backdrop-filter: var(--glass-blur-deep);
   -webkit-backdrop-filter: var(--glass-blur-deep);
   border: var(--glass-border);
-  box-shadow: var(--shadow-solar-card), var(--glass-specular-top);
+  box-shadow: var(--shadow-card), var(--glass-specular-top);
   border-radius: var(--r-xl);
   position: relative;
-  transition: transform 0.28s var(--ease-apple), 
-              box-shadow 0.28s var(--ease-apple), 
-              border-color 0.28s var(--ease-apple);
+  transition: transform 0.26s var(--ease-apple), 
+              box-shadow 0.26s var(--ease-apple), 
+              border-color 0.26s var(--ease-apple);
 }
 
 .glass-capsule {
@@ -253,7 +136,7 @@ body {
   border-radius: var(--r-pill);
 }
 
-/* Tactile Buttons with Orange/Amber Micro-Physics */
+/* Tactile Modern Buttons */
 .tactile-btn {
   display: inline-flex;
   align-items: center;
@@ -262,7 +145,6 @@ body {
   font-family: var(--font-family);
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.01em;
   color: var(--text-bright);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -270,20 +152,15 @@ body {
   padding: 7px 16px;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), var(--glass-specular-top);
-  transition: transform 0.22s var(--ease-apple), 
-              background 0.22s var(--ease-apple), 
-              box-shadow 0.22s var(--ease-apple), 
-              border-color 0.22s var(--ease-apple),
-              color 0.22s var(--ease-apple);
+  transition: all 0.22s var(--ease-apple);
 }
 
-/* Tactile Hover Lift */
 .tactile-btn:hover {
   transform: translateY(-2px) scale(1.02);
-  background: rgba(249, 115, 22, 0.16);
-  border-color: rgba(251, 146, 60, 0.5);
-  color: var(--text-pure);
-  box-shadow: var(--shadow-solar-hover);
+  background: var(--boysic-orange-subtle);
+  border-color: var(--boysic-orange-border);
+  color: #fff;
+  box-shadow: var(--shadow-hover);
 }
 
 .tactile-btn:active {
@@ -291,13 +168,14 @@ body {
 }
 
 .tactile-btn.active {
-  background: var(--gradient-solar-fire);
-  color: #fff;
+  background: var(--gradient-boysic-primary);
+  color: #000;
+  font-weight: 700;
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: var(--shadow-solar-glow);
+  box-shadow: var(--shadow-glow);
 }
 
-/* Minimal Custom Scrollbar with Warm Amber Touch */
+/* Minimal Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -308,10 +186,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: var(--r-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.5);
+  background: var(--boysic-orange);
 }
