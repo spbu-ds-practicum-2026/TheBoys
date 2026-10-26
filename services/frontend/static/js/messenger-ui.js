@@ -1,18 +1,256 @@
 /**
- * Boysic Messenger — Discord & Telegram Dark Hybrid (Typewriter Edition)
- * Features: Typewriter Streaming, Functional Paperclip Attachments, File Import Pipeline
+ * Boysic Messenger — Modern Discord & Telegram Dark Hybrid (Refined Gray Edition)
+ * Features:
+ *  - Monochromatic Dark & Sleek Gray Avatars (No orange clutter)
+ *  - Bilingual i18n System (English Default, Instant Live RU/EN Switching)
+ *  - Typewriter Streaming & Monospace Precision
+ *  - Functional Paperclip File Attachments & Music Upload Pipeline
  */
 
-// Global State Store (Pure Messages & Documents, No Track Module Clutter)
+// ============================================================================
+// 1. Bilingual Translations Dictionary (EN Default / RU)
+// ============================================================================
+const I18N_DICTIONARY = {
+  en: {
+    // Navigation
+    nav_chats: 'Chats',
+    nav_player: 'Player',
+    nav_import: 'Import Music',
+    nav_settings: 'Settings',
+    user_status_online: 'Dmitry Byzov (online)',
+
+    // Drawer / Dialogs
+    search_placeholder: 'Search messages...',
+    hide_drawer: 'Hide drawer (Ctrl+B)',
+    show_drawer: 'Show drawer (Ctrl+B)',
+    filter_all: 'All Chats',
+    filter_direct: 'Direct',
+    filter_channels: 'Channels',
+
+    // Chat header & recipient
+    user_alice: 'Alice Smirnova',
+    user_oleg: 'Oleg Ivanov',
+    user_pavel: 'Pavel Grigoryev',
+    user_artem: 'Artem Eremenko',
+    recipient_online_node2: 'online [node app-2]',
+    recipient_online_node1: 'online [node app-1]',
+    recipient_offline_pavel: 'last seen 45 min ago',
+    search_chat_tooltip: 'Search conversation',
+    dialog_options_tooltip: 'Chat options',
+
+    // Timeline & typing
+    timeline_today: 'Today',
+    timeline_stream: '[ -- 2026-10-26 // LOG STREAM -- ]',
+    typing_alice: 'alice is typing...',
+    typing_oleg: 'oleg is typing...',
+    typing_pavel: 'pavel is typing...',
+    typing_artem: 'artem is typing...',
+
+    // Messages
+    msg_alice_1: 'Hello! Full-text search and file storage are up and running.',
+    msg_alice_2: 'Verified inter-node delivery via POST /internal/deliver — all sequence events arrive in strict order without duplicates.',
+    msg_alice_3: 'Great! Now attachments can be sent with any file format, and the music import section supports track uploads.',
+    msg_alice_4: 'Typewriter active: monospace input with tactile feedback and live cursor.',
+    alice_preview: 'Hello! Full-text search and storage are ready...',
+    oleg_preview: 'Can we send attachments via paperclip now?',
+    pavel_preview: 'Database schema committed',
+    artem_preview: 'Docker Compose cluster is up',
+
+    // Composer
+    attach_tooltip: 'Attach file (Paperclip)',
+    composer_placeholder: 'Write a message to {name}...',
+    emoji_tooltip: 'Insert emoji',
+    send_tooltip: 'Send message (Enter)',
+
+    // Footer
+    footer_drawer: 'drawer',
+    footer_send: 'send',
+    footer_engine: '[TTY // ENGINE: LIVE]',
+    footer_seq: 'seq: total order',
+    footer_ws: 'ws: connected',
+    footer_node: 'node: app-1',
+
+    // Player tab
+    player_badge: 'Audio Module',
+    player_title: 'Music Player',
+    player_desc: 'Global audio player with seamless background playback during messaging and navigation',
+    player_now_playing: 'NOW PLAYING',
+    player_shuffle: 'Shuffle',
+    player_prev: 'Previous',
+    player_play_pause: 'Play / Pause',
+    player_next: 'Next',
+    player_repeat: 'Repeat',
+    player_footer_note: 'Tracks replicated across 2 nodes (storage-1, storage-2). Streaming via HTTP /blobs/{id}',
+
+    // Import tab
+    import_badge: '[STORAGE // REPLICATION ENGINE]',
+    import_title: 'Import Music',
+    import_desc: 'Upload MP3/WAV to distributed cluster with auto ID3-tag extraction and multi-node replication',
+    dropzone_title: 'Drag & drop audio files here or click to browse',
+    dropzone_subtitle: 'Supports MP3, WAV, FLAC, OGG (up to 50 MB)',
+    chip_size: 'up to 50 MB',
+    chip_id3: 'ID3 Parser',
+    chip_replication: 'Replication: 2 copies',
+    step1_title: 'Upload to node',
+    step1_sub: 'Waiting for file selection...',
+    step2_title: 'ID3 Metadata',
+    step2_sub: 'Parsing tags and bitrate',
+    step3_title: 'Replication',
+    step3_sub: 'Synchronizing storage-1/storage-2',
+    catalog_title: '[UPLOADED TRACKS CATALOG]',
+    catalog_counter: '{count} tracks in cluster',
+    send_to_chat_btn: '💬 To chat',
+
+    // Settings tab
+    settings_title: 'System Settings',
+    settings_desc: 'Manage profile, glass physics, language and distributed cluster state'
+  },
+  ru: {
+    // Navigation
+    nav_chats: 'Чаты',
+    nav_player: 'Плеер',
+    nav_import: 'Импорт своей музыки',
+    nav_settings: 'Параметры',
+    user_status_online: 'Дмитрий Бызов (в сети)',
+
+    // Drawer / Dialogs
+    search_placeholder: 'Поиск сообщений...',
+    hide_drawer: 'Скрыть панель (Ctrl+B)',
+    show_drawer: 'Показать панель (Ctrl+B)',
+    filter_all: 'Все диалоги',
+    filter_direct: 'Личные',
+    filter_channels: 'Каналы',
+
+    // Chat header & recipient
+    user_alice: 'Алиса Смирнова',
+    user_oleg: 'Олег Иванов',
+    user_pavel: 'Павел Григорьев',
+    user_artem: 'Артём Еременко',
+    recipient_online_node2: 'в сети [узел app-2]',
+    recipient_online_node1: 'в сети [узел app-1]',
+    recipient_offline_pavel: 'был(а) в сети 45 мин назад',
+    search_chat_tooltip: 'Поиск по переписке',
+    dialog_options_tooltip: 'Опции диалога',
+
+    // Timeline & typing
+    timeline_today: 'Сегодня',
+    timeline_stream: '[ -- 2026-10-26 // ПОТОК СООБЩЕНИЙ -- ]',
+    typing_alice: 'alisa печатает...',
+    typing_oleg: 'oleg печатает...',
+    typing_pavel: 'pavel печатает...',
+    typing_artem: 'artem печатает...',
+
+    // Messages
+    msg_alice_1: 'Привет! Полнотекстовый поиск и хранилище файлов готовы к работе.',
+    msg_alice_2: 'Проверила доставку через межузловой протокол POST /internal/deliver — все события приходят строго по порядку sequence без дублей.',
+    msg_alice_3: 'Отлично! Теперь через скрепку можно прикреплять любые файлы, а в разделе импорта загружать треки с предпросмотром.',
+    msg_alice_4: 'Печатная машинка активна: monospace-набор с тактильным откликом и живым курсором.',
+    alice_preview: 'Привет! Проверила доставку сообщений...',
+    oleg_preview: 'Слушай, а вложения теперь отправляются?',
+    pavel_preview: 'Схему БД зафиксировал',
+    artem_preview: 'Docker Compose стенд поднят',
+
+    // Composer
+    attach_tooltip: 'Прикрепить файл (Скрепка)',
+    composer_placeholder: 'Написать сообщение {name}...',
+    emoji_tooltip: 'Вставить эмодзи',
+    send_tooltip: 'Отправить сообщение (Enter)',
+
+    // Footer
+    footer_drawer: 'панель',
+    footer_send: 'отправить',
+    footer_engine: '[TTY // ДВИЖОК: АКТИВЕН]',
+    footer_seq: 'seq: строгий порядок',
+    footer_ws: 'ws: подключено',
+    footer_node: 'узел: app-1',
+
+    // Player tab
+    player_badge: 'Аудио-модуль',
+    player_title: 'Музыкальный плеер',
+    player_desc: 'Глобальный аудиоплеер с непрерывным воспроизведением треков во время навигации и переписки',
+    player_now_playing: 'СЕЙЧАС ИГРАЕТ',
+    player_shuffle: 'Перемешать',
+    player_prev: 'Предыдущий',
+    player_play_pause: 'Воспроизведение / Пауза',
+    player_next: 'Следующий',
+    player_repeat: 'Повтор',
+    player_footer_note: 'Треки распределены в 2 копиях на узлах storage-1 и storage-2. Стриминг через HTTP /blobs/{id}',
+
+    // Import tab
+    import_badge: '[STORAGE // ДВИЖОК РЕПЛИКАЦИИ]',
+    import_title: 'Импорт своей музыки',
+    import_desc: 'Загрузка MP3/WAV в распределённый кластер с автоматическим извлечением ID3-тегов и репликацией на storage-узлы',
+    dropzone_title: 'Перетащите аудиофайлы сюда или нажмите для выбора',
+    dropzone_subtitle: 'Поддерживаются MP3, WAV, FLAC, OGG (до 50 МБ)',
+    chip_size: 'до 50 МБ',
+    chip_id3: 'Парсер ID3',
+    chip_replication: 'Репликация: 2 копии',
+    step1_title: 'Загрузка в узел',
+    step1_sub: 'Ожидание выбора файла...',
+    step2_title: 'ID3 Метаданные',
+    step2_sub: 'Парсинг тегов и битрейта',
+    step3_title: 'Репликация',
+    step3_sub: 'Синхронизация storage-1/storage-2',
+    catalog_title: '[КАТАЛОГ ЗАГРУЖЕННЫХ ТРЕКОВ]',
+    catalog_counter: '{count} трека в кластере',
+    send_to_chat_btn: '💬 В чат',
+
+    // Settings tab
+    settings_title: 'Параметры системы',
+    settings_desc: 'Управление профилем, космической физикой стекла и состоянием распределённого кластера'
+  }
+};
+
+// Current active language: English is strictly the default
+let currentLang = localStorage.getItem('boysic_lang') || 'en';
+
+// ============================================================================
+// 2. Chat Data Store with Bilingual Data & Sleek Gray Avatars
+// ============================================================================
 const CHATS_STORE = {
   1: {
     id: 1,
-    name: 'Алиса Смирнова',
+    name_en: 'Alice Smirnova',
+    name_ru: 'Алиса Смирнова',
+    initials_en: 'AS',
+    initials_ru: 'АС',
     status: 'online',
-    statusText: 'в сети [узел app-2]',
-    avatarText: 'АС',
-    avatarBg: 'var(--avatar-orange-gradient)',
-    messages: [
+    status_en: 'online [node app-2]',
+    status_ru: 'в сети [узел app-2]',
+    avatarBg: 'var(--avatar-gray-gradient)',
+    messages_en: [
+      {
+        id: 'msg-1-1',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Hello! Full-text search and file storage are up and running.',
+        time: '19:40'
+      },
+      {
+        id: 'msg-1-2',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Verified inter-node delivery via POST /internal/deliver — all sequence events arrive in strict order without duplicates.',
+        time: '19:41'
+      },
+      {
+        id: 'msg-1-3',
+        sender: 'outgoing',
+        type: 'text',
+        text: 'Great! Now attachments can be sent with any file format, and the music import section supports track uploads.',
+        time: '19:42',
+        delivered: true
+      },
+      {
+        id: 'msg-1-4',
+        sender: 'outgoing',
+        type: 'text',
+        text: 'Typewriter active: monospace input with tactile feedback and live cursor.',
+        time: '19:43',
+        delivered: true
+      }
+    ],
+    messages_ru: [
       {
         id: 'msg-1-1',
         sender: 'incoming',
@@ -47,12 +285,46 @@ const CHATS_STORE = {
   },
   2: {
     id: 2,
-    name: 'Олег Иванов',
+    name_en: 'Oleg Ivanov',
+    name_ru: 'Олег Иванов',
+    initials_en: 'OI',
+    initials_ru: 'ОИ',
     status: 'online',
-    statusText: 'в сети [узел app-1]',
-    avatarText: 'ОИ',
-    avatarBg: 'var(--avatar-orange-gradient)',
-    messages: [
+    status_en: 'online [node app-1]',
+    status_ru: 'в сети [узел app-1]',
+    avatarBg: 'var(--avatar-gray-gradient)',
+    messages_en: [
+      {
+        id: 'msg-2-1',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Hey Dmitry! Finishing up the layout for music catalog screens.',
+        time: '19:28'
+      },
+      {
+        id: 'msg-2-2',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Can we send attachments via paperclip now?',
+        time: '19:30'
+      },
+      {
+        id: 'msg-2-3',
+        sender: 'outgoing',
+        type: 'text',
+        text: 'Yes! Added full file selection with chip preview in composer and direct message stream upload.',
+        time: '19:32',
+        delivered: true
+      },
+      {
+        id: 'msg-2-4',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Awesome, testing photo and MP3 file uploads 👍',
+        time: '19:34'
+      }
+    ],
+    messages_ru: [
       {
         id: 'msg-2-1',
         sender: 'incoming',
@@ -86,12 +358,39 @@ const CHATS_STORE = {
   },
   3: {
     id: 3,
-    name: 'Павел Григорьев',
+    name_en: 'Pavel Grigoryev',
+    name_ru: 'Павел Григорьев',
+    initials_en: 'PG',
+    initials_ru: 'ПГ',
     status: 'offline',
-    statusText: 'был(а) в сети 45 мин назад',
-    avatarText: 'ПГ',
-    avatarBg: 'var(--avatar-orange-gradient)',
-    messages: [
+    status_en: 'last seen 45 min ago',
+    status_ru: 'был(а) в сети 45 мин назад',
+    avatarBg: 'var(--avatar-gray-gradient)',
+    messages_en: [
+      {
+        id: 'msg-3-1',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Hello! Database schema locked: conversations, messages, sessions, replicas.',
+        time: '18:10'
+      },
+      {
+        id: 'msg-3-2',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Using direct_key = min_id:max_id for 1-on-1 chats with monotonic seq.',
+        time: '18:12'
+      },
+      {
+        id: 'msg-3-3',
+        sender: 'outgoing',
+        type: 'text',
+        text: 'Excellent! Generating seq strictly within chat transaction to avoid race conditions.',
+        time: '18:15',
+        delivered: true
+      }
+    ],
+    messages_ru: [
       {
         id: 'msg-3-1',
         sender: 'incoming',
@@ -118,12 +417,31 @@ const CHATS_STORE = {
   },
   4: {
     id: 4,
-    name: 'Артём Еременко',
+    name_en: 'Artem Eremenko',
+    name_ru: 'Артём Еременко',
+    initials_en: 'AE',
+    initials_ru: 'АЕ',
     status: 'online',
-    statusText: 'в сети [узел app-1]',
-    avatarText: 'АЕ',
-    avatarBg: 'var(--avatar-orange-gradient)',
-    messages: [
+    status_en: 'online [node app-1]',
+    status_ru: 'в сети [узел app-1]',
+    avatarBg: 'var(--avatar-gray-gradient)',
+    messages_en: [
+      {
+        id: 'msg-4-1',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Docker Compose stack is online! Nginx load balances traffic between app-1 and app-2.',
+        time: '17:50'
+      },
+      {
+        id: 'msg-4-2',
+        sender: 'incoming',
+        type: 'text',
+        text: 'Containers replicate messages and files in real-time.',
+        time: '17:52'
+      }
+    ],
+    messages_ru: [
       {
         id: 'msg-4-1',
         sender: 'incoming',
@@ -145,8 +463,123 @@ const CHATS_STORE = {
 let currentActiveChatId = 1;
 let currentAttachments = [];
 
+// Get chat localized fields
+function getChatName(chat, lang = currentLang) {
+  return lang === 'ru' ? chat.name_ru : chat.name_en;
+}
+
+function getChatInitials(chat, lang = currentLang) {
+  return lang === 'ru' ? chat.initials_ru : chat.initials_en;
+}
+
+function getChatStatusText(chat, lang = currentLang) {
+  return lang === 'ru' ? chat.status_ru : chat.status_en;
+}
+
+function getChatMessages(chat, lang = currentLang) {
+  return lang === 'ru' ? chat.messages_ru : chat.messages_en;
+}
+
 // ============================================================================
-// 1. Navigation Tab Switching (Плеер, Чаты, Импорт, Параметры)
+// 3. Language Switching Engine (EN / RU)
+// ============================================================================
+function setLanguage(lang) {
+  if (lang !== 'en' && lang !== 'ru') lang = 'en';
+  currentLang = lang;
+  localStorage.setItem('boysic_lang', currentLang);
+
+  document.documentElement.lang = currentLang;
+
+  // Update switcher badges in rail
+  const badgeEn = document.getElementById('lang-badge-en');
+  const badgeRu = document.getElementById('lang-badge-ru');
+  if (badgeEn && badgeRu) {
+    if (currentLang === 'en') {
+      badgeEn.classList.add('active');
+      badgeRu.classList.remove('active');
+    } else {
+      badgeEn.classList.remove('active');
+      badgeRu.classList.add('active');
+    }
+  }
+
+  const dict = I18N_DICTIONARY[currentLang];
+
+  // Update elements with [data-i18n]
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) {
+      el.textContent = dict[key];
+    }
+  });
+
+  // Update elements with [data-i18n-placeholder]
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key]) {
+      const activeChat = CHATS_STORE[currentActiveChatId];
+      const firstName = activeChat ? getChatName(activeChat, currentLang).split(' ')[0] : 'user';
+      el.placeholder = dict[key].replace('{name}', firstName);
+    }
+  });
+
+  // Update elements with [data-i18n-title]
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (dict[key]) {
+      el.title = dict[key];
+    }
+  });
+
+  // Update dialogs drawer list items
+  updateDialogsListLanguage();
+
+  // Re-render active chat
+  const chat = CHATS_STORE[currentActiveChatId];
+  if (chat) {
+    renderChatHeader(chat);
+    renderChatMessages(chat);
+    updateComposerPlaceholder(chat);
+  }
+}
+window.setLanguage = setLanguage;
+
+function toggleLanguage() {
+  const nextLang = currentLang === 'en' ? 'ru' : 'en';
+  setLanguage(nextLang);
+}
+window.toggleLanguage = toggleLanguage;
+
+function updateDialogsListLanguage() {
+  Object.keys(CHATS_STORE).forEach(id => {
+    const chat = CHATS_STORE[id];
+    const item = document.querySelector(`.deck-item[data-chat-id="${id}"]`);
+    if (!item) return;
+
+    const nameEl = item.querySelector('.deck-item-name');
+    const avatarEl = item.querySelector('.deck-item-avatar');
+    const previewEl = item.querySelector('.deck-item-preview');
+
+    if (nameEl) nameEl.textContent = getChatName(chat, currentLang);
+    if (avatarEl) {
+      avatarEl.textContent = getChatInitials(chat, currentLang);
+      const dot = document.createElement('span');
+      dot.className = `deck-presence-dot ${chat.status}`;
+      avatarEl.appendChild(dot);
+    }
+
+    if (previewEl) {
+      const msgs = getChatMessages(chat, currentLang);
+      if (msgs && msgs.length > 0) {
+        const lastMsg = msgs[msgs.length - 1];
+        previewEl.textContent = lastMsg.text;
+      }
+    }
+  });
+}
+
+// ============================================================================
+// 4. Navigation Tab Switching (Chats, Player, Import, Settings)
 // ============================================================================
 function switchNavTab(tabName) {
   const tabs = ['player', 'chats', 'import', 'settings'];
@@ -169,9 +602,10 @@ function switchNavTab(tabName) {
     if (flow) flow.scrollTop = flow.scrollHeight;
   }
 }
+window.switchNavTab = switchNavTab;
 
 // ============================================================================
-// 2. Select & Render Chat
+// 5. Select & Render Chat
 // ============================================================================
 function selectChat(chatId) {
   const targetId = parseInt(chatId, 10);
@@ -190,55 +624,49 @@ function selectChat(chatId) {
     }
   });
 
-  // Re-render chat header
+  // Re-render chat header & messages
   renderChatHeader(chatData);
-
-  // Re-render chat messages
   renderChatMessages(chatData);
+  updateComposerPlaceholder(chatData);
 
-  // Update composer input placeholder with Typewriter Feel
-  const input = document.getElementById('composer-input');
-  if (input) {
-    const firstName = chatData.name.split(' ')[0];
-    input.placeholder = `Написать сообщение ${firstName}...`;
-    input.focus();
-  }
-
-  // On compact viewports, auto-collapse drawer when user picks a chat
+  // Auto-collapse drawer on mobile viewports
   if (window.innerWidth <= 860 && typeof isDrawerOpen !== 'undefined' && isDrawerOpen) {
     toggleDialogsDrawer(false);
   }
 }
 window.selectChat = selectChat;
 
-// Helper: Render Chat Header
+function updateComposerPlaceholder(chat) {
+  const input = document.getElementById('composer-input');
+  if (!input) return;
+  const firstName = getChatName(chat, currentLang).split(' ')[0];
+  const dict = I18N_DICTIONARY[currentLang];
+  input.placeholder = dict.composer_placeholder.replace('{name}', firstName);
+}
+
+// Render Chat Header with Sleek Gray Avatar
 function renderChatHeader(chat) {
   const nameEl = document.getElementById('active-recipient-name');
-  const statusEl = document.getElementById('active-recipient-status');
+  const statusTextEl = document.getElementById('active-recipient-status-text');
   const avatarEl = document.getElementById('active-recipient-avatar');
+  const statusContainer = document.getElementById('active-recipient-status');
 
-  if (nameEl) nameEl.textContent = chat.name;
+  if (nameEl) nameEl.textContent = getChatName(chat, currentLang);
   if (avatarEl) {
-    avatarEl.textContent = chat.avatarText;
-    avatarEl.style.background = 'var(--avatar-orange-gradient)';
-    avatarEl.style.color = '#000000';
-    avatarEl.style.fontWeight = '800';
+    avatarEl.textContent = getChatInitials(chat, currentLang);
+    avatarEl.className = 'chat-recipient-avatar avatar-gray';
   }
 
-  if (statusEl) {
+  if (statusContainer) {
     if (chat.status === 'online') {
-      statusEl.className = 'chat-recipient-status online';
-      statusEl.innerHTML = `
-        <span class="recipient-presence-dot"></span>
-        <span>в сети [узел app-2]</span>
-      `;
+      statusContainer.className = 'chat-recipient-status online';
     } else {
-      statusEl.className = 'chat-recipient-status';
-      statusEl.innerHTML = `
-        <span class="recipient-presence-dot" style="background:#64748b; box-shadow:none;"></span>
-        <span>${escapeHtml(chat.statusText)}</span>
-      `;
+      statusContainer.className = 'chat-recipient-status';
     }
+  }
+
+  if (statusTextEl) {
+    statusTextEl.textContent = getChatStatusText(chat, currentLang);
   }
 }
 
@@ -261,11 +689,13 @@ function renderChatMessages(chat) {
   // Typewriter Timeline Pill
   const timelinePill = document.createElement('div');
   timelinePill.className = 'chat-timeline-pill typewriter-pill';
-  timelinePill.textContent = '[ -- 2026-10-26 // LOG STREAM -- ]';
+  timelinePill.textContent = I18N_DICTIONARY[currentLang].timeline_today;
   flow.appendChild(timelinePill);
 
+  const messages = getChatMessages(chat, currentLang);
+
   // Render all messages in sequence
-  chat.messages.forEach(msg => {
+  messages.forEach(msg => {
     const row = document.createElement('div');
     row.className = `msg-row ${msg.sender}`;
 
@@ -276,7 +706,7 @@ function renderChatMessages(chat) {
       </svg>
     ` : '';
 
-    const authorTag = msg.sender === 'incoming' ? `<span class="msg-author-tag">@${chat.name.split(' ')[0].toLowerCase()}</span>` : '';
+    const authorTag = msg.sender === 'incoming' ? `<span class="msg-author-tag">@${getChatName(chat, 'en').split(' ')[0].toLowerCase()}</span>` : '';
 
     // Render attachments if any
     let attachmentsHtml = '';
@@ -302,7 +732,7 @@ function renderChatMessages(chat) {
     row.innerHTML = `
       <div class="msg-bubble typewriter-bubble">
         ${authorTag}
-        <div class="msg-text-content">${escapeHtml(msg.text || '')}</div>
+        <div class="msg-body-text">${escapeHtml(msg.text || '')}</div>
         ${attachmentsHtml}
         <div class="msg-meta">
           <span>${msg.time}</span>
@@ -319,11 +749,14 @@ function renderChatMessages(chat) {
     const typing = document.createElement('div');
     typing.className = 'typing-capsule';
     typing.id = 'chat-typing-capsule';
+    const dict = I18N_DICTIONARY[currentLang];
+    const key = `typing_${getChatName(chat, 'en').split(' ')[0].toLowerCase()}`;
+    const typingText = dict[key] || `${getChatName(chat, currentLang).split(' ')[0]} ...`;
     typing.innerHTML = `
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
-      <span class="typing-label typewriter-font">${chat.name.split(' ')[0].toLowerCase()} печатает...</span>
+      <span class="typing-label typewriter-font" id="chat-typing-label">${typingText}</span>
     `;
     flow.appendChild(typing);
   }
@@ -332,7 +765,7 @@ function renderChatMessages(chat) {
 }
 
 // ============================================================================
-// 3. Functional Paperclip & File Attachments
+// 6. Functional Paperclip & File Attachments
 // ============================================================================
 function triggerComposerAttach() {
   const fileInput = document.getElementById('composer-file-input');
@@ -407,7 +840,7 @@ function removeComposerAttachment(index) {
 window.removeComposerAttachment = removeComposerAttachment;
 
 // ============================================================================
-// 4. Send Message with Typewriter Streaming Effect
+// 7. Send Message with Typewriter Streaming Effect
 // ============================================================================
 function handleSendSpatialMessage(event) {
   if (event && event.preventDefault) event.preventDefault();
@@ -437,7 +870,12 @@ function handleSendSpatialMessage(event) {
     delivered: true
   };
 
-  chat.messages.push(newMsg);
+  // Add to active lang message list
+  if (currentLang === 'ru') {
+    chat.messages_ru.push(newMsg);
+  } else {
+    chat.messages_en.push(newMsg);
+  }
 
   const flow = document.getElementById('spatial-messages-flow');
   const typingCapsule = document.getElementById('chat-typing-capsule');
@@ -467,7 +905,7 @@ function handleSendSpatialMessage(event) {
   row.className = 'msg-row outgoing';
   row.innerHTML = `
     <div class="msg-bubble typewriter-bubble">
-      <div class="msg-text-content">${escapeHtml(text)}</div>
+      <div class="msg-body-text">${escapeHtml(text)}</div>
       ${attachmentsHtml}
       <div class="msg-meta">
         <span>${timeStr}</span>
@@ -504,13 +942,21 @@ function handleSendSpatialMessage(event) {
     setTimeout(() => {
       if (typingCapsule) typingCapsule.style.display = 'none';
 
-      const replyReplies = [
+      const repliesEn = [
+        'Received in replicated log [seq: OK].',
+        'Message delivered and stored in storage-1.',
+        'Files successfully committed to cluster.',
+        'Got it! Synchronizing across all nodes.'
+      ];
+      const repliesRu = [
         'Принято в реплицированный лог [seq: OK].',
         'Сообщение доставлено и сохранено в storage-1.',
         'Файлы успешно зафиксированы в кластере.',
         'Получено! Синхронизирую с другими клиентами.'
       ];
-      const replyText = replyReplies[Math.floor(Math.random() * replyReplies.length)];
+
+      const replyPool = currentLang === 'ru' ? repliesRu : repliesEn;
+      const replyText = replyPool[Math.floor(Math.random() * replyPool.length)];
       const replyTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
       const replyMsg = {
@@ -520,14 +966,19 @@ function handleSendSpatialMessage(event) {
         text: replyText,
         time: replyTime
       };
-      chat.messages.push(replyMsg);
+
+      if (currentLang === 'ru') {
+        chat.messages_ru.push(replyMsg);
+      } else {
+        chat.messages_en.push(replyMsg);
+      }
 
       const replyRow = document.createElement('div');
       replyRow.className = 'msg-row incoming';
       replyRow.innerHTML = `
         <div class="msg-bubble typewriter-bubble">
-          <span class="msg-author-tag">@${chat.name.split(' ')[0].toLowerCase()}</span>
-          <div class="msg-text-content typewriter-streaming"></div>
+          <span class="msg-author-tag">@${getChatName(chat, 'en').split(' ')[0].toLowerCase()}</span>
+          <div class="msg-body-text typewriter-streaming"></div>
           <div class="msg-meta">
             <span>${replyTime}</span>
           </div>
@@ -541,9 +992,9 @@ function handleSendSpatialMessage(event) {
       }
 
       // Typewriter Character by Character Animation
-      const textContainer = replyRow.querySelector('.msg-text-content');
+      const textContainer = replyRow.querySelector('.msg-body-text');
       typewriterStreamText(textContainer, replyText, 18);
-    }, 1100);
+    }, 1000);
   }
 }
 window.sendSpatialMessage = handleSendSpatialMessage;
@@ -586,7 +1037,7 @@ function insertEmojiDemo() {
 window.insertEmojiDemo = insertEmojiDemo;
 
 // ============================================================================
-// 5. Functional Music & File Import Pipeline
+// 8. Functional Music & File Import Pipeline
 // ============================================================================
 function handleMusicFilesUpload(event) {
   const files = event.target.files;
@@ -605,22 +1056,28 @@ function handleMusicFilesUpload(event) {
   const step3Sub = document.getElementById('pipe-step-3-sub');
 
   if (step1) step1.className = 'pipeline-step active';
-  if (step1Sub) step1Sub.textContent = `Загружено: ${filename} (${sizeStr})`;
+  if (step1Sub) step1Sub.textContent = currentLang === 'ru' 
+    ? `Загружено: ${filename} (${sizeStr})` 
+    : `Uploaded: ${filename} (${sizeStr})`;
 
   setTimeout(() => {
     if (step1) step1.className = 'pipeline-step completed';
     if (step2) step2.className = 'pipeline-step active';
-    if (step2Sub) step2Sub.textContent = `ID3: Парсинг тегов (${filename.replace(/\.[^/.]+$/, '')})`;
+    if (step2Sub) step2Sub.textContent = currentLang === 'ru'
+      ? `ID3: Парсинг тегов (${filename.replace(/\.[^/.]+$/, '')})`
+      : `ID3: Parsing tags (${filename.replace(/\.[^/.]+$/, '')})`;
 
     setTimeout(() => {
       if (step2) step2.className = 'pipeline-step completed';
       if (step3) step3.className = 'pipeline-step active completed';
-      if (step3Sub) step3Sub.textContent = 'Успешно реплицировано на storage-1 и storage-2';
+      if (step3Sub) step3Sub.textContent = currentLang === 'ru'
+        ? 'Успешно реплицировано на storage-1 и storage-2'
+        : 'Replicated successfully on storage-1 and storage-2';
 
       // Add to catalog
-      addUploadedTrackToCatalog(filename, 'Пользовательский трек', sizeStr);
-    }, 800);
-  }, 700);
+      addUploadedTrackToCatalog(filename, currentLang === 'ru' ? 'Пользовательский трек' : 'User Track', sizeStr);
+    }, 700);
+  }, 600);
 
   event.target.value = '';
 }
@@ -633,6 +1090,7 @@ function addUploadedTrackToCatalog(title, artist, sizeStr) {
 
   const item = document.createElement('div');
   item.className = 'uploaded-track-item';
+  const btnText = I18N_DICTIONARY[currentLang].send_to_chat_btn;
   item.innerHTML = `
     <div class="track-item-icon">🎵</div>
     <div class="track-item-info">
@@ -640,13 +1098,17 @@ function addUploadedTrackToCatalog(title, artist, sizeStr) {
       <div class="track-item-meta typewriter-font">${escapeHtml(artist)} • 3:30 • ${sizeStr} • storage-1:ok, storage-2:ok</div>
     </div>
     <div class="track-item-actions">
-      <button class="tactile-btn" onclick="sendUploadedTrackToChat('${escapeHtml(title)}', '${escapeHtml(artist)}')" title="Отправить в чат">💬 В чат</button>
+      <button class="tactile-btn" onclick="sendUploadedTrackToChat('${escapeHtml(title)}', '${escapeHtml(artist)}')">${btnText}</button>
     </div>
   `;
   list.insertBefore(item, list.firstChild);
 
   const total = list.children.length;
-  if (countLabel) countLabel.textContent = `${total} треков в кластере`;
+  if (countLabel) {
+    countLabel.textContent = currentLang === 'ru' 
+      ? `${total} трека в кластере` 
+      : `${total} tracks in cluster`;
+  }
 }
 
 function sendUploadedTrackToChat(filename, artist) {
@@ -664,23 +1126,30 @@ function sendUploadedTrackToChat(filename, artist) {
     dataUrl: null
   };
 
+  const textMsg = currentLang === 'ru' ? `Отправляю трек: ${filename}` : `Sending track: ${filename}`;
+
   const newMsg = {
     id: `msg-${chat.id}-${Date.now()}`,
     sender: 'outgoing',
     type: 'text',
-    text: `Отправляю трек: ${filename}`,
+    text: textMsg,
     attachments: [trackAttachment],
     time: timeStr,
     delivered: true
   };
 
-  chat.messages.push(newMsg);
+  if (currentLang === 'ru') {
+    chat.messages_ru.push(newMsg);
+  } else {
+    chat.messages_en.push(newMsg);
+  }
+
   renderChatMessages(chat);
 }
 window.sendUploadedTrackToChat = sendUploadedTrackToChat;
 
 // ============================================================================
-// 6. Search & Quick Filters (Clean, No Unread/Tracks Filter)
+// 9. Search & Quick Filters
 // ============================================================================
 function handleSearchDialogs(query) {
   const term = (query || '').toLowerCase().trim();
@@ -717,7 +1186,7 @@ function filterDialogs(btn, filterType) {
 window.filterDialogs = filterDialogs;
 
 // ============================================================================
-// 7. Slide-Out Left Drawer Controller
+// 10. Slide-Out Left Drawer Controller
 // ============================================================================
 let isDrawerOpen = localStorage.getItem('boysic_drawer_open') !== 'false';
 
@@ -735,7 +1204,8 @@ function applyDrawerState() {
 
   if (headerBtn) {
     headerBtn.classList.toggle('drawer-active', isDrawerOpen);
-    headerBtn.title = isDrawerOpen ? 'Скрыть панель (Ctrl+B)' : 'Показать панель (Ctrl+B)';
+    const dict = I18N_DICTIONARY[currentLang];
+    headerBtn.title = isDrawerOpen ? dict.hide_drawer : dict.show_drawer;
   }
 }
 
@@ -808,8 +1278,11 @@ function escapeHtml(string) {
   return String(string).replace(/[&<>"']/g, s => entityMap[s]);
 }
 
-// Initial Boot
+// ============================================================================
+// 11. Initial Boot
+// ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  setLanguage(currentLang);
   applyDrawerState();
   selectChat(1);
   setupDragAndDrop();

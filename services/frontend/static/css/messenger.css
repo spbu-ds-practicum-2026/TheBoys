@@ -1,5 +1,6 @@
 /* ==========================================================================
-   Boysic Messenger — Deep Black & Monochrome Dark with Orange Avatars
+   Boysic Messenger — Modern Discord & Telegram Dark Hybrid (Refined Gray Edition)
+   Deep Black Void, Dark Graphite Surfaces & Sleek Gray Avatars
    ========================================================================== */
 
 /* Full App Layout Shell */
@@ -56,8 +57,8 @@
 
 .rail-brand-container:hover {
   border-radius: 12px;
-  border-color: var(--avatar-orange);
-  box-shadow: 0 0 14px rgba(255, 153, 0, 0.35);
+  border-color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.2);
 }
 
 .rail-brand-logo {
@@ -121,7 +122,7 @@
   width: 4px;
   height: 0;
   border-radius: 0 4px 4px 0;
-  background: var(--avatar-orange);
+  background: #ffffff;
   transition: all 0.2s var(--ease-discord);
 }
 
@@ -133,7 +134,44 @@
   height: 32px;
 }
 
-/* Bottom User Profile Capsule (Orange Avatar) */
+/* Language Switcher Pill in Rail [ EN | RU ] */
+.rail-lang-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 46px;
+  height: 28px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  cursor: pointer;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-typewriter);
+  transition: all 0.2s var(--ease-discord);
+}
+
+.rail-lang-switcher:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+  transform: scale(1.05);
+}
+
+.lang-badge {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.lang-badge.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* Bottom User Profile Capsule (Sleek Gray Avatar) */
 .rail-bottom-group {
   margin-top: auto;
   display: flex;
@@ -146,22 +184,23 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: var(--avatar-orange-gradient) !important;
-  color: #000000 !important;
-  font-weight: 800 !important;
-  border: 2px solid rgba(0, 0, 0, 0.4);
+  background: var(--avatar-gray-gradient) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s var(--ease-discord);
-  box-shadow: 0 2px 10px rgba(255, 153, 0, 0.35);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .rail-user-avatar:hover {
   border-radius: 14px;
   transform: scale(1.05);
+  border-color: #ffffff;
 }
 
 .rail-presence-dot {
@@ -171,9 +210,9 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: var(--avatar-orange) !important;
+  background: var(--accent-mint) !important;
   border: 2px solid var(--bg-rail);
-  box-shadow: 0 0 6px rgba(255, 153, 0, 0.7);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
 
 /* ==========================================================================
@@ -363,24 +402,25 @@
   border-color: rgba(255, 255, 255, 0.14);
 }
 
-/* Unified Signature Orange Avatars (Exact User Request) */
+/* Sleek Gray Avatars (Exact User Request) */
 .deck-item-avatar,
 .chat-recipient-avatar,
+.avatar-gray,
 .avatar-orange {
   position: relative;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--avatar-orange-gradient) !important;
-  color: #000000 !important;
-  font-weight: 800 !important;
-  border: 2px solid rgba(0, 0, 0, 0.35);
+  background: var(--avatar-gray-gradient) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
   flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(255, 153, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .deck-presence-dot {
@@ -394,12 +434,12 @@
 }
 
 .deck-presence-dot.online {
-  background: var(--avatar-orange) !important;
-  box-shadow: 0 0 6px rgba(255, 153, 0, 0.7);
+  background: var(--accent-mint) !important;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
 
 .deck-presence-dot.offline {
-  background: #5a5f67;
+  background: #5a5f67 !important;
 }
 
 .deck-item-body {
@@ -528,8 +568,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--avatar-orange);
-  box-shadow: 0 0 6px rgba(255, 153, 0, 0.8);
+  background: var(--accent-mint);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
 
 .header-tool-btn {
@@ -600,7 +640,7 @@
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: var(--avatar-orange);
+  color: #d1d5db;
   margin-bottom: 3px;
 }
 
@@ -633,7 +673,7 @@
 .msg-status-check {
   width: 13px;
   height: 13px;
-  color: var(--avatar-orange);
+  color: #ffffff;
 }
 
 /* Typing Indicator Capsule */
@@ -652,7 +692,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--avatar-orange);
+  background: #ffffff;
   animation: typingBounce 1.2s infinite ease-in-out;
 }
 
@@ -717,7 +757,7 @@
 
 .attachment-chip-remove:hover {
   opacity: 1;
-  color: #ff9900;
+  color: #ffffff;
 }
 
 .msg-image-attachment {
@@ -769,12 +809,12 @@
 
 .file-dl-btn {
   font-size: 13px;
-  color: var(--avatar-orange);
+  color: #ffffff;
   cursor: pointer;
   text-decoration: none;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(255, 153, 0, 0.15);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .floating-composer-island {
@@ -809,8 +849,8 @@
 }
 
 .composer-attach-btn:hover {
-  color: var(--avatar-orange);
-  background: rgba(255, 153, 0, 0.12);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .composer-emoji-btn:hover {
@@ -850,8 +890,7 @@
 
 .composer-send-orb:hover {
   transform: scale(1.06);
-  background: var(--avatar-orange);
-  box-shadow: 0 2px 12px rgba(255, 153, 0, 0.5);
+  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.35);
 }
 
 /* ==========================================================================
@@ -898,9 +937,9 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--avatar-orange);
+  background: var(--accent-mint);
   margin-right: 4px;
-  box-shadow: 0 0 6px rgba(255, 153, 0, 0.7);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
 
 /* ==========================================================================
@@ -974,7 +1013,7 @@
 .import-dropzone-card:hover,
 .import-dropzone-card.drag-over {
   background: rgba(255, 255, 255, 0.06);
-  border-color: var(--avatar-orange);
+  border-color: #ffffff;
   transform: translateY(-2px);
 }
 
@@ -982,12 +1021,12 @@
   width: 48px;
   height: 48px;
   border-radius: 10px;
-  background: rgba(255, 153, 0, 0.12);
-  border: 1px solid rgba(255, 153, 0, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--avatar-orange);
+  color: #ffffff;
 }
 
 .dropzone-title {
@@ -1050,9 +1089,9 @@
 }
 
 .pipeline-step.active .step-num {
-  background: var(--avatar-orange);
+  background: #ffffff;
   color: #000000;
-  box-shadow: 0 0 10px rgba(255, 153, 0, 0.6);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
 }
 
 .pipeline-step.completed .step-num {
@@ -1169,7 +1208,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--avatar-orange);
+  background: #ffffff;
   border: 2px solid #000000;
 }
 
@@ -1184,7 +1223,7 @@
 .player-now-badge {
   font-size: 11px;
   font-weight: 700;
-  color: var(--avatar-orange);
+  color: #ffffff;
   letter-spacing: 0.08em;
 }
 
@@ -1211,7 +1250,7 @@
 
 .player-scrub-progress {
   height: 100%;
-  background: var(--avatar-orange);
+  background: #ffffff;
   border-radius: 9999px;
 }
 
@@ -1246,7 +1285,6 @@
 
 .player-play-btn:hover {
   transform: scale(1.08);
-  background: var(--avatar-orange);
 }
 
 .player-play-btn svg {

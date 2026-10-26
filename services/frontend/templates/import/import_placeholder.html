@@ -6,10 +6,10 @@
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
           <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>
         </svg>
-        <span>[STORAGE // REPLICATION ENGINE]</span>
+        <span data-i18n="import_badge">[STORAGE // REPLICATION ENGINE]</span>
       </div>
-      <h1 class="placeholder-title typewriter-text">Импорт своей музыки</h1>
-      <p class="placeholder-desc typewriter-font">Загрузка MP3/WAV в распределённый кластер с автоматическим извлечением ID3-тегов и репликацией на storage-узлы</p>
+      <h1 class="placeholder-title typewriter-text" data-i18n="import_title" data-ru="Импорт своей музыки">Import Music</h1>
+      <p class="placeholder-desc typewriter-font" data-i18n="import_desc" data-ru="Загрузка MP3/WAV в распределённый кластер с автоматическим извлечением ID3-тегов и репликацией на storage-узлы">Upload MP3/WAV to distributed cluster with auto ID3-tag extraction and multi-node replication</p>
     </div>
 
     <!-- Hidden Real File Input -->
@@ -25,14 +25,14 @@
         </svg>
       </div>
 
-      <div class="dropzone-title typewriter-text">Перетащите аудиофайлы сюда или нажмите для выбора</div>
-      <div class="dropzone-subtitle typewriter-font">Поддерживаются MP3, WAV, FLAC, OGG (до 50 МБ)</div>
+      <div class="dropzone-title typewriter-text" data-i18n="dropzone_title" data-ru="Перетащите аудиофайлы сюда или нажмите для выбора">Drag & drop audio files here or click to browse</div>
+      <div class="dropzone-subtitle typewriter-font" data-i18n="dropzone_subtitle" data-ru="Поддерживаются MP3, WAV, FLAC, OGG (до 50 МБ)">Supports MP3, WAV, FLAC, OGG (up to 50 MB)</div>
 
       <div class="import-chips-row">
         <span class="import-chip typewriter-font">MP3 / WAV</span>
-        <span class="import-chip typewriter-font">до 50 МБ</span>
-        <span class="import-chip typewriter-font">Парсер ID3</span>
-        <span class="import-chip typewriter-font">Репликация: 2 копии</span>
+        <span class="import-chip typewriter-font" data-i18n="chip_size" data-ru="до 50 МБ">up to 50 MB</span>
+        <span class="import-chip typewriter-font" data-i18n="chip_id3" data-ru="Парсер ID3">ID3 Parser</span>
+        <span class="import-chip typewriter-font" data-i18n="chip_replication" data-ru="Репликация: 2 копии">Replication: 2 copies</span>
       </div>
     </div>
 
@@ -41,24 +41,24 @@
       <div class="pipeline-step" id="pipe-step-1">
         <div class="step-num">1</div>
         <div class="step-text">
-          <div class="step-name typewriter-font">Загрузка в узел</div>
-          <div class="step-sub typewriter-font" id="pipe-step-1-sub">Ожидание выбора файла...</div>
+          <div class="step-name typewriter-font" data-i18n="step1_title" data-ru="Загрузка в узел">Upload to node</div>
+          <div class="step-sub typewriter-font" id="pipe-step-1-sub" data-i18n="step1_sub" data-ru="Ожидание выбора файла...">Waiting for file selection...</div>
         </div>
       </div>
 
       <div class="pipeline-step" id="pipe-step-2">
         <div class="step-num">2</div>
         <div class="step-text">
-          <div class="step-name typewriter-font">ID3 Метаданные</div>
-          <div class="step-sub typewriter-font" id="pipe-step-2-sub">Парсинг тегов и битрейта</div>
+          <div class="step-name typewriter-font" data-i18n="step2_title" data-ru="ID3 Метаданные">ID3 Metadata</div>
+          <div class="step-sub typewriter-font" id="pipe-step-2-sub" data-i18n="step2_sub" data-ru="Парсинг тегов и битрейта">Parsing tags and bitrate</div>
         </div>
       </div>
 
       <div class="pipeline-step" id="pipe-step-3">
         <div class="step-num">3</div>
         <div class="step-text">
-          <div class="step-name typewriter-font">Репликация</div>
-          <div class="step-sub typewriter-font" id="pipe-step-3-sub">Синхронизация storage-1/storage-2</div>
+          <div class="step-name typewriter-font" data-i18n="step3_title" data-ru="Репликация">Replication</div>
+          <div class="step-sub typewriter-font" id="pipe-step-3-sub" data-i18n="step3_sub" data-ru="Синхронизация storage-1/storage-2">Synchronizing storage-1/storage-2</div>
         </div>
       </div>
     </div>
@@ -66,8 +66,8 @@
     <!-- Dynamic Uploaded Tracks Catalog -->
     <div class="uploaded-catalog-section" id="uploaded-catalog-section">
       <div class="uploaded-catalog-header">
-        <span class="uploaded-catalog-title typewriter-text">[КАТАЛОГ ЗАГРУЖЕННЫХ ТРЕКОВ]</span>
-        <span class="uploaded-catalog-counter typewriter-font" id="uploaded-count-label">3 трека в кластере</span>
+        <span class="uploaded-catalog-title typewriter-text" data-i18n="catalog_title" data-ru="[КАТАЛОГ ЗАГРУЖЕННЫХ ТРЕКОВ]">[UPLOADED TRACKS CATALOG]</span>
+        <span class="uploaded-catalog-counter typewriter-font" id="uploaded-count-label" data-i18n="catalog_counter" data-ru="3 трека в кластере">3 tracks in cluster</span>
       </div>
 
       <div class="uploaded-tracks-list" id="uploaded-tracks-list">

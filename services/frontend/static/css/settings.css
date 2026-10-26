@@ -71,14 +71,14 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--avatar-user);
+  background: var(--avatar-gray-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 17px;
   font-weight: 700;
   color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .profile-hero-name {

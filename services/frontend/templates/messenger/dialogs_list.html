@@ -1,4 +1,4 @@
-<!-- Telegram & Discord Slide-Out Drawer (Clean Typewriter Edition, Orange Avatars) -->
+<!-- Telegram & Discord Slide-Out Drawer (Clean Typewriter Edition, Sleek Gray Avatars) -->
 <aside class="dialogs-drawer-panel" id="dialogs-drawer">
   <!-- Top Search Bar (Icon-Only, Clean Typewriter) -->
   <div class="drawer-top-bar">
@@ -7,11 +7,11 @@
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-      <input type="text" class="deck-search-input typewriter-input" placeholder="Поиск сообщений..." oninput="handleSearchDialogs(this.value)">
+      <input type="text" class="deck-search-input typewriter-input" placeholder="Search messages..." data-ru="Поиск сообщений..." data-i18n-placeholder="search_placeholder" oninput="handleSearchDialogs(this.value)">
     </div>
 
     <!-- Collapse Drawer Icon Button -->
-    <button class="drawer-close-btn" onclick="toggleDialogsDrawer(false)" title="Скрыть панель (Ctrl+B)">
+    <button class="drawer-close-btn" onclick="toggleDialogsDrawer(false)" title="Hide drawer (Ctrl+B)" data-ru="Скрыть панель (Ctrl+B)" data-i18n-title="hide_drawer">
       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -21,77 +21,77 @@
 
   <!-- Clean Filter Pills (No unread or tracks clutter) -->
   <div class="deck-filter-chips">
-    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все диалоги</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'direct')">Личные</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'groups')">Каналы</button>
+    <button class="filter-chip active" onclick="filterDialogs(this, 'all')" data-i18n="filter_all" data-ru="Все диалоги">All Chats</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'direct')" data-i18n="filter_direct" data-ru="Личные">Direct</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'groups')" data-i18n="filter_channels" data-ru="Каналы">Channels</button>
   </div>
 
-  <!-- Dialog Stream (Unified Signature Orange Avatars) -->
+  <!-- Dialog Stream (Unified Sleek Gray Avatars) -->
   <div class="deck-list" id="dialogs-deck-list">
     <!-- Dialog 1: Alice (Active) -->
     <div class="deck-item active" data-chat-id="1" onclick="selectChat(1)">
-      <div class="deck-item-avatar avatar-orange">
-        АС
+      <div class="deck-item-avatar avatar-gray" id="deck-avatar-1">
+        AS
         <span class="deck-presence-dot online"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
-          <span class="deck-item-name">Алиса Смирнова</span>
+          <span class="deck-item-name" data-i18n="user_alice" data-ru="Алиса Смирнова">Alice Smirnova</span>
           <span class="deck-item-time">19:42</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview">Привет! Проверила доставку сообщений...</span>
+          <span class="deck-item-preview" data-i18n="alice_preview" data-ru="Привет! Проверила доставку сообщений...">Hello! Full-text search and storage are ready...</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 2: Oleg -->
     <div class="deck-item" data-chat-id="2" onclick="selectChat(2)">
-      <div class="deck-item-avatar avatar-orange">
-        ОИ
+      <div class="deck-item-avatar avatar-gray" id="deck-avatar-2">
+        OI
         <span class="deck-presence-dot online"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
-          <span class="deck-item-name">Олег Иванов</span>
+          <span class="deck-item-name" data-i18n="user_oleg" data-ru="Олег Иванов">Oleg Ivanov</span>
           <span class="deck-item-time">19:30</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview">Слушай, а вложения теперь отправляются?</span>
+          <span class="deck-item-preview" data-i18n="oleg_preview" data-ru="Слушай, а вложения теперь отправляются?">Can we send attachments via paperclip now?</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 3: Pavel -->
     <div class="deck-item" data-chat-id="3" onclick="selectChat(3)">
-      <div class="deck-item-avatar avatar-orange">
-        ПГ
+      <div class="deck-item-avatar avatar-gray" id="deck-avatar-3">
+        PG
         <span class="deck-presence-dot offline"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
-          <span class="deck-item-name">Павел Григорьев</span>
+          <span class="deck-item-name" data-i18n="user_pavel" data-ru="Павел Григорьев">Pavel Grigoryev</span>
           <span class="deck-item-time">18:12</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview">Схему БД зафиксировал</span>
+          <span class="deck-item-preview" data-i18n="pavel_preview" data-ru="Схему БД зафиксировал">Database schema committed</span>
         </div>
       </div>
     </div>
 
     <!-- Dialog 4: Artem -->
     <div class="deck-item" data-chat-id="4" onclick="selectChat(4)">
-      <div class="deck-item-avatar avatar-orange">
-        АЕ
+      <div class="deck-item-avatar avatar-gray" id="deck-avatar-4">
+        AE
         <span class="deck-presence-dot online"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
-          <span class="deck-item-name">Артём Еременко</span>
+          <span class="deck-item-name" data-i18n="user_artem" data-ru="Артём Еременко">Artem Eremenko</span>
           <span class="deck-item-time">17:55</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview">Docker Compose стенд поднят</span>
+          <span class="deck-item-preview" data-i18n="artem_preview" data-ru="Docker Compose стенд поднят">Docker Compose cluster is up</span>
         </div>
       </div>
     </div>
