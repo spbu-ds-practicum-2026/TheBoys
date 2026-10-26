@@ -1,62 +1,53 @@
 /* ==========================================================================
-   Boysic — Discord & Telegram Dark Hybrid (Typewriter Edition)
-   Rich Color Accents + Monospace Typewriter Typography
+   Boysic — Deep Black & Monochrome Dark Edition with Signature Orange Avatars
+   Pure Black Void, Dark Charcoal Surfaces, White Typography & #ff9900 Avatars
    ========================================================================== */
 
 :root {
-  /* Typewriter Typography System */
+  /* Typewriter Monospace Typography System */
   --font-typewriter: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Courier New', Courier, monospace;
   --font-family: var(--font-typewriter);
   --font-mono: var(--font-typewriter);
 
-  /* Deep Atmospheric Backgrounds (Slate & Obsidian Layers) */
-  --bg-void: #0b0d13;
-  --bg-rail: #10121a;
-  --bg-drawer: #151822;
-  --bg-canvas: #1a1e2b;
-  --bg-surface-0: #151822;
-  --bg-surface-1: #1e2230;
-  --bg-surface-2: #24293a;
-  --bg-surface-3: #2d3348;
-  --bg-surface-input: #1e2230;
+  /* Deep Black & Monochrome Dark Layering */
+  --bg-void: #000000;         /* 100% Pure Black Void */
+  --bg-rail: #070709;         /* Discord Left Rail */
+  --bg-drawer: #0d0e12;       /* Telegram Dialogs Drawer */
+  --bg-canvas: #121318;       /* Chat Stage Canvas */
+  --bg-surface-0: #0d0e12;
+  --bg-surface-1: #14151b;
+  --bg-surface-2: #1b1c24;
+  --bg-surface-3: #232530;
+  --bg-surface-input: #171820;
 
-  /* Rich Color Accent Palette (Discord + Telegram + Boysic) */
-  --accent-blurple: #5865f2;       /* Discord Indigo Blurple */
-  --accent-blurple-hover: #4752c4;
-  --accent-blurple-subtle: rgba(88, 101, 242, 0.15);
-  --accent-blue: #2997ff;          /* Telegram Sky Ice Blue */
-  --accent-blue-subtle: rgba(41, 151, 255, 0.15);
-  --accent-mint: #22c55e;          /* Emerald Online Presence */
-  --accent-amber: #f59e0b;         /* Boysic Warm Gold */
-  --accent-amber-bright: #ff9900;  /* Boysic Signature Orange */
-  --accent-violet: #a855f7;        /* Purple Violet */
-  --accent-rose: #f43f5e;          /* Coral Pink */
-  --accent-cyan: #06b6d4;          /* Cyan Accent */
-
-  /* Text Hierarchy */
+  /* Typography Colors (High-Contrast Pure White & Silvers) */
   --text-pure: #ffffff;
-  --text-bright: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-subtle: #64748b;
-  --text-dim: #475569;
+  --text-bright: #f0f1f5;
+  --text-muted: #8e929f;
+  --text-subtle: #5f6370;
+  --text-dim: #3f424c;
 
-  /* Avatar Dynamic Gradients (Telegram / Discord Style) */
-  --avatar-alice: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  --avatar-oleg: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  --avatar-pavel: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
-  --avatar-artem: linear-gradient(135deg, #f59e0b 0%, #ff9900 100%);
-  --avatar-user: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+  /* Signature Orange Avatars & Accents (Exact User Request) */
+  --avatar-orange: #ff9900;
+  --avatar-orange-gradient: linear-gradient(135deg, #ffa826 0%, #ff9900 60%, #e68a00 100%);
+  --avatar-orange-text: #000000;
+  --accent-orange: #ff9900;
+  --accent-orange-glow: rgba(255, 153, 0, 0.4);
 
-  /* Message Bubble Gradients */
-  --bubble-incoming: linear-gradient(135deg, #1e2332 0%, #181c28 100%);
-  --bubble-outgoing: linear-gradient(135deg, #2d335c 0%, #222648 100%);
-  --bubble-outgoing-border: rgba(99, 102, 241, 0.35);
+  /* Monochrome Message Bubbles */
+  --bubble-incoming: #181920;
+  --bubble-outgoing: #252733;
+  --bubble-outgoing-border: rgba(255, 255, 255, 0.16);
 
-  /* Borders & Specular Glass */
+  /* Borders & Specular Lines */
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
   --glass-border-light: 1px solid rgba(255, 255, 255, 0.15);
-  --glass-border-accent: 1px solid rgba(88, 101, 242, 0.4);
-  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --glass-border-accent: 1px solid rgba(255, 153, 0, 0.45);
+  --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+
+  /* Status Colors */
+  --accent-mint: #ff9900;
+  --accent-blue: #ffffff;
 
   /* Radii */
   --r-xs: 4px;
@@ -66,27 +57,25 @@
   --r-xl: 20px;
   --r-pill: 9999px;
 
-  /* Easing */
+  /* Smooth Easing */
   --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-discord: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Legacy Theme Compatibility Aliases */
+  /* Legacy Compatibility Aliases */
   --boysic-orange: #ff9900;
   --boysic-orange-hover: #ffa826;
   --boysic-orange-deep: #e68a00;
-  --boysic-orange-glow: rgba(255, 153, 0, 0.35);
-  --boysic-orange-subtle: rgba(255, 153, 0, 0.12);
   --solar-orange-primary: #ff9900;
-  --solar-amber-bright: #fbbf24;
-  --gradient-solar-fire: linear-gradient(135deg, #f59e0b 0%, #ff9900 100%);
-  --gradient-solar-pill: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
-  --shadow-solar-card: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --shadow-solar-glow: 0 4px 16px rgba(88, 101, 242, 0.3);
-  --shadow-solar-hover: 0 8px 28px rgba(0, 0, 0, 0.7);
+  --solar-amber-bright: #ff9900;
+  --gradient-solar-fire: var(--avatar-orange-gradient);
+  --gradient-solar-pill: #252733;
+  --shadow-solar-card: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-solar-glow: 0 4px 16px rgba(255, 153, 0, 0.3);
+  --shadow-solar-hover: 0 8px 28px rgba(0, 0, 0, 0.85);
   --glass-blur-deep: blur(20px);
 }
 
-/* Reset & Typewriter Base */
+/* Reset & Global Base */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -105,17 +94,16 @@ body {
   user-select: none;
 }
 
-/* Ambient Canvas Glow with Subtle Blurple & Amber Tints */
+/* Ambient Canvas: Pure Dark Obsidian Background */
 .spatial-ambient {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background: 
-    radial-gradient(circle at 10% 10%, rgba(88, 101, 242, 0.04) 0%, transparent 45%),
-    radial-gradient(circle at 90% 90%, rgba(255, 153, 0, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(41, 151, 255, 0.02) 0%, transparent 60%),
-    var(--bg-void);
+    radial-gradient(circle at 10% 10%, rgba(255, 153, 0, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(255, 255, 255, 0.02) 0%, transparent 45%),
+    #000000;
 }
 
 /* Typewriter Blinking Cursor */
@@ -123,7 +111,7 @@ body {
   display: inline-block;
   width: 7px;
   height: 15px;
-  background: var(--accent-blue);
+  background: #ffffff;
   vertical-align: middle;
   margin-left: 2px;
   animation: typewriterBlink 1s step-start infinite;
@@ -134,16 +122,16 @@ body {
   51%, 100% { opacity: 0; }
 }
 
-/* Glass Panels */
+/* Glass Panels in Deep Black */
 .glass-panel {
   background: var(--bg-surface-0);
   border: var(--glass-border);
   border-radius: var(--r-md);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   position: relative;
 }
 
-/* Buttons with Typewriter Feel */
+/* Tactile Buttons */
 .tactile-btn {
   display: inline-flex;
   align-items: center;
@@ -163,8 +151,8 @@ body {
 }
 
 .tactile-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -174,13 +162,13 @@ body {
 }
 
 .tactile-btn.active {
-  background: var(--accent-blurple);
-  color: #ffffff;
-  border-color: var(--accent-blurple);
-  box-shadow: 0 2px 12px rgba(88, 101, 242, 0.4);
+  background: #ffffff;
+  color: #000000;
+  font-weight: 700;
+  border-color: #ffffff;
 }
 
-/* Custom Scrollbar */
+/* Minimal Dark Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -196,5 +184,5 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-blurple);
+  background: rgba(255, 255, 255, 0.28);
 }

@@ -11,7 +11,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети [узел app-2]',
     avatarText: 'АС',
-    avatarBg: 'var(--avatar-alice)',
+    avatarBg: 'var(--avatar-orange-gradient)',
     messages: [
       {
         id: 'msg-1-1',
@@ -51,7 +51,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети [узел app-1]',
     avatarText: 'ОИ',
-    avatarBg: 'var(--avatar-oleg)',
+    avatarBg: 'var(--avatar-orange-gradient)',
     messages: [
       {
         id: 'msg-2-1',
@@ -90,7 +90,7 @@ const CHATS_STORE = {
     status: 'offline',
     statusText: 'был(а) в сети 45 мин назад',
     avatarText: 'ПГ',
-    avatarBg: 'var(--avatar-pavel)',
+    avatarBg: 'var(--avatar-orange-gradient)',
     messages: [
       {
         id: 'msg-3-1',
@@ -122,7 +122,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети [узел app-1]',
     avatarText: 'АЕ',
-    avatarBg: 'var(--avatar-artem)',
+    avatarBg: 'var(--avatar-orange-gradient)',
     messages: [
       {
         id: 'msg-4-1',
@@ -220,7 +220,9 @@ function renderChatHeader(chat) {
   if (nameEl) nameEl.textContent = chat.name;
   if (avatarEl) {
     avatarEl.textContent = chat.avatarText;
-    avatarEl.style.background = chat.avatarBg;
+    avatarEl.style.background = 'var(--avatar-orange-gradient)';
+    avatarEl.style.color = '#000000';
+    avatarEl.style.fontWeight = '800';
   }
 
   if (statusEl) {
