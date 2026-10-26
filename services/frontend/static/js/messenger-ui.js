@@ -1325,42 +1325,14 @@ function escapeHtml(string) {
 }
 
 // ============================================================================
-// 10. Cosmic Settings Physics & Interactive Spotlight Controls
+// 10. Cosmic Settings Physics Controls
 // ============================================================================
-let cursorGlowEnabled = localStorage.getItem('boysic_cursor_glow') !== 'false';
-let mouseX = window.innerWidth / 2;
-let mouseY = window.innerHeight / 2;
-let currentX = mouseX;
-let currentY = mouseY;
-
-function initCursorSpotlight() {
-  const spotlight = document.getElementById('solar-cursor-spotlight');
-  if (!spotlight) return;
-
-  spotlight.style.display = cursorGlowEnabled ? 'block' : 'none';
-
-  window.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-
-  function animateSpotlight() {
-    if (cursorGlowEnabled && spotlight) {
-      currentX += (mouseX - currentX) * 0.14;
-      currentY += (mouseY - currentY) * 0.14;
-      spotlight.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-    }
-    requestAnimationFrame(animateSpotlight);
-  }
-  requestAnimationFrame(animateSpotlight);
-}
-
 function toggleCursorGlow(checkbox) {
-  cursorGlowEnabled = checkbox.checked;
-  localStorage.setItem('boysic_cursor_glow', cursorGlowEnabled);
+  const isEnabled = checkbox ? checkbox.checked : false;
+  localStorage.setItem('boysic_cursor_glow', isEnabled);
   const spotlight = document.getElementById('solar-cursor-spotlight');
   if (spotlight) {
-    spotlight.style.display = cursorGlowEnabled ? 'block' : 'none';
+    spotlight.style.display = isEnabled ? 'block' : 'none';
   }
 }
 window.toggleCursorGlow = toggleCursorGlow;
@@ -1416,12 +1388,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   selectChat(1);
   setupDragAndDrop();
-  initCursorSpotlight();
 
   // Synchronize Settings UI toggles with persisted localStorage
   const savedCursorToggle = document.getElementById('spatial-toggle-cursor');
   if (savedCursorToggle) {
-    savedCursorToggle.checked = cursorGlowEnabled;
+    savedCursorToggle.checked = false;
   }
 
   const savedBlackHole = localStorage.getItem('boysic_black_hole');

@@ -74,7 +74,6 @@ async def test_full_views_and_cosmic_features():
         assert 'id="spatial-toggle-blur"' in resp_settings.text
         assert 'id="spatial-toggle-haptics"' in resp_settings.text
         assert 'id="cosmic-canvas"' in resp_settings.text
-        assert 'id="solar-cursor-spotlight"' in resp_settings.text
 
         # 2. Direct GET /import loads base with import view set to display: flex
         resp_import = await client.get("/import")
