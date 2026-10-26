@@ -588,13 +588,16 @@ function switchNavTab(tabName) {
   
   tabs.forEach(name => {
     const btn = document.getElementById(`btn-tab-${name}`);
+    const secBtn = document.getElementById(`sec-btn-${name}`);
     const view = document.getElementById(`view-${name}`);
 
     if (name === tabName) {
       if (btn) btn.classList.add('active');
+      if (secBtn) secBtn.classList.add('active');
       if (view) view.style.display = 'flex';
     } else {
       if (btn) btn.classList.remove('active');
+      if (secBtn) secBtn.classList.remove('active');
       if (view) view.style.display = 'none';
     }
   });

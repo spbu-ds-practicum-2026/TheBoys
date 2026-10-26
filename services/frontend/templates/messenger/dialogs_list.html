@@ -25,11 +25,11 @@
         </div>
         <div class="dropdown-item" onclick="switchNavTab('import'); closeDrawerDropdownMenu();">
           <span class="dropdown-item-icon">📥</span>
-          <span class="dropdown-item-text" data-i18n="nav_import" data-ru="Импорт музыки и файлов">Import Music</span>
+          <span class="dropdown-item-text" data-i18n="nav_import" data-ru="Импорт">Импорт</span>
         </div>
         <div class="dropdown-item" onclick="switchNavTab('settings'); closeDrawerDropdownMenu();">
           <span class="dropdown-item-icon">⚙️</span>
-          <span class="dropdown-item-text" data-i18n="nav_settings" data-ru="Параметры и настройки">Settings</span>
+          <span class="dropdown-item-text" data-i18n="nav_settings" data-ru="Параметры">Параметры</span>
         </div>
       </div>
     </div>
@@ -48,6 +48,19 @@
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
+    </button>
+  </div>
+
+  <!-- Prominent Primary Section Switcher: Чаты, Импорт, Параметры -->
+  <div class="drawer-sections-pill-row">
+    <button class="section-pill-btn active" id="sec-btn-chats" onclick="switchNavTab('chats')" title="Чаты">
+      <span data-i18n="nav_chats" data-ru="Чаты">💬 Чаты</span>
+    </button>
+    <button class="section-pill-btn" id="sec-btn-import" onclick="switchNavTab('import')" title="Импорт треков и файлов">
+      <span data-i18n="nav_import" data-ru="Импорт">📥 Импорт</span>
+    </button>
+    <button class="section-pill-btn" id="sec-btn-settings" onclick="switchNavTab('settings')" title="Параметры системы">
+      <span data-i18n="nav_settings" data-ru="Параметры">⚙️ Параметры</span>
     </button>
   </div>
 

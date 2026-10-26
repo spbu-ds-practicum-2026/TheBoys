@@ -9,34 +9,34 @@
   --font-family: var(--font-typewriter);
   --font-mono: var(--font-typewriter);
 
-  /* Deep Black & Graphite Layering */
-  --bg-void: #000000;         /* 100% Pure Black */
-  --bg-rail: #070709;         /* Discord Left Rail */
-  --bg-drawer: #0d0e12;       /* Telegram Dialogs Drawer */
-  --bg-canvas: #121318;       /* Chat Stage Canvas */
-  --bg-surface-0: #0d0e12;
-  --bg-surface-1: #14151b;
-  --bg-surface-2: #1b1c24;
-  --bg-surface-3: #232530;
-  --bg-surface-input: #171820;
+  /* Refined Graphite Dark Palette ("чуть посерее" - Discord & Telegram Dark) */
+  --bg-void: #0e1014;         /* Soft Dark Void */
+  --bg-rail: #14161b;         /* Left Navigation Rail */
+  --bg-drawer: #1a1c23;       /* Dialogs Drawer */
+  --bg-canvas: #21232c;       /* Chat Stage Canvas */
+  --bg-surface-0: #1a1c23;
+  --bg-surface-1: #242732;
+  --bg-surface-2: #2b2e3b;
+  --bg-surface-3: #353847;
+  --bg-surface-input: #262935;
 
   /* Typography Colors */
   --text-pure: #ffffff;
-  --text-bright: #f0f1f5;
-  --text-muted: #8e929f;
-  --text-subtle: #5f6370;
-  --text-dim: #3f424c;
+  --text-bright: #f3f4f8;
+  --text-muted: #9fa4b2;
+  --text-subtle: #6c7182;
+  --text-dim: #4d5160;
 
   /* Refined Gray Avatars (Exact User Request) */
-  --avatar-gray: #2e3036;
-  --avatar-gray-gradient: linear-gradient(135deg, #3a3c45 0%, #25272d 100%);
-  --avatar-gray-border: 1px solid rgba(255, 255, 255, 0.18);
+  --avatar-gray: #343744;
+  --avatar-gray-gradient: linear-gradient(135deg, #444858 0%, #292b36 100%);
+  --avatar-gray-border: 1px solid rgba(255, 255, 255, 0.2);
   --avatar-gray-text: #ffffff;
 
   /* Monochrome Message Bubbles */
-  --bubble-incoming: #181920;
-  --bubble-outgoing: #252733;
-  --bubble-outgoing-border: rgba(255, 255, 255, 0.16);
+  --bubble-incoming: #262833;
+  --bubble-outgoing: #343849;
+  --bubble-outgoing-border: rgba(255, 255, 255, 0.18);
 
   /* Accent Borders & Specular Lines */
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
