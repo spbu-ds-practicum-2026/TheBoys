@@ -1,10 +1,16 @@
 <!-- Spatial Bento Grid Settings (Solar Cosmic Edition) -->
 <div class="bento-settings-stage">
-  <!-- Header -->
+  <!-- Header with Back Button -->
   <div class="bento-header">
-    <div>
-      <h1 class="bento-header-title">Параметры системы</h1>
-      <p class="bento-header-desc">Управление профилем, космической физикой стекла и состоянием распределённого кластера</p>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <button class="tactile-btn nav-back-btn" onclick="switchNavTab('chats')">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        <span data-i18n="back_to_chats" data-ru="Назад к чатам">Back to Chats</span>
+      </button>
+      <div>
+        <h1 class="bento-header-title" data-i18n="settings_title" data-ru="Параметры системы">System Settings</h1>
+        <p class="bento-header-desc" data-i18n="settings_desc" data-ru="Управление профилем, космической физикой стекла и состоянием распределённого кластера">Manage profile, cluster nodes, language and interface preferences</p>
+      </div>
     </div>
   </div>
 

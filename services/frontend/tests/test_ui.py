@@ -31,7 +31,32 @@ async def test_static_files_accessible():
             "/static/css/glass.css",
             "/static/css/messenger.css",
             "/static/css/settings.css",
-            "/static/js/messenger-ui.js"
+            "/static/js/messenger-ui.js",
+            "/static/js/htmx.min.js"
         ]:
             resp = await client.get(static_file)
             assert resp.status_code == 200, f"Failed to fetch {static_file}"
+
+@pytest.mark.asyncio
+async def test_htmx_endpoints():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        headers = {"HX-Request": "true"}
+        
+        # Test HTMX partial routes for views
+        resp_player = await client.get("/player", headers=headers)
+        assert resp_player.status_code == 200
+        assert "Music Player" in resp_player.text or "Плеер" in resp_player.text
+        
+        resp_import = await client.get("/import", headers=headers)
+        assert resp_import.status_code == 200
+        assert "Import Music" in resp_import.text or "Импорт своей музыки" in resp_import.text
+        
+        resp_settings = await client.get("/settings", headers=headers)
+        assert resp_settings.status_code == 200
+        assert "Параметры" in resp_settings.text or "System Settings" in resp_settings.text
+        
+        # Test HTMX generic partials
+        resp_partial_import = await client.get("/htmx/views/import")
+        assert resp_partial_import.status_code == 200
+        assert "Import Music" in resp_partial_import.text or "Импорт своей музыки" in resp_partial_import.text

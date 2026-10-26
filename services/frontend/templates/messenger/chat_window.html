@@ -28,19 +28,29 @@
       </div>
     </div>
 
-    <!-- Header Tools -->
+    <!-- Header Tools with Quick Access to Settings & Import -->
     <div style="display: flex; gap: 6px;">
+      <!-- Direct Import Link -->
+      <button class="tactile-btn header-tool-btn" onclick="switchNavTab('import')" title="Import Music & Files" data-ru="Импорт музыки и файлов" data-i18n-title="nav_import">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+          <path d="M12 12v9"/>
+          <path d="m16 16-4-4-4 4"/>
+        </svg>
+      </button>
+
+      <!-- Direct Settings Link -->
+      <button class="tactile-btn header-tool-btn" onclick="switchNavTab('settings')" title="Settings / Параметры" data-ru="Параметры системы" data-i18n-title="nav_settings">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+
       <button class="tactile-btn header-tool-btn" title="Search conversation" data-ru="Поиск по переписке" data-i18n-title="search_chat_tooltip">
         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-      </button>
-      <button class="tactile-btn header-tool-btn" title="Chat options" data-ru="Опции диалога" data-i18n-title="dialog_options_tooltip">
-        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-          <circle cx="12" cy="12" r="1.5"></circle>
-          <circle cx="12" cy="5" r="1.5"></circle>
-          <circle cx="12" cy="19" r="1.5"></circle>
         </svg>
       </button>
     </div>

@@ -17,6 +17,7 @@ const I18N_DICTIONARY = {
     nav_player: 'Player',
     nav_import: 'Import Music',
     nav_settings: 'Settings',
+    back_to_chats: 'Back to Chats',
     user_status_online: 'Dmitry Byzov (online)',
 
     // Drawer / Dialogs
@@ -111,6 +112,7 @@ const I18N_DICTIONARY = {
     nav_player: 'Плеер',
     nav_import: 'Импорт своей музыки',
     nav_settings: 'Параметры',
+    back_to_chats: 'Назад к чатам',
     user_status_online: 'Дмитрий Бызов (в сети)',
 
     // Drawer / Dialogs
@@ -1266,6 +1268,30 @@ function setupDragAndDrop() {
     });
   }
 }
+
+function toggleDrawerDropdownMenu(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('drawer-dropdown-menu');
+  if (!menu) return;
+  const isHidden = menu.style.display === 'none' || !menu.style.display;
+  menu.style.display = isHidden ? 'flex' : 'none';
+}
+window.toggleDrawerDropdownMenu = toggleDrawerDropdownMenu;
+
+function closeDrawerDropdownMenu() {
+  const menu = document.getElementById('drawer-dropdown-menu');
+  if (menu) menu.style.display = 'none';
+}
+window.closeDrawerDropdownMenu = closeDrawerDropdownMenu;
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('drawer-dropdown-menu');
+  const btn = document.getElementById('drawer-menu-btn');
+  if (menu && menu.style.display !== 'none' && !menu.contains(e.target) && !btn?.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
 
 function escapeHtml(string) {
   const entityMap = {

@@ -27,43 +27,55 @@
 
       <div class="rail-separator"></div>
 
-      <!-- Navigation Icon Group -->
+      <!-- Navigation Icon Group with Visible Labels (Telegram Style) & HTMX Support -->
       <nav class="rail-nav-group">
-        <!-- 1. Chats (Default Active, No Unread Badge Clutter) -->
-        <button class="rail-tab-btn active" id="btn-tab-chats" onclick="switchNavTab('chats')" title="Chats" data-ru="Чаты" data-i18n-title="nav_chats">
+        <!-- 1. Chats (Default Active) -->
+        <button class="rail-tab-btn active" id="btn-tab-chats" onclick="switchNavTab('chats')"
+                hx-get="/htmx/views/chats" hx-trigger="click" hx-target="#view-chats" hx-swap="none"
+                title="Chats" data-ru="Чаты" data-i18n-title="nav_chats">
           <span class="rail-pill-indicator"></span>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
           </svg>
+          <span class="rail-btn-label" data-i18n="nav_chats" data-ru="Чаты">Chats</span>
         </button>
 
         <!-- 2. Player -->
-        <button class="rail-tab-btn" id="btn-tab-player" onclick="switchNavTab('player')" title="Player" data-ru="Плеер" data-i18n-title="nav_player">
+        <button class="rail-tab-btn" id="btn-tab-player" onclick="switchNavTab('player')"
+                hx-get="/htmx/views/player" hx-trigger="click" hx-target="#view-player" hx-swap="none"
+                title="Player" data-ru="Плеер" data-i18n-title="nav_player">
           <span class="rail-pill-indicator"></span>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="8" cy="18" r="3"/>
             <circle cx="18" cy="16" r="3"/>
             <path d="M11 18V4l10-2v14"/>
           </svg>
+          <span class="rail-btn-label" data-i18n="nav_player" data-ru="Плеер">Player</span>
         </button>
 
-        <!-- 3. Import Music -->
-        <button class="rail-tab-btn" id="btn-tab-import" onclick="switchNavTab('import')" title="Import Music" data-ru="Импорт своей музыки" data-i18n-title="nav_import">
+        <!-- 3. Import Music & Files -->
+        <button class="rail-tab-btn" id="btn-tab-import" onclick="switchNavTab('import')"
+                hx-get="/htmx/views/import" hx-trigger="click" hx-target="#view-import" hx-swap="none"
+                title="Import Music" data-ru="Импорт своей музыки" data-i18n-title="nav_import">
           <span class="rail-pill-indicator"></span>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
             <path d="M12 12v9"/>
             <path d="m16 16-4-4-4 4"/>
           </svg>
+          <span class="rail-btn-label" data-i18n="nav_import" data-ru="Импорт">Import</span>
         </button>
 
         <!-- 4. Settings -->
-        <button class="rail-tab-btn" id="btn-tab-settings" onclick="switchNavTab('settings')" title="Settings" data-ru="Параметры" data-i18n-title="nav_settings">
+        <button class="rail-tab-btn" id="btn-tab-settings" onclick="switchNavTab('settings')"
+                hx-get="/htmx/views/settings" hx-trigger="click" hx-target="#view-settings" hx-swap="none"
+                title="Settings" data-ru="Параметры" data-i18n-title="nav_settings">
           <span class="rail-pill-indicator"></span>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
+          <span class="rail-btn-label" data-i18n="nav_settings" data-ru="Параметры">Settings</span>
         </button>
       </nav>
 
@@ -128,6 +140,7 @@
     </div>
   </div>
 
+  <script src="/static/js/htmx.min.js"></script>
   <script src="/static/js/messenger-ui.js"></script>
 </body>
 </html>
