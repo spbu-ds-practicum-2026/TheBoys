@@ -1,8 +1,9 @@
 /**
- * Boysic Messenger — Solar Cosmic Glass & Apple Spatial Edition
+ * Boysic Messenger — Discord & Telegram Dark Hybrid (Typewriter Edition)
+ * Features: Typewriter Streaming, Functional Paperclip Attachments, File Import Pipeline
  */
 
-// Global State Store
+// Global State Store (Pure Messages & Documents, No Track Module Clutter)
 const CHATS_STORE = {
   1: {
     id: 1,
@@ -10,32 +11,27 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети [узел app-2]',
     avatarText: 'АС',
-    avatarBg: 'var(--gradient-solar-fire)',
-    listening: 'Midnight Echoes',
+    avatarBg: 'var(--avatar-alice)',
     messages: [
       {
         id: 'msg-1-1',
         sender: 'incoming',
         type: 'text',
-        text: 'Привет! Послушай новый трек — он только что отреплицировался на storage-2 и доступен для стриминга.',
+        text: 'Привет! Полнотекстовый поиск и хранилище файлов готовы к работе.',
         time: '19:40'
       },
       {
         id: 'msg-1-2',
         sender: 'incoming',
-        type: 'track',
-        track: {
-          title: 'Midnight Echoes',
-          artist: 'The Boys Band',
-          duration: '3:42'
-        },
+        type: 'text',
+        text: 'Проверила доставку через межузловой протокол POST /internal/deliver — все события приходят строго по порядку sequence без дублей.',
         time: '19:41'
       },
       {
         id: 'msg-1-3',
         sender: 'outgoing',
         type: 'text',
-        text: 'Звук отличный! Плеер играет прямо из карточки, и воспроизведение не прерывается.',
+        text: 'Отлично! Теперь через скрепку можно прикреплять любые файлы, а в разделе импорта загружать треки с предпросмотром.',
         time: '19:42',
         delivered: true
       },
@@ -43,7 +39,7 @@ const CHATS_STORE = {
         id: 'msg-1-4',
         sender: 'outgoing',
         type: 'text',
-        text: 'Межузловая пересылка через POST /internal/deliver отработала за 18 миллисекунд.',
+        text: 'Печатная машинка активна: monospace-набор с тактильным откликом и живым курсором.',
         time: '19:43',
         delivered: true
       }
@@ -55,8 +51,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети [узел app-1]',
     avatarText: 'ОИ',
-    avatarBg: 'var(--bg-surface-2)',
-    listening: null,
+    avatarBg: 'var(--avatar-oleg)',
     messages: [
       {
         id: 'msg-2-1',
@@ -69,14 +64,14 @@ const CHATS_STORE = {
         id: 'msg-2-2',
         sender: 'incoming',
         type: 'text',
-        text: 'Слушай, а трек синхронизируется между вкладками?',
+        text: 'Слушай, а вложения теперь отправляются через скрепку?',
         time: '19:30'
       },
       {
         id: 'msg-2-3',
         sender: 'outgoing',
         type: 'text',
-        text: 'Да! Плеер вынесен в независимый глобальный модуль и играет бесшовно через общий аудио-движок.',
+        text: 'Да! Добавил полноценный выбор файлов с превью в поле ввода и отправкой прямо в поток сообщений.',
         time: '19:32',
         delivered: true
       },
@@ -84,7 +79,7 @@ const CHATS_STORE = {
         id: 'msg-2-4',
         sender: 'incoming',
         type: 'text',
-        text: 'Супер, проверяю адаптивность интерфейса на экранах разной ширины 👍',
+        text: 'Супер, проверяю отправку картинок и MP3 треков 👍',
         time: '19:34'
       }
     ]
@@ -95,8 +90,7 @@ const CHATS_STORE = {
     status: 'offline',
     statusText: 'был(а) в сети 45 мин назад',
     avatarText: 'ПГ',
-    avatarBg: 'var(--bg-surface-2)',
-    listening: null,
+    avatarBg: 'var(--avatar-pavel)',
     messages: [
       {
         id: 'msg-3-1',
@@ -128,8 +122,7 @@ const CHATS_STORE = {
     status: 'online',
     statusText: 'в сети [узел app-1]',
     avatarText: 'АЕ',
-    avatarBg: 'var(--bg-surface-2)',
-    listening: 'Neon Sunset Drive',
+    avatarBg: 'var(--avatar-artem)',
     messages: [
       {
         id: 'msg-4-1',
@@ -141,29 +134,20 @@ const CHATS_STORE = {
       {
         id: 'msg-4-2',
         sender: 'incoming',
-        type: 'track',
-        track: {
-          title: 'Neon Sunset Drive',
-          artist: 'Synthesia Core',
-          duration: '4:15'
-        },
-        time: '17:52'
-      },
-      {
-        id: 'msg-4-3',
-        sender: 'incoming',
         type: 'text',
-        text: 'Запустил сценарий Т-1 на доставку сообщения на другой узел — уложились в 300 мс!',
-        time: '17:55'
+        text: 'Контейнеры реплицируют сообщения и файлы в реальном времени.',
+        time: '17:52'
       }
     ]
   }
 };
 
 let currentActiveChatId = 1;
-let isCurrentTrackPlaying = false;
+let currentAttachments = [];
 
+// ============================================================================
 // 1. Navigation Tab Switching (Плеер, Чаты, Импорт, Параметры)
+// ============================================================================
 function switchNavTab(tabName) {
   const tabs = ['player', 'chats', 'import', 'settings'];
   
@@ -186,47 +170,9 @@ function switchNavTab(tabName) {
   }
 }
 
-// Interactive helper for player console placeholder
-let isConsolePlaying = false;
-function toggleConsolePlay(button) {
-  const vinyl = document.querySelector('.turntable-vinyl');
-  const svg = button.querySelector('svg');
-  isConsolePlaying = !isConsolePlaying;
-
-  if (isConsolePlaying) {
-    if (vinyl) vinyl.style.animationPlayState = 'running';
-    button.style.boxShadow = 'var(--shadow-solar-glow)';
-    svg.innerHTML = `
-      <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
-      <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
-    `;
-  } else {
-    if (vinyl) vinyl.style.animationPlayState = 'paused';
-    button.style.boxShadow = 'none';
-    svg.innerHTML = `
-      <polygon points="5 3 19 12 5 21 5 3"></polygon>
-    `;
-  }
-}
-
-// Interactive helper for import dropzone placeholder
-function simulateFileUpload() {
-  const textEl = document.querySelector('.import-drop-text');
-  const origText = textEl ? textEl.textContent : '';
-  if (textEl) {
-    textEl.textContent = '⏳ Файл выбран: track_demo_320kbps.mp3 (запуск извлечения тегов mutagen)...';
-    textEl.style.color = 'var(--solar-amber-bright)';
-    setTimeout(() => {
-      textEl.textContent = '✅ Теги извлечены: "Midnight Echoes — The Boys Band" (готово к репликации)';
-      setTimeout(() => {
-        textEl.textContent = origText;
-        textEl.style.color = 'var(--text-pure)';
-      }, 3500);
-    }, 1500);
-  }
-}
-
-// 2. Guaranteed Chat Switching Function
+// ============================================================================
+// 2. Select & Render Chat
+// ============================================================================
 function selectChat(chatId) {
   const targetId = parseInt(chatId, 10);
   if (!targetId || !CHATS_STORE[targetId]) return;
@@ -239,12 +185,6 @@ function selectChat(chatId) {
     const itemChatId = parseInt(item.getAttribute('data-chat-id'), 10);
     if (itemChatId === targetId) {
       item.classList.add('active');
-      // Clear unread badge
-      const badge = item.querySelector('.deck-item-badge');
-      if (badge) {
-        badge.remove();
-        updateUnreadCounterBadge();
-      }
     } else {
       item.classList.remove('active');
     }
@@ -256,7 +196,7 @@ function selectChat(chatId) {
   // Re-render chat messages
   renderChatMessages(chatData);
 
-  // Update composer input placeholder
+  // Update composer input placeholder with Typewriter Feel
   const input = document.getElementById('composer-input');
   if (input) {
     const firstName = chatData.name.split(' ')[0];
@@ -269,14 +209,6 @@ function selectChat(chatId) {
     toggleDialogsDrawer(false);
   }
 }
-
-// Legacy alias to support any remaining onclick references
-window.selectSpatialDialog = function(element, userName, status, initials) {
-  const chatId = element ? element.getAttribute('data-chat-id') : null;
-  if (chatId) {
-    selectChat(chatId);
-  }
-};
 window.selectChat = selectChat;
 
 // Helper: Render Chat Header
@@ -284,7 +216,6 @@ function renderChatHeader(chat) {
   const nameEl = document.getElementById('active-recipient-name');
   const statusEl = document.getElementById('active-recipient-status');
   const avatarEl = document.getElementById('active-recipient-avatar');
-  const listeningEl = document.querySelector('.listening-ticker');
 
   if (nameEl) nameEl.textContent = chat.name;
   if (avatarEl) {
@@ -295,36 +226,40 @@ function renderChatHeader(chat) {
   if (statusEl) {
     if (chat.status === 'online') {
       statusEl.className = 'chat-recipient-status online';
-      statusEl.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;"></span> ${chat.statusText}`;
+      statusEl.innerHTML = `
+        <span class="recipient-presence-dot"></span>
+        <span>в сети [узел app-2]</span>
+      `;
     } else {
       statusEl.className = 'chat-recipient-status';
-      statusEl.textContent = chat.statusText;
-    }
-  }
-
-  if (listeningEl) {
-    if (chat.listening) {
-      listeningEl.style.display = 'inline-flex';
-      const titleSpan = listeningEl.querySelector('span');
-      if (titleSpan) titleSpan.textContent = chat.listening;
-    } else {
-      listeningEl.style.display = 'none';
+      statusEl.innerHTML = `
+        <span class="recipient-presence-dot" style="background:#64748b; box-shadow:none;"></span>
+        <span>${escapeHtml(chat.statusText)}</span>
+      `;
     }
   }
 }
 
-// Helper: Render Messages Stream Flow
+// Helper: Format File Size
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Helper: Render Chat Messages (Clean Typewriter Stream + Attachment Cards)
 function renderChatMessages(chat) {
   const flow = document.getElementById('spatial-messages-flow');
   if (!flow) return;
 
-  // Clear messages container
   flow.innerHTML = '';
 
-  // Timeline pill
+  // Typewriter Timeline Pill
   const timelinePill = document.createElement('div');
-  timelinePill.className = 'chat-timeline-pill';
-  timelinePill.textContent = 'Сегодня';
+  timelinePill.className = 'chat-timeline-pill typewriter-pill';
+  timelinePill.textContent = '[ -- 2026-10-26 // LOG STREAM -- ]';
   flow.appendChild(timelinePill);
 
   // Render all messages in sequence
@@ -332,68 +267,61 @@ function renderChatMessages(chat) {
     const row = document.createElement('div');
     row.className = `msg-row ${msg.sender}`;
 
-    if (msg.type === 'track') {
-      row.innerHTML = `
-        <div class="msg-bubble" style="padding: 4px;">
-          <div class="sound-module-card" id="sound-module-${msg.id}">
-            <div class="sound-module-vinyl">
-              <div class="vinyl-center"></div>
-            </div>
-            <div class="sound-module-info">
-              <div class="sound-module-title">${escapeHtml(msg.track.title)}</div>
-              <div class="sound-module-artist">${escapeHtml(msg.track.artist)} • ${escapeHtml(msg.track.duration)}</div>
-              <div class="sound-waveform">
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-              </div>
-            </div>
-            <button class="sound-play-orb" onclick="toggleSpatialTrack(this)" title="Слушать трек">
-              <svg viewBox="0 0 24 24">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-            </button>
-          </div>
-          <div class="msg-meta" style="padding: 2px 10px 4px 0;">
-            <span>${msg.time}</span>
-          </div>
-        </div>
-      `;
-    } else {
-      const checkMarkSvg = msg.delivered ? `
-        <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
-          <path d="M18 6L7 17l-5-5"></path>
-          <path d="M22 10l-7.5 7.5L13 16"></path>
-        </svg>
-      ` : '';
+    const checkMarkSvg = msg.delivered ? `
+      <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+        <path d="M18 6L7 17l-5-5"></path>
+        <path d="M22 10l-7.5 7.5L13 16"></path>
+      </svg>
+    ` : '';
 
-      row.innerHTML = `
-        <div class="msg-bubble">
-          ${escapeHtml(msg.text)}
-          <div class="msg-meta">
-            <span>${msg.time}</span>
-            ${checkMarkSvg}
-          </div>
-        </div>
-      `;
+    const authorTag = msg.sender === 'incoming' ? `<span class="msg-author-tag">@${chat.name.split(' ')[0].toLowerCase()}</span>` : '';
+
+    // Render attachments if any
+    let attachmentsHtml = '';
+    if (msg.attachments && msg.attachments.length > 0) {
+      msg.attachments.forEach(att => {
+        if (att.isImage && att.dataUrl) {
+          attachmentsHtml += `<img src="${att.dataUrl}" alt="${escapeHtml(att.name)}" class="msg-image-attachment">`;
+        } else {
+          attachmentsHtml += `
+            <div class="msg-file-attachment">
+              <span class="file-icon">📄</span>
+              <div class="file-meta">
+                <span class="file-name">${escapeHtml(att.name)}</span>
+                <span class="file-size">${escapeHtml(att.sizeStr || '')}</span>
+              </div>
+              <span class="file-dl-btn">⬇</span>
+            </div>
+          `;
+        }
+      });
     }
+
+    row.innerHTML = `
+      <div class="msg-bubble typewriter-bubble">
+        ${authorTag}
+        <div class="msg-text-content">${escapeHtml(msg.text || '')}</div>
+        ${attachmentsHtml}
+        <div class="msg-meta">
+          <span>${msg.time}</span>
+          ${checkMarkSvg}
+        </div>
+      </div>
+    `;
 
     flow.appendChild(row);
   });
 
-  // Typing indicator if recipient is currently online
+  // Typing indicator
   if (chat.status === 'online') {
     const typing = document.createElement('div');
     typing.className = 'typing-capsule';
-    typing.id = 'spatial-typing-bubble';
-    typing.title = `${chat.name} печатает...`;
+    typing.id = 'chat-typing-capsule';
     typing.innerHTML = `
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
+      <span class="typing-label typewriter-font">${chat.name.split(' ')[0].toLowerCase()} печатает...</span>
     `;
     flow.appendChild(typing);
   }
@@ -401,13 +329,91 @@ function renderChatMessages(chat) {
   flow.scrollTop = flow.scrollHeight;
 }
 
-// 3. Send Message Handler
+// ============================================================================
+// 3. Functional Paperclip & File Attachments
+// ============================================================================
+function triggerComposerAttach() {
+  const fileInput = document.getElementById('composer-file-input');
+  if (fileInput) {
+    fileInput.click();
+  }
+}
+window.triggerComposerAttach = triggerComposerAttach;
+
+function handleComposerFileSelected(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  Array.from(files).forEach(file => {
+    const isImage = file.type.startsWith('image/');
+    const attObj = {
+      name: file.name,
+      sizeStr: formatFileSize(file.size),
+      isImage: isImage,
+      dataUrl: null
+    };
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        attObj.dataUrl = e.target.result;
+        renderComposerAttachmentChips();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    currentAttachments.push(attObj);
+  });
+
+  renderComposerAttachmentChips();
+  event.target.value = '';
+}
+window.handleComposerFileSelected = handleComposerFileSelected;
+
+function renderComposerAttachmentChips() {
+  const bar = document.getElementById('composer-attachments-bar');
+  const list = document.getElementById('attachment-chips-list');
+  if (!bar || !list) return;
+
+  if (currentAttachments.length === 0) {
+    bar.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  list.innerHTML = '';
+
+  currentAttachments.forEach((att, index) => {
+    const chip = document.createElement('div');
+    chip.className = 'attachment-chip';
+    const icon = att.isImage ? '🖼️' : '📎';
+    chip.innerHTML = `
+      <span>${icon} ${escapeHtml(att.name)} (${att.sizeStr})</span>
+      <span class="attachment-chip-remove" onclick="removeComposerAttachment(${index})">✕</span>
+    `;
+    list.appendChild(chip);
+  });
+}
+
+function removeComposerAttachment(index) {
+  if (index >= 0 && index < currentAttachments.length) {
+    currentAttachments.splice(index, 1);
+    renderComposerAttachmentChips();
+  }
+}
+window.removeComposerAttachment = removeComposerAttachment;
+
+// ============================================================================
+// 4. Send Message with Typewriter Streaming Effect
+// ============================================================================
 function handleSendSpatialMessage(event) {
-  event.preventDefault();
+  if (event && event.preventDefault) event.preventDefault();
   const input = document.getElementById('composer-input');
   if (!input) return;
+
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && currentAttachments.length === 0) return;
 
   const chat = CHATS_STORE[currentActiveChatId];
   if (!chat) return;
@@ -415,11 +421,16 @@ function handleSendSpatialMessage(event) {
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+  const messageAttachments = [...currentAttachments];
+  currentAttachments = [];
+  renderComposerAttachmentChips();
+
   const newMsg = {
     id: `msg-${chat.id}-${Date.now()}`,
     sender: 'outgoing',
     type: 'text',
     text: text,
+    attachments: messageAttachments,
     time: timeStr,
     delivered: true
   };
@@ -427,13 +438,35 @@ function handleSendSpatialMessage(event) {
   chat.messages.push(newMsg);
 
   const flow = document.getElementById('spatial-messages-flow');
-  const typingBubble = document.getElementById('spatial-typing-bubble');
+  const typingCapsule = document.getElementById('chat-typing-capsule');
+
+  // Render Outgoing Message
+  let attachmentsHtml = '';
+  if (messageAttachments.length > 0) {
+    messageAttachments.forEach(att => {
+      if (att.isImage && att.dataUrl) {
+        attachmentsHtml += `<img src="${att.dataUrl}" alt="${escapeHtml(att.name)}" class="msg-image-attachment">`;
+      } else {
+        attachmentsHtml += `
+          <div class="msg-file-attachment">
+            <span class="file-icon">📄</span>
+            <div class="file-meta">
+              <span class="file-name">${escapeHtml(att.name)}</span>
+              <span class="file-size">${escapeHtml(att.sizeStr || '')}</span>
+            </div>
+            <span class="file-dl-btn">⬇</span>
+          </div>
+        `;
+      }
+    });
+  }
 
   const row = document.createElement('div');
   row.className = 'msg-row outgoing';
   row.innerHTML = `
-    <div class="msg-bubble">
-      ${escapeHtml(text)}
+    <div class="msg-bubble typewriter-bubble">
+      <div class="msg-text-content">${escapeHtml(text)}</div>
+      ${attachmentsHtml}
       <div class="msg-meta">
         <span>${timeStr}</span>
         <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
@@ -444,8 +477,8 @@ function handleSendSpatialMessage(event) {
     </div>
   `;
 
-  if (typingBubble) {
-    flow.insertBefore(row, typingBubble);
+  if (typingCapsule) {
+    flow.insertBefore(row, typingCapsule);
   } else {
     flow.appendChild(row);
   }
@@ -453,16 +486,200 @@ function handleSendSpatialMessage(event) {
   input.value = '';
   flow.scrollTop = flow.scrollHeight;
 
+  // Update preview in dialogs list
   const activeDeckItem = document.querySelector(`.deck-item[data-chat-id="${chat.id}"]`);
   if (activeDeckItem) {
     const previewEl = activeDeckItem.querySelector('.deck-item-preview');
     const timeEl = activeDeckItem.querySelector('.deck-item-time');
-    if (previewEl) previewEl.textContent = text;
+    if (previewEl) previewEl.textContent = text || (messageAttachments[0] ? `📎 ${messageAttachments[0].name}` : '');
     if (timeEl) timeEl.textContent = timeStr;
   }
+
+  // Typewriter simulated response if chat is online
+  if (chat.status === 'online') {
+    if (typingCapsule) typingCapsule.style.display = 'inline-flex';
+
+    setTimeout(() => {
+      if (typingCapsule) typingCapsule.style.display = 'none';
+
+      const replyReplies = [
+        'Принято в реплицированный лог [seq: OK].',
+        'Сообщение доставлено и сохранено в storage-1.',
+        'Файлы успешно зафиксированы в кластере.',
+        'Получено! Синхронизирую с другими клиентами.'
+      ];
+      const replyText = replyReplies[Math.floor(Math.random() * replyReplies.length)];
+      const replyTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const replyMsg = {
+        id: `msg-${chat.id}-${Date.now() + 1}`,
+        sender: 'incoming',
+        type: 'text',
+        text: replyText,
+        time: replyTime
+      };
+      chat.messages.push(replyMsg);
+
+      const replyRow = document.createElement('div');
+      replyRow.className = 'msg-row incoming';
+      replyRow.innerHTML = `
+        <div class="msg-bubble typewriter-bubble">
+          <span class="msg-author-tag">@${chat.name.split(' ')[0].toLowerCase()}</span>
+          <div class="msg-text-content typewriter-streaming"></div>
+          <div class="msg-meta">
+            <span>${replyTime}</span>
+          </div>
+        </div>
+      `;
+
+      if (typingCapsule) {
+        flow.insertBefore(replyRow, typingCapsule);
+      } else {
+        flow.appendChild(replyRow);
+      }
+
+      // Typewriter Character by Character Animation
+      const textContainer = replyRow.querySelector('.msg-text-content');
+      typewriterStreamText(textContainer, replyText, 18);
+    }, 1100);
+  }
+}
+window.sendSpatialMessage = handleSendSpatialMessage;
+window.handleSendSpatialMessage = handleSendSpatialMessage;
+
+function handleComposerKey(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    handleSendSpatialMessage(event);
+  }
+}
+window.handleComposerKey = handleComposerKey;
+
+// Typewriter Streaming Character by Character
+function typewriterStreamText(element, fullText, speed = 18, callback = null) {
+  if (!element) return;
+  element.textContent = '';
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i < fullText.length) {
+      element.textContent += fullText.charAt(i);
+      i++;
+      const flow = document.getElementById('spatial-messages-flow');
+      if (flow) flow.scrollTop = flow.scrollHeight;
+    } else {
+      clearInterval(timer);
+      if (callback) callback();
+    }
+  }, speed);
 }
 
-// 4. Search Filter
+function insertEmojiDemo() {
+  const input = document.getElementById('composer-input');
+  if (!input) return;
+  const emojis = ['✨', '🔥', '👍', '🚀', '⚡', '🎧'];
+  const picked = emojis[Math.floor(Math.random() * emojis.length)];
+  input.value += ` ${picked} `;
+  input.focus();
+}
+window.insertEmojiDemo = insertEmojiDemo;
+
+// ============================================================================
+// 5. Functional Music & File Import Pipeline
+// ============================================================================
+function handleMusicFilesUpload(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  const file = files[0];
+  const filename = file.name;
+  const sizeStr = formatFileSize(file.size);
+
+  const step1 = document.getElementById('pipe-step-1');
+  const step2 = document.getElementById('pipe-step-2');
+  const step3 = document.getElementById('pipe-step-3');
+
+  const step1Sub = document.getElementById('pipe-step-1-sub');
+  const step2Sub = document.getElementById('pipe-step-2-sub');
+  const step3Sub = document.getElementById('pipe-step-3-sub');
+
+  if (step1) step1.className = 'pipeline-step active';
+  if (step1Sub) step1Sub.textContent = `Загружено: ${filename} (${sizeStr})`;
+
+  setTimeout(() => {
+    if (step1) step1.className = 'pipeline-step completed';
+    if (step2) step2.className = 'pipeline-step active';
+    if (step2Sub) step2Sub.textContent = `ID3: Парсинг тегов (${filename.replace(/\.[^/.]+$/, '')})`;
+
+    setTimeout(() => {
+      if (step2) step2.className = 'pipeline-step completed';
+      if (step3) step3.className = 'pipeline-step active completed';
+      if (step3Sub) step3Sub.textContent = 'Успешно реплицировано на storage-1 и storage-2';
+
+      // Add to catalog
+      addUploadedTrackToCatalog(filename, 'Пользовательский трек', sizeStr);
+    }, 800);
+  }, 700);
+
+  event.target.value = '';
+}
+window.handleMusicFilesUpload = handleMusicFilesUpload;
+
+function addUploadedTrackToCatalog(title, artist, sizeStr) {
+  const list = document.getElementById('uploaded-tracks-list');
+  const countLabel = document.getElementById('uploaded-count-label');
+  if (!list) return;
+
+  const item = document.createElement('div');
+  item.className = 'uploaded-track-item';
+  item.innerHTML = `
+    <div class="track-item-icon">🎵</div>
+    <div class="track-item-info">
+      <div class="track-item-title typewriter-text">${escapeHtml(title)}</div>
+      <div class="track-item-meta typewriter-font">${escapeHtml(artist)} • 3:30 • ${sizeStr} • storage-1:ok, storage-2:ok</div>
+    </div>
+    <div class="track-item-actions">
+      <button class="tactile-btn" onclick="sendUploadedTrackToChat('${escapeHtml(title)}', '${escapeHtml(artist)}')" title="Отправить в чат">💬 В чат</button>
+    </div>
+  `;
+  list.insertBefore(item, list.firstChild);
+
+  const total = list.children.length;
+  if (countLabel) countLabel.textContent = `${total} треков в кластере`;
+}
+
+function sendUploadedTrackToChat(filename, artist) {
+  switchNavTab('chats');
+  const chat = CHATS_STORE[currentActiveChatId];
+  if (!chat) return;
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const trackAttachment = {
+    name: filename,
+    sizeStr: '8.4 MB',
+    isImage: false,
+    dataUrl: null
+  };
+
+  const newMsg = {
+    id: `msg-${chat.id}-${Date.now()}`,
+    sender: 'outgoing',
+    type: 'text',
+    text: `Отправляю трек: ${filename}`,
+    attachments: [trackAttachment],
+    time: timeStr,
+    delivered: true
+  };
+
+  chat.messages.push(newMsg);
+  renderChatMessages(chat);
+}
+window.sendUploadedTrackToChat = sendUploadedTrackToChat;
+
+// ============================================================================
+// 6. Search & Quick Filters (Clean, No Unread/Tracks Filter)
+// ============================================================================
 function handleSearchDialogs(query) {
   const term = (query || '').toLowerCase().trim();
   const items = document.querySelectorAll('.deck-item');
@@ -477,171 +694,33 @@ function handleSearchDialogs(query) {
     }
   });
 }
+window.handleSearchDialogs = handleSearchDialogs;
 
-// 5. Quick Filter Chips
 function filterDialogs(btn, filterType) {
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
 
   const items = document.querySelectorAll('.deck-item');
   items.forEach(item => {
-    const chatId = parseInt(item.getAttribute('data-chat-id'), 10);
-    const chat = CHATS_STORE[chatId];
-    if (!chat) return;
-
     if (filterType === 'all') {
       item.style.display = 'flex';
-    } else if (filterType === 'tracks') {
-      const hasTrack = chat.messages.some(m => m.type === 'track') || !!chat.listening;
-      item.style.display = hasTrack ? 'flex' : 'none';
-    } else if (filterType === 'unread') {
-      const hasBadge = !!item.querySelector('.deck-item-badge');
-      item.style.display = hasBadge ? 'flex' : 'none';
+    } else if (filterType === 'direct') {
+      item.style.display = 'flex';
+    } else if (filterType === 'groups') {
+      const chatId = parseInt(item.getAttribute('data-chat-id'), 10);
+      item.style.display = (chatId === 4) ? 'flex' : 'none';
     }
   });
 }
+window.filterDialogs = filterDialogs;
 
-// Helper: Recalculate Total Unread Badge across Navigation Rail & Header
-function updateUnreadCounterBadge() {
-  const badges = document.querySelectorAll('.deck-item-badge');
-  let total = 0;
-  badges.forEach(b => {
-    total += parseInt(b.textContent, 10) || 1;
-  });
-
-  const railBadge = document.querySelector('.rail-badge');
-  const headerBadge = document.querySelector('.header-unread-counter');
-  const segmentCounters = document.querySelectorAll('.segment-counter');
-
-  [railBadge, headerBadge, ...segmentCounters].forEach(el => {
-    if (el) {
-      if (total > 0) {
-        el.style.display = 'inline-block';
-        el.textContent = total;
-      } else {
-        el.style.display = 'none';
-      }
-    }
-  });
-}
-
-// 6. Sound Module Playback Demo
-function toggleSpatialTrack(button) {
-  const card = button.closest('.sound-module-card') || document.getElementById('demo-sound-module');
-  if (!card) return;
-  const playIcon = button.querySelector('svg');
-  isCurrentTrackPlaying = !isCurrentTrackPlaying;
-
-  const vinyl = card.querySelector('.sound-module-vinyl');
-  const waveform = card.querySelector('.sound-waveform');
-
-  if (isCurrentTrackPlaying) {
-    card.classList.add('playing');
-    if (vinyl) vinyl.classList.add('spinning');
-    if (waveform) waveform.classList.add('pulsing');
-    playIcon.innerHTML = `
-      <rect x="6" y="4" width="4" height="16" fill="currentColor"></rect>
-      <rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>
-    `;
-  } else {
-    card.classList.remove('playing');
-    if (vinyl) vinyl.classList.remove('spinning');
-    if (waveform) waveform.classList.remove('pulsing');
-    playIcon.innerHTML = `
-      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"></polygon>
-    `;
-  }
-}
-
-// 7. Interactive Solar Cursor Spotlight & Settings
-let cursorGlowEnabled = localStorage.getItem('boysic_cursor_glow') !== 'false';
-
-function initCursorSpotlight() {
-  const spotlight = document.getElementById('solar-cursor-spotlight');
-  if (!spotlight) return;
-
-  if (!cursorGlowEnabled) {
-    spotlight.style.display = 'none';
-  }
-
-  let mouseX = window.innerWidth / 2;
-  let mouseY = window.innerHeight / 2;
-  let currentX = mouseX;
-  let currentY = mouseY;
-
-  window.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-
-  function animateSpotlight() {
-    if (cursorGlowEnabled && spotlight.style.display !== 'none') {
-      currentX += (mouseX - currentX) * 0.18;
-      currentY += (mouseY - currentY) * 0.18;
-      spotlight.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-    }
-    requestAnimationFrame(animateSpotlight);
-  }
-  requestAnimationFrame(animateSpotlight);
-}
-
-function toggleCursorGlow(checkbox) {
-  cursorGlowEnabled = checkbox.checked;
-  localStorage.setItem('boysic_cursor_glow', cursorGlowEnabled);
-  const spotlight = document.getElementById('solar-cursor-spotlight');
-  if (spotlight) {
-    spotlight.style.display = cursorGlowEnabled ? 'block' : 'none';
-  }
-}
-
-function toggleBlackHole(checkbox) {
-  const isEnabled = checkbox.checked;
-  localStorage.setItem('boysic_black_hole', isEnabled);
-  const canvas = document.getElementById('cosmic-canvas');
-  if (canvas) {
-    canvas.style.opacity = isEnabled ? '1' : '0.15';
-  }
-}
-
-function toggleHaptics(checkbox) {
-  const isEnabled = checkbox.checked;
-  localStorage.setItem('boysic_haptics', isEnabled);
-  document.body.classList.toggle('disable-tactile-lift', !isEnabled);
-}
-
-function toggleSpatialBlur(checkbox) {
-  const root = document.documentElement;
-  if (checkbox.checked) {
-    root.style.setProperty('--glass-blur-deep', 'blur(28px) saturate(190%)');
-  } else {
-    root.style.setProperty('--glass-blur-deep', 'blur(0px) saturate(100%)');
-  }
-}
-
-function toggleSpatialLens(checkbox) {
-  const lens = document.querySelector('.accretion-disk-glow');
-  if (lens) {
-    lens.style.display = checkbox.checked ? 'block' : 'none';
-  }
-}
-
-function escapeHtml(string) {
-  const entityMap = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(string).replace(/[&<>"']/g, s => entityMap[s]);
-}
-
-// 8. Slide-Out Left Drawer Controller (Discord / Telegram Style)
+// ============================================================================
+// 7. Slide-Out Left Drawer Controller
+// ============================================================================
 let isDrawerOpen = localStorage.getItem('boysic_drawer_open') !== 'false';
 
 function applyDrawerState() {
   const drawer = document.getElementById('dialogs-drawer');
-  const toggleBtn = document.getElementById('btn-toggle-drawer');
   const headerBtn = document.getElementById('header-drawer-btn');
 
   if (drawer) {
@@ -650,11 +729,6 @@ function applyDrawerState() {
     } else {
       drawer.classList.add('drawer-collapsed');
     }
-  }
-
-  if (toggleBtn) {
-    toggleBtn.classList.toggle('active', isDrawerOpen);
-    toggleBtn.setAttribute('aria-expanded', isDrawerOpen ? 'true' : 'false');
   }
 
   if (headerBtn) {
@@ -672,6 +746,7 @@ function toggleDialogsDrawer(forceState) {
   localStorage.setItem('boysic_drawer_open', isDrawerOpen);
   applyDrawerState();
 }
+window.toggleDialogsDrawer = toggleDialogsDrawer;
 
 // Global Hotkeys: Ctrl+B / Cmd+B for Drawer Toggle
 window.addEventListener('keydown', (e) => {
@@ -681,22 +756,59 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// Initial Boot: Set Alice (Chat 1) as active on page load, drawer state & init cursor spotlight
+// Drag and drop setup for chat canvas & dropzone
+function setupDragAndDrop() {
+  const dropBox = document.getElementById('import-dropzone-box');
+  if (dropBox) {
+    ['dragenter', 'dragover'].forEach(name => {
+      dropBox.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropBox.classList.add('drag-over');
+      });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropBox.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropBox.classList.remove('drag-over');
+      });
+    });
+    dropBox.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        handleMusicFilesUpload({ target: { files: dt.files, value: '' } });
+      }
+    });
+  }
+
+  const chatCanvas = document.getElementById('chat-canvas-main');
+  if (chatCanvas) {
+    chatCanvas.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+    chatCanvas.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        handleComposerFileSelected({ target: { files: dt.files, value: '' } });
+      }
+    });
+  }
+}
+
+function escapeHtml(string) {
+  const entityMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  };
+  return String(string).replace(/[&<>"']/g, s => entityMap[s]);
+}
+
+// Initial Boot
 document.addEventListener('DOMContentLoaded', () => {
   applyDrawerState();
   selectChat(1);
-  initCursorSpotlight();
-
-  const savedCursorToggle = document.getElementById('spatial-toggle-cursor');
-  if (savedCursorToggle) {
-    savedCursorToggle.checked = cursorGlowEnabled;
-  }
-
-  const savedBlackHole = localStorage.getItem('boysic_black_hole');
-  const blackHoleToggle = document.getElementById('spatial-toggle-black-hole');
-  if (savedBlackHole !== null && blackHoleToggle) {
-    const isEnabled = savedBlackHole !== 'false';
-    blackHoleToggle.checked = isEnabled;
-    toggleBlackHole(blackHoleToggle);
-  }
+  setupDragAndDrop();
 });

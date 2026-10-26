@@ -1,16 +1,17 @@
 /* ==========================================================================
-   Boysic Settings — Discord & Telegram Dark Monochrome Edition
+   Boysic Settings — Discord & Telegram Dark Hybrid (Typewriter Edition)
    ========================================================================== */
 
 .bento-settings-stage {
   flex: 1;
   width: 100%;
   overflow-y: auto;
-  padding: 18px 24px 30px 24px;
+  padding: 20px 26px 30px 26px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   background: var(--bg-canvas);
+  font-family: var(--font-typewriter);
 }
 
 .bento-header {
@@ -26,7 +27,7 @@
 }
 
 .bento-header-desc {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -38,7 +39,7 @@
   gap: 12px;
 }
 
-/* Base Monochrome Card */
+/* Base Card */
 .glass-card {
   background: var(--bg-surface-0);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -47,8 +48,8 @@
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: #1e1f24;
+  border-color: rgba(88, 101, 242, 0.35);
+  background: var(--bg-surface-1);
 }
 
 /* 1. Profile Hero Card (Span 12) */
@@ -70,14 +71,14 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #25262c;
+  background: var(--avatar-user);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 17px;
   font-weight: 700;
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .profile-hero-name {
@@ -87,7 +88,7 @@
 }
 
 .profile-hero-handle {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -98,10 +99,10 @@
   gap: 6px;
   margin-top: 6px;
   padding: 2px 8px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  border-radius: 4px;
+  background: rgba(88, 101, 242, 0.15);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  color: var(--accent-blue);
   font-size: 11px;
   font-weight: 600;
 }
@@ -119,7 +120,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #ffffff;
   margin-bottom: 2px;
@@ -128,7 +129,7 @@
 .bento-card-title svg {
   width: 16px;
   height: 16px;
-  stroke: #ffffff;
+  stroke: var(--accent-blue);
   stroke-width: 2;
   fill: none;
 }
@@ -146,8 +147,8 @@
 }
 
 .bento-item-row:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(88, 101, 242, 0.08);
+  border-color: rgba(88, 101, 242, 0.25);
 }
 
 .bento-item-label {
@@ -156,7 +157,7 @@
 }
 
 .bento-label-primary {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #ffffff;
 }
@@ -167,7 +168,7 @@
   margin-top: 1px;
 }
 
-/* Monochrome Switch Slider */
+/* Switch Slider */
 .spatial-switch {
   position: relative;
   display: inline-block;
@@ -204,11 +205,11 @@
 }
 
 input:checked + .spatial-switch-slider {
-  background: #ffffff;
-  border-color: #ffffff;
+  background: var(--accent-blurple);
+  border-color: var(--accent-blurple);
+  box-shadow: 0 0 10px rgba(88, 101, 242, 0.4);
 }
 
 input:checked + .spatial-switch-slider:before {
   transform: translateX(16px);
-  background-color: #000000;
 }

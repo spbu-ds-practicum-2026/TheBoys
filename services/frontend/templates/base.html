@@ -6,7 +6,7 @@
   <title>Boysic — Modern Messenger & Player</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/messenger.css">
   <link rel="stylesheet" href="/static/css/settings.css">
@@ -29,13 +29,12 @@
 
       <!-- Navigation Icon Group -->
       <nav class="rail-nav-group">
-        <!-- 1. Chats (Default Active) -->
+        <!-- 1. Chats (Default Active, No Unread Badge Clutter) -->
         <button class="rail-tab-btn active" id="btn-tab-chats" onclick="switchNavTab('chats')" title="Чаты">
           <span class="rail-pill-indicator"></span>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
           </svg>
-          <span class="rail-badge">3</span>
         </button>
 
         <!-- 2. Player -->
@@ -85,11 +84,11 @@
           {% include "player/player_placeholder.html" %}
         </section>
 
-        <!-- Tab 2: Чаты (Slide-Out Telegram Drawer + Discord Chat Canvas) -->
+        <!-- Tab 2: Чаты -->
         <section id="view-chats" class="spatial-stage" style="display: flex; width: 100%; height: 100%; position: relative;">
-          <!-- Slide-out Drawer (Icon toggle, no bulky 'Диалоги' label) -->
+          <!-- Slide-out Drawer (Icon-Only, Clean Typewriter) -->
           {% include "messenger/dialogs_list.html" %}
-          <!-- Full-Width Chat Canvas -->
+          <!-- Chat Canvas with Attachment & Typewriter Support -->
           {% include "messenger/chat_window.html" %}
         </section>
 
@@ -104,13 +103,13 @@
         </section>
       </main>
 
-      <!-- Slim Discord Telemetry Footer -->
-      <footer class="discord-footer">
+      <!-- Typewriter Terminal Footer -->
+      <footer class="discord-footer typewriter-font">
         <div class="footer-left">
-          <span class="footer-hotkey"><kbd>ctrl</kbd> + <kbd>b</kbd> панель</span>
-          <span class="footer-hotkey"><kbd>enter</kbd> отправить</span>
+          <span class="footer-hotkey"><kbd>ctrl</kbd> + <kbd>b</kbd> drawer</span>
+          <span class="footer-hotkey"><kbd>enter</kbd> send</span>
           <span class="footer-dim">•</span>
-          <span class="footer-tag">Boysic Stream Engine</span>
+          <span class="footer-tag">[TTY // ENGINE: LIVE]</span>
         </div>
         <div class="footer-right">
           <span class="footer-tag"><span class="status-pulse-dot"></span> seq: total order</span>

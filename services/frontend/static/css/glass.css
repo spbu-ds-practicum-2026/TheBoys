@@ -1,83 +1,62 @@
 /* ==========================================================================
-   Boysic — Discord & Telegram Dark Monochrome Edition
-   Strictly Black & White Palette: Deep Obsidian, Discord Dark & Pure White
+   Boysic — Discord & Telegram Dark Hybrid (Typewriter Edition)
+   Rich Color Accents + Monospace Typewriter Typography
    ========================================================================== */
 
 :root {
-  /* System Typography (Discord & Apple SF Pro) */
-  --font-family: -apple-system, BlinkMacSystemFont, "gg sans", "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  /* Typewriter Typography System */
+  --font-typewriter: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Courier New', Courier, monospace;
+  --font-family: var(--font-typewriter);
+  --font-mono: var(--font-typewriter);
 
-  /* Pure Monochrome Palette */
-  --mono-0: #000000;         /* Pure Void */
-  --mono-50: #090a0c;        /* App Shell Dark */
-  --mono-100: #0e0f12;       /* Discord Left Rail */
-  --mono-150: #16171b;       /* Telegram/Discord Channel & Dialog List */
-  --mono-200: #1e1f24;       /* Discord Chat Canvas */
-  --mono-250: #25262c;       /* Incoming Message Bubble & Card */
-  --mono-300: #2f3138;       /* Hover Surface & Outgoing Bubble */
-  --mono-350: #3a3c44;       /* Active Hover Surface */
-  --mono-400: #4e5058;       /* Discord Icon Muted */
-  --mono-500: #6d737d;       /* Muted Subtle Text */
-  --mono-600: #949ba4;       /* Telegram/Discord Secondary Text */
-  --mono-700: #b5bac1;       /* Light Silver Secondary */
-  --mono-800: #e0e2e5;       /* High-contrast Near White */
-  --mono-900: #ffffff;       /* Pure White Text & Badges */
+  /* Deep Atmospheric Backgrounds (Slate & Obsidian Layers) */
+  --bg-void: #0b0d13;
+  --bg-rail: #10121a;
+  --bg-drawer: #151822;
+  --bg-canvas: #1a1e2b;
+  --bg-surface-0: #151822;
+  --bg-surface-1: #1e2230;
+  --bg-surface-2: #24293a;
+  --bg-surface-3: #2d3348;
+  --bg-surface-input: #1e2230;
 
-  /* Semantic Theme Mapping */
-  --bg-void: var(--mono-50);
-  --bg-rail: var(--mono-100);
-  --bg-drawer: var(--mono-150);
-  --bg-canvas: var(--mono-200);
-  --bg-surface-0: var(--mono-150);
-  --bg-surface-1: var(--mono-200);
-  --bg-surface-2: var(--mono-250);
-  --bg-surface-3: var(--mono-300);
-  --bg-surface-input: var(--mono-250);
+  /* Rich Color Accent Palette (Discord + Telegram + Boysic) */
+  --accent-blurple: #5865f2;       /* Discord Indigo Blurple */
+  --accent-blurple-hover: #4752c4;
+  --accent-blurple-subtle: rgba(88, 101, 242, 0.15);
+  --accent-blue: #2997ff;          /* Telegram Sky Ice Blue */
+  --accent-blue-subtle: rgba(41, 151, 255, 0.15);
+  --accent-mint: #22c55e;          /* Emerald Online Presence */
+  --accent-amber: #f59e0b;         /* Boysic Warm Gold */
+  --accent-amber-bright: #ff9900;  /* Boysic Signature Orange */
+  --accent-violet: #a855f7;        /* Purple Violet */
+  --accent-rose: #f43f5e;          /* Coral Pink */
+  --accent-cyan: #06b6d4;          /* Cyan Accent */
 
-  /* Typography Colors */
+  /* Text Hierarchy */
   --text-pure: #ffffff;
-  --text-bright: #f2f3f5;
-  --text-muted: #949ba4;
-  --text-subtle: #6d737d;
-  --text-dim: #4e5058;
+  --text-bright: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --text-dim: #475569;
 
-  /* High-Contrast Accents (Black & White Only) */
-  --accent-white: #ffffff;
-  --accent-black: #000000;
-  --accent-mint: #ffffff;    /* Monochrome active presence */
-  --accent-amber: #e0e2e5;
-  --accent-ice: #d1d5db;
+  /* Avatar Dynamic Gradients (Telegram / Discord Style) */
+  --avatar-alice: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --avatar-oleg: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --avatar-pavel: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  --avatar-artem: linear-gradient(135deg, #f59e0b 0%, #ff9900 100%);
+  --avatar-user: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
 
-  /* Aliases for Full Compatibility */
-  --boysic-orange: #ffffff;
-  --boysic-orange-hover: #e0e2e5;
-  --boysic-orange-deep: #cccccc;
-  --boysic-orange-glow: rgba(255, 255, 255, 0.2);
-  --boysic-orange-subtle: rgba(255, 255, 255, 0.08);
-  --boysic-orange-border: rgba(255, 255, 255, 0.25);
-  --solar-orange-primary: #ffffff;
-  --solar-orange-light: #e0e2e5;
-  --solar-amber-bright: #ffffff;
-  --gradient-solar-fire: linear-gradient(180deg, #ffffff 0%, #d8dadf 100%);
-  --gradient-solar-pill: linear-gradient(180deg, #32343b 0%, #292a30 100%);
-  --shadow-solar-card: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --shadow-solar-glow: 0 4px 16px rgba(255, 255, 255, 0.15);
-  --shadow-solar-hover: 0 8px 28px rgba(0, 0, 0, 0.8);
+  /* Message Bubble Gradients */
+  --bubble-incoming: linear-gradient(135deg, #1e2332 0%, #181c28 100%);
+  --bubble-outgoing: linear-gradient(135deg, #2d335c 0%, #222648 100%);
+  --bubble-outgoing-border: rgba(99, 102, 241, 0.35);
 
-  /* Gradients */
-  --gradient-mono-badge: linear-gradient(180deg, #ffffff 0%, #e6e6e6 100%);
-  --gradient-mono-bubble-out: linear-gradient(180deg, #32333a 0%, #28292f 100%);
-  --gradient-mono-bubble-in: linear-gradient(180deg, #25262c 0%, #1f2025 100%);
-
-  /* Borders & Glass Specular */
+  /* Borders & Specular Glass */
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
   --glass-border-light: 1px solid rgba(255, 255, 255, 0.15);
-  --glass-border-accent: 1px solid rgba(255, 255, 255, 0.3);
+  --glass-border-accent: 1px solid rgba(88, 101, 242, 0.4);
   --glass-specular-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-
-  --glass-blur-deep: blur(20px);
-  --glass-blur-standard: blur(14px);
 
   /* Radii */
   --r-xs: 4px;
@@ -87,12 +66,27 @@
   --r-xl: 20px;
   --r-pill: 9999px;
 
-  /* Smooth Transitions */
+  /* Easing */
   --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-discord: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Legacy Theme Compatibility Aliases */
+  --boysic-orange: #ff9900;
+  --boysic-orange-hover: #ffa826;
+  --boysic-orange-deep: #e68a00;
+  --boysic-orange-glow: rgba(255, 153, 0, 0.35);
+  --boysic-orange-subtle: rgba(255, 153, 0, 0.12);
+  --solar-orange-primary: #ff9900;
+  --solar-amber-bright: #fbbf24;
+  --gradient-solar-fire: linear-gradient(135deg, #f59e0b 0%, #ff9900 100%);
+  --gradient-solar-pill: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+  --shadow-solar-card: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-solar-glow: 0 4px 16px rgba(88, 101, 242, 0.3);
+  --shadow-solar-hover: 0 8px 28px rgba(0, 0, 0, 0.7);
+  --glass-blur-deep: blur(20px);
 }
 
-/* Reset & Base */
+/* Reset & Typewriter Base */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -100,8 +94,8 @@
 }
 
 body {
-  font-family: var(--font-family);
-  background-color: var(--mono-50);
+  font-family: var(--font-typewriter);
+  background-color: var(--bg-void);
   color: var(--text-pure);
   width: 100vw;
   height: 100vh;
@@ -111,70 +105,82 @@ body {
   user-select: none;
 }
 
-/* Ambient Background (Monochrome Deep Obsidian Canvas) */
+/* Ambient Canvas Glow with Subtle Blurple & Amber Tints */
 .spatial-ambient {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background: 
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 60%),
-    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.015) 0%, transparent 50%),
-    var(--mono-50);
+    radial-gradient(circle at 10% 10%, rgba(88, 101, 242, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(255, 153, 0, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(41, 151, 255, 0.02) 0%, transparent 60%),
+    var(--bg-void);
 }
 
-/* Glass Panels in Monochrome */
+/* Typewriter Blinking Cursor */
+.typewriter-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background: var(--accent-blue);
+  vertical-align: middle;
+  margin-left: 2px;
+  animation: typewriterBlink 1s step-start infinite;
+}
+
+@keyframes typewriterBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Glass Panels */
 .glass-panel {
   background: var(--bg-surface-0);
   border: var(--glass-border);
+  border-radius: var(--r-md);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  border-radius: var(--r-lg);
   position: relative;
 }
 
-.glass-capsule {
-  background: var(--bg-surface-0);
-  border: var(--glass-border);
-  border-radius: var(--r-pill);
-}
-
-/* Tactile Modern Monochrome Buttons */
+/* Buttons with Typewriter Feel */
 .tactile-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  font-family: var(--font-family);
-  font-size: 13px;
+  font-family: var(--font-typewriter);
+  font-size: 12.5px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-bright);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--r-sm);
-  padding: 6px 14px;
+  padding: 6px 13px;
   cursor: pointer;
-  transition: all 0.18s var(--ease-discord);
+  transition: all 0.16s var(--ease-discord);
 }
 
 .tactile-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.22);
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .tactile-btn:active {
-  transform: scale(0.97);
+  transform: translateY(1px);
 }
 
 .tactile-btn.active {
-  background: #ffffff;
-  color: #000000;
-  font-weight: 700;
-  border-color: #ffffff;
-  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.25);
+  background: var(--accent-blurple);
+  color: #ffffff;
+  border-color: var(--accent-blurple);
+  box-shadow: 0 2px 12px rgba(88, 101, 242, 0.4);
 }
 
-/* Minimal Custom Scrollbar (Telegram / Discord dark scrollbar) */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -190,5 +196,5 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--accent-blurple);
 }

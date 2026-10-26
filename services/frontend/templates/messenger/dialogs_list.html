@@ -1,16 +1,16 @@
-<!-- Telegram & Discord Hybrid Slide-Out Drawer (Icon-Only, Zero Text Labels) -->
+<!-- Telegram & Discord Slide-Out Drawer (Clean Typewriter Edition, No Unread Clutter, No Tracks) -->
 <aside class="dialogs-drawer-panel" id="dialogs-drawer">
-  <!-- Top Search & Drawer Action Bar (No bulky 'Диалоги' label, strictly icon-driven) -->
+  <!-- Top Search Bar (Icon-Only, Clean Typewriter) -->
   <div class="drawer-top-bar">
     <div class="deck-search">
-      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-      <input type="text" class="deck-search-input" placeholder="Поиск..." oninput="handleSearchDialogs(this.value)">
+      <input type="text" class="deck-search-input typewriter-input" placeholder="Поиск сообщений..." oninput="handleSearchDialogs(this.value)">
     </div>
 
-    <!-- Collapse Icon Button -->
+    <!-- Collapse Drawer Icon Button -->
     <button class="drawer-close-btn" onclick="toggleDialogsDrawer(false)" title="Скрыть панель (Ctrl+B)">
       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -19,20 +19,20 @@
     </button>
   </div>
 
-  <!-- Telegram / Discord Filter Pills -->
+  <!-- Clean Filter Pills (No unread or tracks clutter) -->
   <div class="deck-filter-chips">
-    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'unread')">Непрочитанные (3)</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'tracks')">🎵 Треки</button>
+    <button class="filter-chip active" onclick="filterDialogs(this, 'all')">Все диалоги</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'direct')">Личные</button>
+    <button class="filter-chip" onclick="filterDialogs(this, 'groups')">Каналы</button>
   </div>
 
   <!-- Dialog Stream (Click to Switch Chats!) -->
   <div class="deck-list" id="dialogs-deck-list">
-    <!-- Dialog 1: Alice (Active) -->
+    <!-- Dialog 1: Alice (Active) - Distinct Violet Avatar -->
     <div class="deck-item active" data-chat-id="1" onclick="selectChat(1)">
-      <div class="deck-item-avatar">
+      <div class="deck-item-avatar avatar-alice">
         АС
-        <span class="deck-presence-dot"></span>
+        <span class="deck-presence-dot online"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
@@ -40,17 +40,16 @@
           <span class="deck-item-time">19:42</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview">🎵 Midnight Echoes</span>
-          <span class="deck-item-tag">• Трек</span>
+          <span class="deck-item-preview">Привет! Проверила доставку сообщений...</span>
         </div>
       </div>
     </div>
 
-    <!-- Dialog 2: Oleg -->
+    <!-- Dialog 2: Oleg - Distinct Emerald Avatar -->
     <div class="deck-item" data-chat-id="2" onclick="selectChat(2)">
-      <div class="deck-item-avatar">
+      <div class="deck-item-avatar avatar-oleg">
         ОИ
-        <span class="deck-presence-dot"></span>
+        <span class="deck-presence-dot online"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
@@ -58,15 +57,14 @@
           <span class="deck-item-time">19:30</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview">Слушай, а трек синхронизируется?</span>
-          <span class="deck-item-badge">2</span>
+          <span class="deck-item-preview">Слушай, а вложения теперь отправляются?</span>
         </div>
       </div>
     </div>
 
-    <!-- Dialog 3: Pavel -->
+    <!-- Dialog 3: Pavel - Distinct Sky Blue Avatar -->
     <div class="deck-item" data-chat-id="3" onclick="selectChat(3)">
-      <div class="deck-item-avatar">
+      <div class="deck-item-avatar avatar-pavel">
         ПГ
         <span class="deck-presence-dot offline"></span>
       </div>
@@ -81,11 +79,11 @@
       </div>
     </div>
 
-    <!-- Dialog 4: Artem -->
+    <!-- Dialog 4: Artem - Distinct Amber Gold Avatar -->
     <div class="deck-item" data-chat-id="4" onclick="selectChat(4)">
-      <div class="deck-item-avatar">
+      <div class="deck-item-avatar avatar-artem">
         АЕ
-        <span class="deck-presence-dot"></span>
+        <span class="deck-presence-dot online"></span>
       </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
@@ -94,7 +92,6 @@
         </div>
         <div class="deck-item-bottom">
           <span class="deck-item-preview">Docker Compose стенд поднят</span>
-          <span class="deck-item-badge">1</span>
         </div>
       </div>
     </div>

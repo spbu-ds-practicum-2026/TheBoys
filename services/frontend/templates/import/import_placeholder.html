@@ -1,20 +1,23 @@
-<!-- Spatial Music Import Placeholder Screen -->
-<div class="placeholder-stage glass-panel">
+<!-- Functional Music & File Import Stage (Typewriter Edition) -->
+<div class="placeholder-stage">
   <div class="placeholder-container">
     <div class="placeholder-header">
-      <div class="placeholder-badge">
+      <div class="placeholder-badge typewriter-font">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
           <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/>
         </svg>
-        <span>Хранилище треков</span>
+        <span>[STORAGE // REPLICATION ENGINE]</span>
       </div>
-      <h1 class="placeholder-title">Импорт своей музыки</h1>
-      <p class="placeholder-desc">Загрузка MP3 в отказоустойчивое хранилище с автоматическим парсингом тегов и репликацией</p>
+      <h1 class="placeholder-title typewriter-text">Импорт своей музыки</h1>
+      <p class="placeholder-desc typewriter-font">Загрузка MP3/WAV в распределённый кластер с автоматическим извлечением ID3-тегов и репликацией на storage-узлы</p>
     </div>
 
-    <!-- Spatial Upload Dropzone -->
-    <div class="import-dropzone-card" onclick="simulateFileUpload()">
-      <div class="import-icon-orb">
+    <!-- Hidden Real File Input -->
+    <input type="file" id="music-file-picker" accept="audio/*, .mp3, .wav, .flac, .ogg" multiple style="display: none;" onchange="handleMusicFilesUpload(event)">
+
+    <!-- Functional Upload Dropzone -->
+    <div class="import-dropzone-card" id="import-dropzone-box" onclick="document.getElementById('music-file-picker').click()">
+      <div class="dropzone-icon">
         <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/>
@@ -22,53 +25,75 @@
         </svg>
       </div>
 
-      <div class="import-drop-text">Перетащите MP3-файл сюда или нажмите для выбора</div>
-      <div class="import-drop-subtext">Поддерживаются аудиофайлы MP3 до 30 МБ</div>
+      <div class="dropzone-title typewriter-text">Перетащите аудиофайлы сюда или нажмите для выбора</div>
+      <div class="dropzone-subtitle typewriter-font">Поддерживаются MP3, WAV, FLAC, OGG (до 50 МБ)</div>
 
       <div class="import-chips-row">
-        <span class="import-chip">MP3 Only</span>
-        <span class="import-chip">до 30 МБ</span>
-        <span class="import-chip">Авто-теги Mutagen</span>
-        <span class="import-chip">2 копии репликации</span>
+        <span class="import-chip typewriter-font">MP3 / WAV</span>
+        <span class="import-chip typewriter-font">до 50 МБ</span>
+        <span class="import-chip typewriter-font">Парсер ID3</span>
+        <span class="import-chip typewriter-font">Репликация: 2 копии</span>
       </div>
     </div>
 
-    <!-- Pipeline Visualizer -->
-    <div class="import-pipeline-card">
-      <div class="pipeline-step">
+    <!-- Live Pipeline Tracker (Animates upon file upload!) -->
+    <div class="pipeline-tracker" id="import-pipeline-tracker">
+      <div class="pipeline-step" id="pipe-step-1">
         <div class="step-num">1</div>
-        <div class="step-info">
-          <div class="step-title">Загрузка в узел</div>
-          <div class="step-desc">POST /tracks/upload на живой узел приложения</div>
+        <div class="step-text">
+          <div class="step-name typewriter-font">Загрузка в узел</div>
+          <div class="step-sub typewriter-font" id="pipe-step-1-sub">Ожидание выбора файла...</div>
         </div>
       </div>
 
-      <div class="pipeline-arrow">→</div>
-
-      <div class="pipeline-step">
+      <div class="pipeline-step" id="pipe-step-2">
         <div class="step-num">2</div>
-        <div class="step-info">
-          <div class="step-title">Фоновый воркер</div>
-          <div class="step-desc">Извлечение ID3 тегов (название, автор, длина)</div>
+        <div class="step-text">
+          <div class="step-name typewriter-font">ID3 Метаданные</div>
+          <div class="step-sub typewriter-font" id="pipe-step-2-sub">Парсинг тегов и битрейта</div>
         </div>
       </div>
 
-      <div class="pipeline-arrow">→</div>
-
-      <div class="pipeline-step">
+      <div class="pipeline-step" id="pipe-step-3">
         <div class="step-num">3</div>
-        <div class="step-info">
-          <div class="step-title">Репликация трека</div>
-          <div class="step-desc">Сохранение на storage-1 и storage-2</div>
+        <div class="step-text">
+          <div class="step-name typewriter-font">Репликация</div>
+          <div class="step-sub typewriter-font" id="pipe-step-3-sub">Синхронизация storage-1/storage-2</div>
         </div>
       </div>
     </div>
 
-    <!-- Notice footer -->
-    <div class="placeholder-footer-note">
-      <span class="cluster-dot"></span>
-      <span>После загрузки трек сразу появится в каталоге и его можно будет отправлять в чат карточкой</span>
+    <!-- Dynamic Uploaded Tracks Catalog -->
+    <div class="uploaded-catalog-section" id="uploaded-catalog-section">
+      <div class="uploaded-catalog-header">
+        <span class="uploaded-catalog-title typewriter-text">[КАТАЛОГ ЗАГРУЖЕННЫХ ТРЕКОВ]</span>
+        <span class="uploaded-catalog-counter typewriter-font" id="uploaded-count-label">3 трека в кластере</span>
+      </div>
+
+      <div class="uploaded-tracks-list" id="uploaded-tracks-list">
+        <!-- Default Initial Tracks -->
+        <div class="uploaded-track-item">
+          <div class="track-item-icon">🎵</div>
+          <div class="track-item-info">
+            <div class="track-item-title typewriter-text">Midnight Echoes.mp3</div>
+            <div class="track-item-meta typewriter-font">The Boys Band • 3:42 • 8.4 MB • storage-1:ok, storage-2:ok</div>
+          </div>
+          <div class="track-item-actions">
+            <button class="tactile-btn" onclick="sendUploadedTrackToChat('Midnight Echoes.mp3', 'The Boys Band')" title="Отправить в чат">💬 В чат</button>
+          </div>
+        </div>
+
+        <div class="uploaded-track-item">
+          <div class="track-item-icon">🎵</div>
+          <div class="track-item-info">
+            <div class="track-item-title typewriter-text">Neon Sunset Drive.mp3</div>
+            <div class="track-item-meta typewriter-font">Synthesia Core • 4:15 • 9.8 MB • storage-1:ok, storage-2:ok</div>
+          </div>
+          <div class="track-item-actions">
+            <button class="tactile-btn" onclick="sendUploadedTrackToChat('Neon Sunset Drive.mp3', 'Synthesia Core')" title="Отправить в чат">💬 В чат</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
