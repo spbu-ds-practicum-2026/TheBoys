@@ -1,193 +1,153 @@
-<!-- Spatial Bento Grid Settings (Solar Cosmic Edition) -->
+<!-- Section: System Settings & User Profile (Typewriter Edition) -->
 <div class="bento-settings-stage">
-  <!-- Header with Back Button -->
+  <!-- Header -->
   <div class="bento-header">
-    <div style="display: flex; align-items: center; gap: 14px;">
-      <button class="tactile-btn nav-back-btn" onclick="switchNavTab('chats')">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-        <span data-i18n="back_to_chats" data-ru="Назад к чатам">Back to Chats</span>
-      </button>
-      <div>
-        <h1 class="bento-header-title" data-i18n="settings_title" data-ru="Параметры системы">Параметры системы</h1>
-        <p class="bento-header-desc" data-i18n="settings_desc" data-ru="Управление профилем, космической физикой стекла и состоянием распределённого кластера">Управление профилем, космической физикой стекла и состоянием распределённого кластера</p>
-      </div>
+    <div>
+      <h1 class="bento-header-title typewriter-text" data-i18n="settings_title" data-ru="Параметры системы">Параметры системы</h1>
+      <p class="bento-header-desc typewriter-font" data-i18n="settings_desc" data-ru="Управление профилем пользователя, языком интерфейса и состоянием кластера">
+        Управление профилем пользователя, языком интерфейса и состоянием узлов распределённой системы.
+      </p>
     </div>
   </div>
 
   <div class="bento-grid">
-    <!-- 1. Hero Profile Card -->
+    <!-- 1. User Profile & Authentication (TR FT1: "Регистрация и вход по логину и паролю") -->
     <div class="glass-card bento-card-profile">
       <div class="profile-hero-left">
-        <div class="profile-hero-avatar">ДБ</div>
+        <div class="profile-hero-avatar avatar-gray" id="settings-user-avatar">ДБ</div>
         <div>
-          <div class="profile-hero-name">Дмитрий Бызов</div>
-          <div class="profile-hero-handle">@byzov • Разработчик WebSocket & Fullstack</div>
-          <div class="profile-hero-tag">
-            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;"></span>
-            Подключен к узлу app-1 (порт 8000)
+          <div class="profile-hero-name typewriter-text" id="settings-user-name">Дмитрий Бызов</div>
+          <div class="profile-hero-handle typewriter-font" id="settings-user-handle">@byzov • Узел приложения app-1 (порт 8000)</div>
+          <div class="profile-hero-tag typewriter-font">
+            <span class="cluster-dot-green"></span>
+            <span data-i18n="settings_auth_status" data-ru="Авторизован в системе">Сессия активна (WebSocket: connected)</span>
           </div>
         </div>
       </div>
-      <button class="tactile-btn" style="font-size: 13px;">Редактировать профиль</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="tactile-btn" id="btn-switch-account" onclick="openUserLoginModal()" title="Сменить пользователя / Войти">
+          <span data-i18n="settings_switch_user" data-ru="Сменить аккаунт">Сменить аккаунт</span>
+        </button>
+      </div>
     </div>
 
-    <!-- 2. Bento Card: Glass Physics & Cosmic Accents -->
+    <!-- 2. Bento Card: Audio & Playback Parameters -->
     <div class="glass-card bento-card-half">
-      <div class="bento-card-title">
-        <svg viewBox="0 0 24 24">
+      <div class="bento-card-title typewriter-text">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="8" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M11 18V4l10-2v14"/>
+        </svg>
+        <span data-i18n="settings_audio_group" data-ru="Аудио и потоковое вещание">Аудио и потоковое вещание</span>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary typewriter-text" data-i18n="setting_range_stream" data-ru="Стриминг с Range-заголовком">Стриминг с Range-заголовком</span>
+          <span class="bento-label-secondary typewriter-font" data-i18n="setting_range_desc" data-ru="Перемотка запрашивает фрагменты через HTTP 206 Partial Content">Перемотка запрашивает фрагменты через HTTP 206 Partial Content</span>
+        </div>
+        <label class="spatial-switch">
+          <input type="checkbox" checked id="spatial-toggle-range" onchange="toggleSettingOption('range', this)">
+          <span class="spatial-switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary typewriter-text" data-i18n="setting_sound_alerts" data-ru="Звуковые уведомления">Звуковые уведомления</span>
+          <span class="bento-label-secondary typewriter-font" data-i18n="setting_sound_desc" data-ru="Мягкий клик при доставке входящих сообщений">Мягкий клик при доставке входящих сообщений</span>
+        </div>
+        <label class="spatial-switch">
+          <input type="checkbox" checked id="spatial-toggle-sound" onchange="toggleSettingOption('sound', this)">
+          <span class="spatial-switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="bento-item-row">
+        <div class="bento-item-label">
+          <span class="bento-label-primary typewriter-text" data-i18n="setting_typing_broadcast" data-ru="Трансляция «Печатает...»">Трансляция «Печатает...»</span>
+          <span class="bento-label-secondary typewriter-font" data-i18n="setting_typing_desc" data-ru="Передача статуса набора через WebSocket без записи в БД">Передача статуса набора через WebSocket без записи в БД</span>
+        </div>
+        <label class="spatial-switch">
+          <input type="checkbox" checked id="spatial-toggle-typing" onchange="toggleSettingOption('typing', this)">
+          <span class="spatial-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 3. Bento Card: Visual Theme & Monospace Typography -->
+    <div class="glass-card bento-card-half">
+      <div class="bento-card-title typewriter-text">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M12 2a10 10 0 0 1 10 10"></path>
         </svg>
-        <span>Визуальная среда и Космос</span>
+        <span data-i18n="settings_theme_group" data-ru="Оформление и типографика">Оформление и типографика</span>
       </div>
 
-      <!-- Toggle: Cursor Glow -->
       <div class="bento-item-row">
         <div class="bento-item-label">
-          <span class="bento-label-primary">Подсветка курсора (Solar Glow)</span>
-          <span class="bento-label-secondary">Интерактивный янтарный световой ореол за мышью</span>
+          <span class="bento-label-primary typewriter-text" data-i18n="setting_dark_monochrome" data-ru="Тёмная графитовая палитра">Тёмная графитовая палитра</span>
+          <span class="bento-label-secondary typewriter-font" data-i18n="setting_dark_desc" data-ru="Комфортная серо-чёрная гамма с серыми аватарами">Комфортная серо-чёрная гамма с серыми аватарами</span>
         </div>
         <label class="spatial-switch">
-          <input type="checkbox" checked id="spatial-toggle-cursor" onchange="toggleCursorGlow(this)">
+          <input type="checkbox" checked id="spatial-toggle-palette" onchange="toggleSettingOption('palette', this)">
           <span class="spatial-switch-slider"></span>
         </label>
       </div>
 
-      <!-- Toggle: Black Hole & Stars -->
       <div class="bento-item-row">
         <div class="bento-item-label">
-          <span class="bento-label-primary">Чёрная дыра и Звёздное небо</span>
-          <span class="bento-label-secondary">Космическая гравитационная линза Gargantua в фоне</span>
+          <span class="bento-label-primary typewriter-text" data-i18n="setting_glass_blur" data-ru="Размытие жидкого стекла">Размытие жидкого стекла</span>
+          <span class="bento-label-secondary typewriter-font" data-i18n="setting_glass_desc" data-ru="Эффект преломления матовых панелей интерфейса">Эффект преломления матовых панелей интерфейса</span>
         </div>
         <label class="spatial-switch">
-          <input type="checkbox" checked id="spatial-toggle-black-hole" onchange="toggleBlackHole(this)">
+          <input type="checkbox" checked id="spatial-toggle-blur" onchange="toggleSettingOption('blur', this)">
           <span class="spatial-switch-slider"></span>
         </label>
       </div>
 
-      <!-- Toggle: Frosted Glass Blur -->
       <div class="bento-item-row">
         <div class="bento-item-label">
-          <span class="bento-label-primary">Размытие жидкого стекла</span>
-          <span class="bento-label-secondary">Эффект преломления Apple VisionOS</span>
+          <span class="bento-label-primary typewriter-text" data-i18n="setting_typewriter" data-ru="Печатная машинка (Monospace)">Печатная машинка (Monospace)</span>
+          <span class="bento-label-secondary typewriter-font" data-i18n="setting_typewriter_desc" data-ru="Моноширинный шрифт и тактильный курсор ввода">Моноширинный шрифт и тактильный курсор ввода</span>
         </div>
         <label class="spatial-switch">
-          <input type="checkbox" checked id="spatial-toggle-blur" onchange="toggleSpatialBlur(this)">
-          <span class="spatial-switch-slider"></span>
-        </label>
-      </div>
-
-      <!-- Toggle: Solar Ambient Disk -->
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Свечение аккреционного диска</span>
-          <span class="bento-label-secondary">Мягкая янтарно-оранжевая плазма вокруг горизонта событий</span>
-        </div>
-        <label class="spatial-switch">
-          <input type="checkbox" checked id="spatial-toggle-lens" onchange="toggleSpatialLens(this)">
+          <input type="checkbox" checked id="spatial-toggle-typewriter" onchange="toggleSettingOption('typewriter', this)">
           <span class="spatial-switch-slider"></span>
         </label>
       </div>
     </div>
 
-    <!-- 3. Bento Card: Audio & Delivery Haptics -->
-    <div class="glass-card bento-card-half">
-      <div class="bento-card-title">
-        <svg viewBox="0 0 24 24">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-        </svg>
-        <span>Звуки и отклик доставки</span>
-      </div>
-
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Звуковой клик при получении</span>
-          <span class="bento-label-secondary">Мягкий сигнал при приходе сообщений</span>
-        </div>
-        <label class="spatial-switch">
-          <input type="checkbox" checked>
-          <span class="spatial-switch-slider"></span>
-        </label>
-      </div>
-
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Индикация «Печатает...»</span>
-          <span class="bento-label-secondary">Трансляция набора без записи в БД</span>
-        </div>
-        <label class="spatial-switch">
-          <input type="checkbox" checked>
-          <span class="spatial-switch-slider"></span>
-        </label>
-      </div>
-
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Тактильный подъём карточек</span>
-          <span class="bento-label-secondary">Микро-анимация при наведении курсора</span>
-        </div>
-        <label class="spatial-switch">
-          <input type="checkbox" checked id="spatial-toggle-haptics" onchange="toggleHaptics(this)">
-          <span class="spatial-switch-slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <!-- 4. Bento Card: Distributed Cluster State -->
-    <div class="glass-card bento-card-half">
-      <div class="bento-card-title">
-        <svg viewBox="0 0 24 24">
+    <!-- 4. Bento Card: Distributed Cluster Topology (TR 1.17: "Узлов не меньше трёх, каждый трек лежит на двух из них") -->
+    <div class="glass-card bento-card-full">
+      <div class="bento-card-title typewriter-text">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
           <rect x="2" y="2" width="20" height="8" rx="2"></rect>
           <rect x="2" y="14" width="20" height="8" rx="2"></rect>
           <line x1="6" y1="6" x2="6.01" y2="6"></line>
           <line x1="6" y1="18" x2="6.01" y2="18"></line>
         </svg>
-        <span>Топология кластера (app & storage)</span>
+        <span data-i18n="settings_cluster_title" data-ru="Топология кластера (узлы приложения и хранения)">Топология кластера (узлы приложения и хранения)</span>
       </div>
 
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Узлы приложения (FastAPI)</span>
-          <span class="bento-label-secondary">app-1 (текущий) • app-2 (в сети)</span>
+      <div class="cluster-specs-grid">
+        <div class="cluster-spec-box">
+          <div class="spec-box-label typewriter-font">Узлы приложения (FastAPI)</div>
+          <div class="spec-box-val typewriter-text">app-1 :8000, app-2 :8001</div>
+          <div class="spec-box-sub typewriter-font">Взаимозаменяемые узлы со сквозным сессионным реестром</div>
         </div>
-        <span class="cluster-pill" style="color: var(--accent-mint);">2 живых</span>
-      </div>
 
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Узлы хранения (MP3 Blobs)</span>
-          <span class="bento-label-secondary">storage-1, storage-2, storage-3</span>
+        <div class="cluster-spec-box">
+          <div class="spec-box-label typewriter-font">Узлы хранения (Storage)</div>
+          <div class="spec-box-val typewriter-text">storage-1, storage-2, storage-3</div>
+          <div class="spec-box-sub typewriter-font">Каждый трек хранится ровно в 2 копиях по хеш-партиционированию</div>
         </div>
-        <span class="cluster-pill" style="color: var(--solar-amber-bright);">3 реплики</span>
-      </div>
-    </div>
 
-    <!-- 5. Bento Card: Database & Sequence -->
-    <div class="glass-card bento-card-half">
-      <div class="bento-card-title">
-        <svg viewBox="0 0 24 24">
-          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-        </svg>
-        <span>Порядок событий (Total Order seq)</span>
-      </div>
-
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Монотонный seq</span>
-          <span class="bento-label-secondary">Исключает перестановку сообщений собеседников</span>
+        <div class="cluster-spec-box">
+          <div class="spec-box-label typewriter-font">Межузловая доставка</div>
+          <div class="spec-box-val typewriter-text">POST /internal/deliver</div>
+          <div class="spec-box-sub typewriter-font">Гарантия строгого порядка (seq) без дублей и потерь</div>
         </div>
-        <span class="cluster-pill" style="color: var(--solar-orange-light);">Активен</span>
-      </div>
-
-      <div class="bento-item-row">
-        <div class="bento-item-label">
-          <span class="bento-label-primary">Идемпотентность (client_msg_id)</span>
-          <span class="bento-label-secondary">Защита от дублей при повторных сетевых запросах</span>
-        </div>
-        <span class="cluster-pill" style="color: var(--accent-mint);">Гарантирована</span>
       </div>
     </div>
   </div>

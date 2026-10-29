@@ -1,9 +1,9 @@
-<!-- Discord & Telegram Hybrid Chat Stage (Deep Black & Monochrome with Sleek Gray Avatars) -->
+<!-- Discord & Telegram Hybrid Chat Stage (Clean Monochromatic Typewriter Edition) -->
 <section class="chat-canvas" id="chat-canvas-main">
   <!-- 1. Chat Header -->
   <header class="chat-canvas-header">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <!-- Icon-Only Drawer Toggle Button (No Text Label, No Unread Clutter) -->
+      <!-- Drawer Toggle Button -->
       <button class="header-drawer-btn" id="header-drawer-btn" onclick="toggleDialogsDrawer()" title="Toggle drawer (Ctrl+B)" data-ru="Скрыть/показать панель диалогов (Ctrl+B)" data-i18n-title="hide_drawer">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
           <rect x="3" y="3" width="18" height="18" rx="3"></rect>
@@ -22,21 +22,21 @@
           </div>
           <span class="chat-recipient-status online" id="active-recipient-status">
             <span class="recipient-presence-dot"></span>
-            <span id="active-recipient-status-text" data-i18n="recipient_online_node2" data-ru="в сети (узел app-2)">online [node app-2]</span>
+            <span id="active-recipient-status-text" data-i18n="recipient_online_node2" data-ru="в сети [узел app-2]">online [node app-2]</span>
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Header Tools: Search & Chat Options -->
+    <!-- Header Tools: Search & Recipient Info -->
     <div style="display: flex; align-items: center; gap: 8px;">
-      <button class="tactile-btn header-tool-btn" title="Search conversation" data-ru="Поиск по переписке" data-i18n-title="search_chat_tooltip">
+      <button class="tactile-btn header-tool-btn" id="btn-chat-search" onclick="toggleChatSearch()" title="Search conversation" data-ru="Поиск по переписке" data-i18n-title="search_chat_tooltip">
         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </button>
-      <button class="tactile-btn header-tool-btn" title="Conversation options" data-ru="Настройки диалога" data-i18n-title="dialog_options_tooltip">
+      <button class="tactile-btn header-tool-btn" id="btn-chat-details" onclick="openRecipientProfileModal()" title="Conversation options" data-ru="Информация о собеседнике" data-i18n-title="dialog_options_tooltip">
         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="12" cy="12" r="1.5"></circle>
           <circle cx="12" cy="5" r="1.5"></circle>
@@ -46,15 +46,15 @@
     </div>
   </header>
 
-  <!-- 2. Messages Stream Flow (Monochrome Dark, No Tracks) -->
+  <!-- 2. Messages Stream Flow (Ordered by `seq` strictly per TR) -->
   <div class="chat-messages-flow" id="spatial-messages-flow">
     <!-- Centered Date Pill -->
     <div class="chat-timeline-pill typewriter-pill" data-i18n="timeline_today" data-ru="Сегодня">Today</div>
 
-    <!-- Incoming Message 1 -->
-    <div class="msg-row incoming">
+    <!-- Initial Messages rendered by default (Hydrated dynamically by selectChat) -->
+    <div class="msg-row incoming" data-seq="1">
       <div class="msg-bubble typewriter-bubble">
-        <span class="msg-author-tag">@alisa</span>
+        <span class="msg-author-tag">@alisa • seq #1</span>
         <span class="msg-body-text" data-i18n="msg_alice_1">Hello! Full-text search and file storage are up and running.</span>
         <div class="msg-meta">
           <span>19:40</span>
@@ -62,10 +62,9 @@
       </div>
     </div>
 
-    <!-- Incoming Message 2: Clean Text (No Track Module) -->
-    <div class="msg-row incoming">
+    <div class="msg-row incoming" data-seq="2">
       <div class="msg-bubble typewriter-bubble">
-        <span class="msg-author-tag">@alisa</span>
+        <span class="msg-author-tag">@alisa • seq #2</span>
         <span class="msg-body-text" data-i18n="msg_alice_2">Verified inter-node delivery via POST /internal/deliver — all sequence events arrive in strict order without duplicates.</span>
         <div class="msg-meta">
           <span>19:41</span>
@@ -73,27 +72,23 @@
       </div>
     </div>
 
-    <!-- Outgoing Message 1 -->
-    <div class="msg-row outgoing">
-      <div class="msg-bubble typewriter-bubble">
-        <span class="msg-body-text" data-i18n="msg_alice_3">Great! Now attachments can be sent with any file format, and the music import section supports track uploads.</span>
-        <div class="msg-meta">
+    <!-- Track Card in Chat (TR FT5: "Отправка трека в чат карточкой, которую собеседник запускает прямо из диалога") -->
+    <div class="msg-row incoming msg-track-card-row" data-seq="3">
+      <div class="msg-track-container">
+        <span class="msg-author-tag" style="margin-bottom: 6px; display: block;">@alisa • seq #3</span>
+        {% include "messenger/components/message_track.html" %}
+        <div class="msg-meta" style="justify-content: flex-end; margin-top: 4px;">
           <span>19:42</span>
-          <!-- Delivered Double Check Mark -->
-          <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
-            <path d="M18 6L7 17l-5-5"></path>
-            <path d="M22 10l-7.5 7.5L13 16"></path>
-          </svg>
         </div>
       </div>
     </div>
 
-    <!-- Outgoing Message 2 -->
-    <div class="msg-row outgoing">
+    <!-- Outgoing Message -->
+    <div class="msg-row outgoing" data-seq="4">
       <div class="msg-bubble typewriter-bubble">
-        <span class="msg-body-text" data-i18n="msg_alice_4">Typewriter active: monospace input with tactile feedback and live cursor.</span>
+        <span class="msg-body-text" data-i18n="msg_alice_3">Great! Now track cards stream directly via /api/tracks/{id}/stream with Range support.</span>
         <div class="msg-meta">
-          <span>19:43</span>
+          <span>seq #4 • 19:43</span>
           <svg class="msg-status-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
             <path d="M18 6L7 17l-5-5"></path>
             <path d="M22 10l-7.5 7.5L13 16"></path>
@@ -103,7 +98,7 @@
     </div>
 
     <!-- Typing indicator capsule -->
-    <div class="typing-capsule" id="chat-typing-capsule">
+    <div class="typing-capsule" id="chat-typing-capsule" style="display: none;">
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
@@ -111,27 +106,33 @@
     </div>
   </div>
 
-  <!-- 3. Telegram & Discord Bottom Composer with Functional Paperclip -->
+  <!-- 3. Bottom Composer (Strictly text or track card per TR and PR #4 schema) -->
   <div class="composer-container">
-    <!-- Attachment Tray (Pops up when files are picked via paperclip) -->
-    <div class="composer-attachments-bar" id="composer-attachments-bar" style="display: none;">
-      <div class="attachment-chips-list" id="attachment-chips-list"></div>
-    </div>
-
     <div class="floating-composer-island">
-      <!-- Hidden File Input for Real Paperclip Upload -->
-      <input type="file" id="composer-file-input" style="display: none;" multiple onchange="handleComposerFileSelected(event)">
-
-      <!-- Functional Attachment Paperclip -->
-      <button class="composer-attach-btn" id="composer-attach-btn" onclick="triggerComposerAttach()" title="Attach file (Paperclip)" data-ru="Прикрепить файл (Скрепка)" data-i18n-title="attach_tooltip">
+      <!-- Attach Track Card Button (TR FT5: Opens Track Selector to attach Track Card) -->
+      <button 
+        class="composer-attach-btn" 
+        id="composer-attach-track-btn" 
+        onclick="openAttachTrackModal()" 
+        title="Отправить карточку трека в чат / Attach Track Card" 
+        data-i18n-title="attach_track_tooltip"
+      >
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
-          <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          <circle cx="8" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M11 18V4l10-2v14"/>
         </svg>
       </button>
 
       <!-- Typewriter Message Input Field -->
       <div style="flex: 1; display: flex; align-items: center; position: relative;">
-        <input type="text" class="composer-input-field typewriter-input" id="composer-input" placeholder="Write a message to Alice..." data-ru="Написать сообщение Алисе..." data-i18n-placeholder="composer_placeholder" onkeydown="handleComposerKey(event)">
+        <input 
+          type="text" 
+          class="composer-input-field typewriter-input" 
+          id="composer-input" 
+          placeholder="Write a message to Alice..." 
+          data-ru="Написать сообщение Алисе..." 
+          data-i18n-placeholder="composer_placeholder" 
+          onkeydown="handleComposerKey(event)"
+        >
         <span class="typewriter-cursor"></span>
       </div>
 
@@ -145,10 +146,10 @@
         </svg>
       </button>
 
-      <!-- Send Button with Tactile Strike -->
-      <button class="composer-send-orb" onclick="sendSpatialMessage()" title="Send message (Enter)" data-ru="Отправить сообщение (Enter)" data-i18n-title="send_tooltip">
+      <!-- Send Button -->
+      <button class="composer-send-orb" id="composer-send-btn" onclick="sendChatMessage()" title="Send message (Enter)" data-ru="Отправить сообщение (Enter)" data-i18n-title="send_tooltip">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
     </div>

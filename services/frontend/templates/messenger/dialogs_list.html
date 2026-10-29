@@ -1,46 +1,38 @@
-<!-- Telegram & Discord Slide-Out Drawer (Clean Typewriter Edition, Sleek Gray Avatars) -->
+<!-- Telegram & Discord Slide-Out Drawer (1-on-1 Dialogs with Unread Badges) -->
 <aside class="dialogs-drawer-panel" id="dialogs-drawer">
-  <!-- Top Search Bar (Icon-Only, Clean Typewriter) -->
+  <!-- Top Bar: Search and New Dialog Button -->
   <div class="drawer-top-bar">
-    <!-- Telegram-Style Hamburger Menu Button (Direct Access to Settings, Import, Player, Chats) -->
-    <div class="drawer-menu-container" style="position: relative;">
-      <button class="drawer-menu-btn" id="drawer-menu-btn" onclick="toggleDrawerDropdownMenu(event)" title="Navigation Menu / Меню разделов">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.2" fill="none">
-          <line x1="4" y1="7" x2="20" y2="7"></line>
-          <line x1="4" y1="12" x2="20" y2="12"></line>
-          <line x1="4" y1="17" x2="20" y2="17"></line>
-        </svg>
-      </button>
-
-      <!-- Dropdown Quick Menu for Instant Navigation -->
-      <div class="drawer-dropdown-menu" id="drawer-dropdown-menu" style="display: none;">
-        <div class="drawer-dropdown-header typewriter-font">[ НАВИГАЦИЯ // SECTIONS ]</div>
-        <div class="dropdown-item" onclick="switchNavTab('chats'); closeDrawerDropdownMenu();">
-          <span class="dropdown-item-icon">💬</span>
-          <span class="dropdown-item-text" data-i18n="nav_chats" data-ru="Чаты">Chats</span>
-        </div>
-        <div class="dropdown-item" onclick="switchNavTab('player'); closeDrawerDropdownMenu();">
-          <span class="dropdown-item-icon">🎵</span>
-          <span class="dropdown-item-text" data-i18n="nav_player" data-ru="Плеер">Player</span>
-        </div>
-        <div class="dropdown-item" onclick="switchNavTab('import'); closeDrawerDropdownMenu();">
-          <span class="dropdown-item-icon">📥</span>
-          <span class="dropdown-item-text" data-i18n="nav_import" data-ru="Импорт">Импорт</span>
-        </div>
-        <div class="dropdown-item" onclick="switchNavTab('settings'); closeDrawerDropdownMenu();">
-          <span class="dropdown-item-icon">⚙️</span>
-          <span class="dropdown-item-text" data-i18n="nav_settings" data-ru="Параметры">Параметры</span>
-        </div>
-      </div>
-    </div>
-
     <div class="deck-search">
       <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-      <input type="text" class="deck-search-input typewriter-input" placeholder="Search messages..." data-ru="Поиск сообщений..." data-i18n-placeholder="search_placeholder" oninput="handleSearchDialogs(this.value)">
+      <input 
+        type="text" 
+        class="deck-search-input typewriter-input" 
+        id="dialogs-search-input"
+        placeholder="Search contacts..." 
+        data-ru="Поиск собеседника..." 
+        data-i18n-placeholder="search_dialogs_placeholder" 
+        oninput="handleSearchDialogs(this.value)"
+      >
     </div>
+
+    <!-- New Dialog / Find User by Login (TR 1.8: "Алиса находит Боба по логину и открывает диалог с ним") -->
+    <button 
+      class="drawer-new-chat-btn" 
+      id="btn-open-user-search" 
+      onclick="openUserSearchModal()"
+      title="Найти собеседника по логину / New Dialog"
+      data-i18n-title="new_dialog_tooltip"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="8.5" cy="7" r="4"></circle>
+        <line x1="20" y1="8" x2="20" y2="14"></line>
+        <line x1="23" y1="11" x2="17" y2="11"></line>
+      </svg>
+    </button>
 
     <!-- Collapse Drawer Icon Button -->
     <button class="drawer-close-btn" onclick="toggleDialogsDrawer(false)" title="Hide drawer (Ctrl+B)" data-ru="Скрыть панель (Ctrl+B)" data-i18n-title="hide_drawer">
@@ -51,94 +43,48 @@
     </button>
   </div>
 
-  <!-- Prominent Primary Section Switcher: Чаты, Импорт, Параметры -->
-  <div class="drawer-sections-pill-row">
-    <button class="section-pill-btn active" id="sec-btn-chats" onclick="switchNavTab('chats')" title="Чаты">
-      <span data-i18n="nav_chats" data-ru="Чаты">💬 Чаты</span>
-    </button>
-    <button class="section-pill-btn" id="sec-btn-import" onclick="switchNavTab('import')" title="Импорт треков и файлов">
-      <span data-i18n="nav_import" data-ru="Импорт">📥 Импорт</span>
-    </button>
-    <button class="section-pill-btn" id="sec-btn-settings" onclick="switchNavTab('settings')" title="Параметры системы">
-      <span data-i18n="nav_settings" data-ru="Параметры">⚙️ Параметры</span>
-    </button>
-  </div>
-
-  <!-- Clean Filter Pills (No unread or tracks clutter) -->
+  <!-- Filter Chips (TR: All Dialogs are 1-on-1 between 2 users. Removed non-TR 'Channels') -->
   <div class="deck-filter-chips">
-    <button class="filter-chip active" onclick="filterDialogs(this, 'all')" data-i18n="filter_all" data-ru="Все диалоги">All Chats</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'direct')" data-i18n="filter_direct" data-ru="Личные">Direct</button>
-    <button class="filter-chip" onclick="filterDialogs(this, 'groups')" data-i18n="filter_channels" data-ru="Каналы">Channels</button>
+    <button class="filter-chip active" id="filter-chip-all" onclick="filterDialogs(this, 'all')" data-i18n="filter_all" data-ru="Все">All</button>
+    <button class="filter-chip" id="filter-chip-direct" onclick="filterDialogs(this, 'direct')" data-i18n="filter_direct" data-ru="Личные">Direct</button>
+    <button class="filter-chip" id="filter-chip-unread" onclick="filterDialogs(this, 'unread')" data-i18n="filter_unread" data-ru="Непрочитанные">Unread</button>
   </div>
 
-  <!-- Dialog Stream (Unified Sleek Gray Avatars) -->
-  <div class="deck-list" id="dialogs-deck-list">
-    <!-- Dialog 1: Alice (Active) -->
-    <div class="deck-item active" data-chat-id="1" onclick="selectChat(1)">
-      <div class="deck-item-avatar avatar-gray" id="deck-avatar-1">
-        AS
-        <span class="deck-presence-dot online"></span>
+  <!-- Dialogs Stream (TR FT6: Online status and Unread Message Counters) -->
+  <div class="deck-list" id="dialogs-deck-list" role="listbox" aria-label="Dialogs List">
+    {% for dialog in dialogs %}
+    <div 
+      class="deck-item {% if dialog.id == 1 %}active{% endif %}" 
+      data-chat-id="{{ dialog.id }}"
+      data-name="{{ dialog.name | lower }}"
+      data-handle="{{ dialog.handle | lower }}"
+      data-unread="{{ dialog.unread_count }}"
+      tabindex="0"
+      role="option"
+      aria-selected="{% if dialog.id == 1 %}true{% else %}false{% endif %}"
+      onclick="selectChat({{ dialog.id }})"
+      onkeydown="if(event.key==='Enter'||event.key===' ') { selectChat({{ dialog.id }}); event.preventDefault(); }"
+    >
+      <div class="deck-item-avatar avatar-gray" id="deck-avatar-{{ dialog.id }}">
+        {{ dialog.initials }}
+        <span class="deck-presence-dot {{ dialog.status }}"></span>
       </div>
-      <div class="deck-item-body">
-        <div class="deck-item-top">
-          <span class="deck-item-name" data-i18n="user_alice" data-ru="Алиса Смирнова">Alice Smirnova</span>
-          <span class="deck-item-time">19:42</span>
-        </div>
-        <div class="deck-item-bottom">
-          <span class="deck-item-preview" data-i18n="alice_preview" data-ru="Привет! Проверила доставку сообщений...">Hello! Full-text search and storage are ready...</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Dialog 2: Oleg -->
-    <div class="deck-item" data-chat-id="2" onclick="selectChat(2)">
-      <div class="deck-item-avatar avatar-gray" id="deck-avatar-2">
-        OI
-        <span class="deck-presence-dot online"></span>
-      </div>
       <div class="deck-item-body">
         <div class="deck-item-top">
-          <span class="deck-item-name" data-i18n="user_oleg" data-ru="Олег Иванов">Oleg Ivanov</span>
-          <span class="deck-item-time">19:30</span>
+          <span class="deck-item-name" data-chat-name="{{ dialog.id }}">{{ dialog.name }}</span>
+          <span class="deck-item-time">{{ dialog.last_time }}</span>
         </div>
         <div class="deck-item-bottom">
-          <span class="deck-item-preview" data-i18n="oleg_preview" data-ru="Слушай, а вложения теперь отправляются?">Can we send attachments via paperclip now?</span>
+          <span class="deck-item-preview" data-chat-preview="{{ dialog.id }}">{{ dialog.last_message }}</span>
+          {% if dialog.unread_count > 0 %}
+          <span class="deck-unread-badge" id="deck-unread-badge-{{ dialog.id }}">{{ dialog.unread_count }}</span>
+          {% else %}
+          <span class="deck-unread-badge" id="deck-unread-badge-{{ dialog.id }}" style="display: none;">0</span>
+          {% endif %}
         </div>
       </div>
     </div>
-
-    <!-- Dialog 3: Pavel -->
-    <div class="deck-item" data-chat-id="3" onclick="selectChat(3)">
-      <div class="deck-item-avatar avatar-gray" id="deck-avatar-3">
-        PG
-        <span class="deck-presence-dot offline"></span>
-      </div>
-      <div class="deck-item-body">
-        <div class="deck-item-top">
-          <span class="deck-item-name" data-i18n="user_pavel" data-ru="Павел Григорьев">Pavel Grigoryev</span>
-          <span class="deck-item-time">18:12</span>
-        </div>
-        <div class="deck-item-bottom">
-          <span class="deck-item-preview" data-i18n="pavel_preview" data-ru="Схему БД зафиксировал">Database schema committed</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dialog 4: Artem -->
-    <div class="deck-item" data-chat-id="4" onclick="selectChat(4)">
-      <div class="deck-item-avatar avatar-gray" id="deck-avatar-4">
-        AE
-        <span class="deck-presence-dot online"></span>
-      </div>
-      <div class="deck-item-body">
-        <div class="deck-item-top">
-          <span class="deck-item-name" data-i18n="user_artem" data-ru="Артём Еременко">Artem Eremenko</span>
-          <span class="deck-item-time">17:55</span>
-        </div>
-        <div class="deck-item-bottom">
-          <span class="deck-item-preview" data-i18n="artem_preview" data-ru="Docker Compose стенд поднят">Docker Compose cluster is up</span>
-        </div>
-      </div>
-    </div>
+    {% endfor %}
   </div>
 </aside>

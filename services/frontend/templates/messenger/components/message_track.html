@@ -1,14 +1,14 @@
-<!-- Sound Module Card Component (Typewriter Terminal Style) -->
-<div class="sound-module-card" id="demo-sound-module">
+<!-- Track Card in Chat (TR FT5: "Карточка трека, которую собеседник запускает прямо из диалога") -->
+<div class="sound-module-card" data-track-id="{{ track_id | default('track-1') }}">
   <div class="sound-module-vinyl">
     <div class="vinyl-center"></div>
   </div>
 
   <div class="sound-module-info">
-    <div class="sound-module-title">{{ title | default('Midnight Echoes') }}</div>
-    <div class="sound-module-artist">{{ artist | default('The Boys Band') }} • {{ duration | default('3:42') }}</div>
+    <div class="sound-module-title typewriter-text">{{ title | default('Midnight Echoes') }}</div>
+    <div class="sound-module-artist typewriter-font">{{ artist | default('The Boys Band') }} • {{ duration | default('3:42') }}</div>
     
-    <!-- Frequency Waveform -->
+    <!-- Frequency Waveform Indicator -->
     <div class="sound-waveform">
       <div class="wave-bar"></div>
       <div class="wave-bar"></div>
@@ -19,9 +19,22 @@
     </div>
   </div>
 
-  <button class="sound-play-orb" onclick="toggleSpatialTrack(this)" title="Слушать трек">
-    <svg viewBox="0 0 24 24">
-      <polygon points="5 3 19 12 5 21 5 21"></polygon>
+  <!-- Play / Pause Button with multi-card synchronization -->
+  <button 
+    class="sound-play-orb" 
+    data-action="play-track-card"
+    data-track-id="{{ track_id | default('track-1') }}"
+    data-track-title="{{ title | default('Midnight Echoes') }}"
+    data-track-artist="{{ artist | default('The Boys Band') }}"
+    data-track-duration="{{ duration | default('3:42') }}"
+    title="Воспроизвести трек / Play track"
+  >
+    <svg viewBox="0 0 24 24" class="card-play-icon" width="16" height="16" fill="currentColor">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+    <svg viewBox="0 0 24 24" class="card-pause-icon" width="16" height="16" fill="currentColor" style="display: none;">
+      <rect x="6" y="4" width="4" height="16"></rect>
+      <rect x="14" y="4" width="4" height="16"></rect>
     </svg>
   </button>
 </div>

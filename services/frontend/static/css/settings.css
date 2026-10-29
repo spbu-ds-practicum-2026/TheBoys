@@ -213,3 +213,41 @@ input:checked + .spatial-switch-slider {
 input:checked + .spatial-switch-slider:before {
   transform: translateX(16px);
 }
+
+/* Full Bento Card (Span 12) */
+.bento-card-full {
+  grid-column: span 12;
+  padding: 18px 22px;
+}
+
+.cluster-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cluster-spec-box {
+  background: var(--bg-surface-1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.spec-box-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.spec-box-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 4px;
+}
+
+.spec-box-sub {
+  font-size: 10.5px;
+  color: var(--text-subtle);
+  margin-top: 2px;
+}

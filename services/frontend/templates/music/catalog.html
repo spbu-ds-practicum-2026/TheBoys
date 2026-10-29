@@ -1,0 +1,117 @@
+<!-- Section: Music Catalog (TR: "Пользователь открывает раздел «Музыка» и видит каталог треков") -->
+<div class="music-catalog-stage">
+  <div class="music-catalog-container">
+    
+    <!-- Top Header & Search Bar -->
+    <div class="music-catalog-header">
+      <div class="music-header-left">
+        <div class="catalog-badge typewriter-font">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+            <circle cx="8" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M11 18V4l10-2v14"/>
+          </svg>
+          <span data-i18n="catalog_badge">[CATALOG // REPLICATED AUDIO]</span>
+        </div>
+        <h1 class="catalog-title typewriter-text" data-i18n="music_title" data-ru="Каталог треков">Каталог треков</h1>
+        <p class="catalog-desc typewriter-font" data-i18n="music_desc" data-ru="Воспроизведение через GET /api/tracks/{id}/stream с поддержкой перемотки (Range) и отправка в чат карточкой">
+          Каталог аудиофайлов распределённого кластера. Воспроизведение через <code>GET /api/tracks/{id}/stream</code> с поддержкой <code>Range</code>.
+        </p>
+      </div>
+
+      <!-- Quick Stats Pill -->
+      <div class="catalog-cluster-pill typewriter-font">
+        <span class="cluster-dot-green"></span>
+        <span data-i18n="catalog_cluster_state" data-ru="2 копии на узел: storage-1, storage-2">2 копии: storage-1 / storage-2</span>
+      </div>
+    </div>
+
+    <!-- Search Bar for Tracks (TR: "Каталог треков и поиск по названию и исполнителю") -->
+    <div class="catalog-search-card">
+      <div class="catalog-search-wrapper">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" class="search-icon">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input 
+          type="text" 
+          id="catalog-search-input" 
+          class="catalog-search-input typewriter-input" 
+          placeholder="Search by title or artist..." 
+          data-ru="Поиск треков по названию или исполнителю..." 
+          data-i18n-placeholder="search_tracks_placeholder"
+          oninput="handleSearchTracks(this.value)"
+        >
+        <span class="search-hotkey-badge typewriter-font">ESC clear</span>
+      </div>
+    </div>
+
+    <!-- Track Cards Grid -->
+    <div class="catalog-tracks-grid" id="catalog-tracks-grid">
+      {% for track in tracks %}
+      <div class="track-card-row" data-track-id="{{ track.id }}" data-title="{{ track.title | lower }}" data-artist="{{ track.artist | lower }}">
+        <div class="track-row-left">
+          <button 
+            class="track-row-play-btn" 
+            data-action="play-track"
+            data-track-id="{{ track.id }}"
+            data-track-title="{{ track.title }}"
+            data-track-artist="{{ track.artist }}"
+            data-track-duration="{{ track.duration }}"
+            title="Воспроизвести / Play"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="play-icon">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="pause-icon" style="display: none;">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+          </button>
+          
+          <div class="track-meta-block">
+            <div class="track-row-title typewriter-text">{{ track.title }}</div>
+            <div class="track-row-sub typewriter-font">
+              <span class="track-artist-text">{{ track.artist }}</span>
+              <span class="track-meta-dim">•</span>
+              <span class="track-duration-text">{{ track.duration }}</span>
+              <span class="track-meta-dim">•</span>
+              <span class="track-format-tag">{{ track.format }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="track-row-right">
+          <div class="track-replicas-tag typewriter-font" title="Реплики на узлах хранения">
+            <span class="replica-badge">storage: {{ track.replicas | join(', ') }}</span>
+          </div>
+
+          <!-- Send Track Card to Chat (TR FT5: "Отправка трека в чат карточкой") -->
+          <button 
+            class="tactile-btn track-send-to-chat-btn" 
+            data-action="share-track-modal"
+            data-track-id="{{ track.id }}"
+            data-track-title="{{ track.title }}"
+            data-track-artist="{{ track.artist }}"
+            data-track-duration="{{ track.duration }}"
+            data-i18n="share_to_chat" 
+            data-ru="В чат"
+            title="Отправить карточкой в диалог"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+            <span>В чат</span>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Empty search result alert -->
+    <div class="catalog-empty-search" id="catalog-empty-search" style="display: none;">
+      <div class="empty-search-text typewriter-font" data-i18n="catalog_no_tracks" data-ru="Треков по вашему запросу не найдено">
+        No tracks found matching your query
+      </div>
+    </div>
+
+  </div>
+</div>
