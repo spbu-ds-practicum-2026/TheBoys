@@ -14,6 +14,7 @@ os.environ["ALLOWED_ORIGINS"] = "http://localhost:8000, http://127.0.0.1:8000"
 from services.app.main import (
     app,
     active_connections,
+    user_connections,
     sign_session_cookie,
     verify_session_cookie,
     SESSION_COOKIE_MAX_AGE_SECONDS,
@@ -24,7 +25,6 @@ from services.app.schemas.ws import (
     ClientReadMessage,
     ClientSendMessage,
     ClientSyncMessage,
-    ClientTypingMessage,
     DeliveryTarget,
     DialogSyncItem,
     ErrorCode,
@@ -36,7 +36,6 @@ from services.app.schemas.ws import (
     ServerErrorMessage,
     ServerHistoryMessage,
     ServerOutgoingEvent,
-    ServerPeerTypingMessage,
     ServerReadAckMessage,
     TextPayload,
     TrackPayload,
@@ -170,14 +169,9 @@ def test_client_read_message_zero_or_negative_seq_rejected():
 
 
 def test_client_sync_message_bounds_and_limit():
-    raw_default = {
-        "type": "sync",
-        "conversation_id": 15,
-    }
-    parsed_default = client_adapter.validate_python(raw_default)
-    assert isinstance(parsed_default, ClientSyncMessage)
-    assert parsed_default.since_seq == 0
-    assert parsed_default.limit == 50
+    # One of the bounds is required: a request without them is rejected
+    with pytest.raises(ValidationError):
+        client_adapter.validate_python({"type": "sync", "conversation_id": 15})
 
     raw_before = {
         "type": "sync",
@@ -186,6 +180,7 @@ def test_client_sync_message_bounds_and_limit():
         "limit": 100,
     }
     parsed_before = client_adapter.validate_python(raw_before)
+    assert isinstance(parsed_before, ClientSyncMessage)
     assert parsed_before.before_seq == 200
     assert parsed_before.limit == 100
 
@@ -210,11 +205,9 @@ def test_client_ping_message():
     assert parsed.type == "ping"
 
 
-def test_client_typing_message():
-    raw = {"type": "typing", "conversation_id": 12}
-    parsed = client_adapter.validate_python(raw)
-    assert isinstance(parsed, ClientTypingMessage)
-    assert parsed.conversation_id == 12
+def test_client_typing_rejected():
+    with pytest.raises(ValidationError):
+        client_adapter.validate_python({"type": "typing", "conversation_id": 12})
 
 
 def test_client_invalid_unknown_type():
@@ -368,19 +361,6 @@ def test_server_error_message_rejects_arbitrary_string_code():
         server_adapter.validate_python(raw)
 
 
-def test_server_peer_typing_message():
-    """peer_typing is an optional UX extension schema."""
-    raw = {
-        "type": "peer_typing",
-        "conversation_id": 10,
-        "user_id": 42,
-    }
-    parsed = server_adapter.validate_python(raw)
-    assert isinstance(parsed, ServerPeerTypingMessage)
-    assert parsed.conversation_id == 10
-    assert parsed.user_id == 42
-
-
 # ---------------------------------------------------------------------------
 # Session Cookie Signing & Expiry Tests
 # ---------------------------------------------------------------------------
@@ -482,6 +462,40 @@ def test_internal_deliver_endpoint_via_client():
     assert "delivered" in res
     assert "missed" in res
     assert conn_id in res["missed"]  # Not in active local memory
+
+
+def test_internal_deliver_skips_connection_of_other_user():
+    conn_id = uuid4()
+    sent = []
+
+    class _FakeWS:
+        async def send_text(self, text):
+            sent.append(text)
+
+    active_connections[conn_id] = _FakeWS()
+    user_connections.setdefault(1, set()).add(conn_id)
+    try:
+        payload = {
+            "targets": [{"user_id": 2, "connection_id": str(conn_id)}],
+            "event": {
+                "type": "ack",
+                "client_msg_id": str(uuid4()),
+                "conversation_id": 1,
+                "seq": 4,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        }
+        r = test_client.post(
+            "/internal/deliver",
+            json=payload,
+            headers={"X-Internal-Secret": os.environ["INTERNAL_SECRET"]},
+        )
+        assert r.status_code == 200
+        assert str(conn_id) in r.json()["missed"]
+        assert sent == []
+    finally:
+        active_connections.pop(conn_id, None)
+        user_connections.get(1, set()).discard(conn_id)
 
 
 def test_health_check_endpoint():

@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import json
 import os
+import socket
 import time
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -26,9 +27,9 @@ from services.app.schemas import (
     InternalDeliverResponse,
 )
 
-NODE_ID = os.getenv("NODE_ID", "app-1")
+NODE_ID = os.getenv("NODE_ID") or socket.gethostname()
 
-# Enforce mandatory INTERNAL_SECRET and separate SESSION_SECRET per TR and review P1
+# Enforce mandatory INTERNAL_SECRET and separate SESSION_SECRET per TR
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET")
 if not INTERNAL_SECRET:
     raise RuntimeError("INTERNAL_SECRET environment variable is required")
@@ -63,9 +64,9 @@ def sign_session_cookie(
     secret: str | None = None,
 ) -> str:
     """
-    Generate cryptographically signed session cookie with timestamp (Review P2):
+    Generate cryptographically signed session cookie with timestamp:
     format: '{user_id}.{issued_at}.{hmac_sha256}'
-    Signed with SESSION_SECRET (Review P1).
+    Signed with SESSION_SECRET.
     """
     signing_secret = secret or SESSION_SECRET
     ts = int(time.time()) if issued_at is None else issued_at
@@ -80,8 +81,8 @@ def verify_session_cookie(
     secret: str | None = None,
 ) -> int | None:
     """
-    Verify session cookie cryptographic signature and expiration timestamp (Review P2).
-    Signed with SESSION_SECRET (Review P1).
+    Verify session cookie cryptographic signature and expiration timestamp.
+    Signed with SESSION_SECRET.
     """
     if not cookie_val:
         return None
@@ -145,7 +146,8 @@ async def deliver_internal(
 
     for target in request.targets:
         ws = active_connections.get(target.connection_id)
-        if ws is not None:
+        belongs_to_user = target.connection_id in user_connections.get(target.user_id, set())
+        if ws is not None and belongs_to_user:
             try:
                 await ws.send_text(event_json)
                 delivered.append(target.connection_id)
@@ -201,7 +203,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 continue
 
             # Process validated events (Protocol validation stub):
-            # In stub mode, we do NOT emit synthetic database records or fake seq numbers (Review 3.2).
+            # In stub mode, we do NOT emit synthetic database records or fake seq numbers.
             # Business logic requiring PostgreSQL (monotonic last_seq increment, session persistence,
             # history slices) belongs to the database integration phase.
             if event.type == "ping":
@@ -235,9 +237,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": "Persistence layer offline: running in contract verification stub mode. History sync requires PostgreSQL.",
                     })
                 )
-            elif event.type == "typing":
-                # Ephemeral typing notification (optional UX extension)
-                pass
     except WebSocketDisconnect:
         pass
     finally:

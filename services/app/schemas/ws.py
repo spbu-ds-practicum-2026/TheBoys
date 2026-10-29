@@ -6,7 +6,6 @@ Contracts strictly conform to Technical Requirements (docs/tr.md):
 - extra = "forbid" to reject unexpected client attributes.
 - Sequential ordering: monotonic per-dialogue seq numbers.
 - Separation of Concerns: Client sends only track_id; metadata verified by server.
-- Optional UX Extensions: typing and peer_typing are optional UX extensions not in core TR.
 """
 
 from datetime import datetime
@@ -28,7 +27,6 @@ class ErrorCode(StrEnum):
     INVALID_READ_POSITION = "INVALID_READ_POSITION"
     UNAUTHORIZED = "UNAUTHORIZED"
     FORBIDDEN = "FORBIDDEN"
-    RATE_LIMITED = "RATE_LIMITED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
@@ -104,15 +102,11 @@ class ClientReadMessage(BaseModel):
 
 class ClientSyncMessage(BaseModel):
     """
-    Sync missing messages after connection loss, gaps in seq, or scrolling history.
-    - since_seq: fetch forward (strictly seq > since_seq)
-    - before_seq: fetch backward (strictly seq < before_seq) for older history scrolling
-    - limit: max messages to return (1..100, default 50)
-
-    Semantics:
-    - since_seq and before_seq are mutually exclusive pagination directions.
-    - If neither is provided, defaults to since_seq = 0 (load initial history from start).
-    - When scrolling backward from a conversation last_seq, client passes before_seq = last_seq + 1.
+    History slice request. Exactly one of the bounds is required:
+    - since_seq: messages with seq > since_seq (catch-up after the window end);
+    - before_seq: the `limit` messages with the largest seq < before_seq
+      (opening a dialogue with before_seq = last_seq + 1, scrolling up).
+    Messages in the response are ordered by ascending seq.
     """
     model_config = ConfigDict(extra="forbid")
     type: Literal["sync"] = "sync"
@@ -123,10 +117,8 @@ class ClientSyncMessage(BaseModel):
 
     @model_validator(mode="after")
     def validate_bounds(self) -> "ClientSyncMessage":
-        if self.since_seq is not None and self.before_seq is not None:
-            raise ValueError("since_seq and before_seq are mutually exclusive")
-        if self.since_seq is None and self.before_seq is None:
-            self.since_seq = 0
+        if (self.since_seq is None) == (self.before_seq is None):
+            raise ValueError("since_seq and before_seq are mutually exclusive; exactly one is required")
         return self
 
 
@@ -135,23 +127,12 @@ class ClientPingMessage(BaseModel):
     type: Literal["ping"] = "ping"
 
 
-class ClientTypingMessage(BaseModel):
-    """
-    Optional UX typing indicator extension.
-    Not part of core TR specification; broadcast ephemerally without persisting to database.
-    """
-    model_config = ConfigDict(extra="forbid")
-    type: Literal["typing"] = "typing"
-    conversation_id: int = Field(..., gt=0)
-
-
 ClientIncomingEvent = Annotated[
     Union[
         ClientSendMessage,
         ClientReadMessage,
         ClientSyncMessage,
         ClientPingMessage,
-        ClientTypingMessage,
     ],
     Field(discriminator="type"),
 ]
@@ -226,17 +207,6 @@ class ServerHistoryMessage(BaseModel):
     has_more: bool = False
 
 
-class ServerPeerTypingMessage(BaseModel):
-    """
-    Optional UX typing indicator extension.
-    Not part of core TR specification; broadcast ephemerally without persisting to database.
-    """
-    model_config = ConfigDict(extra="forbid")
-    type: Literal["peer_typing"] = "peer_typing"
-    conversation_id: int = Field(..., gt=0)
-    user_id: int = Field(..., gt=0)
-
-
 class ServerErrorMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["error"] = "error"
@@ -252,7 +222,6 @@ ServerOutgoingEvent = Annotated[
         ServerReadAckMessage,
         ServerDialogSyncMessage,
         ServerHistoryMessage,
-        ServerPeerTypingMessage,
         ServerErrorMessage,
     ],
     Field(discriminator="type"),
