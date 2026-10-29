@@ -1,3 +1,14 @@
+"""
+WebSocket schemas for TheBoys messenger application node.
+
+Contracts strictly conform to Technical Requirements (docs/tr.md):
+- Discriminator: "type" field across all event models.
+- extra = "forbid" to reject unexpected client attributes.
+- Sequential ordering: monotonic per-dialogue seq numbers.
+- Separation of Concerns: Client sends only track_id; metadata verified by server.
+- Optional UX Extensions: typing and peer_typing are optional UX extensions not in core TR.
+"""
+
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal, Union
@@ -125,7 +136,10 @@ class ClientPingMessage(BaseModel):
 
 
 class ClientTypingMessage(BaseModel):
-    """Optional UX typing indicator extension."""
+    """
+    Optional UX typing indicator extension.
+    Not part of core TR specification; broadcast ephemerally without persisting to database.
+    """
     model_config = ConfigDict(extra="forbid")
     type: Literal["typing"] = "typing"
     conversation_id: int = Field(..., gt=0)
@@ -213,7 +227,10 @@ class ServerHistoryMessage(BaseModel):
 
 
 class ServerPeerTypingMessage(BaseModel):
-    """Optional UX typing indicator extension."""
+    """
+    Optional UX typing indicator extension.
+    Not part of core TR specification; broadcast ephemerally without persisting to database.
+    """
     model_config = ConfigDict(extra="forbid")
     type: Literal["peer_typing"] = "peer_typing"
     conversation_id: int = Field(..., gt=0)

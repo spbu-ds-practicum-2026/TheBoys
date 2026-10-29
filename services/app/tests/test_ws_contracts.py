@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 import pytest
@@ -7,6 +8,7 @@ from pydantic import TypeAdapter, ValidationError
 
 # Set environment before importing main
 os.environ["INTERNAL_SECRET"] = "test-internal-secret-for-ci"
+os.environ["SESSION_SECRET"] = "test-session-secret-for-ci"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:8000, http://127.0.0.1:8000"
 
 from services.app.main import (
@@ -14,6 +16,7 @@ from services.app.main import (
     active_connections,
     sign_session_cookie,
     verify_session_cookie,
+    SESSION_COOKIE_MAX_AGE_SECONDS,
 )
 from services.app.schemas.ws import (
     ClientIncomingEvent,
@@ -365,6 +368,70 @@ def test_server_error_message_rejects_arbitrary_string_code():
         server_adapter.validate_python(raw)
 
 
+def test_server_peer_typing_message():
+    """peer_typing is an optional UX extension schema."""
+    raw = {
+        "type": "peer_typing",
+        "conversation_id": 10,
+        "user_id": 42,
+    }
+    parsed = server_adapter.validate_python(raw)
+    assert isinstance(parsed, ServerPeerTypingMessage)
+    assert parsed.conversation_id == 10
+    assert parsed.user_id == 42
+
+
+# ---------------------------------------------------------------------------
+# Session Cookie Signing & Expiry Tests
+# ---------------------------------------------------------------------------
+
+def test_session_cookie_signature_and_verification():
+    user_id = 123
+    cookie_val = sign_session_cookie(user_id)
+    parts = cookie_val.split(".")
+    assert len(parts) == 3
+    assert int(parts[0]) == user_id
+    assert verify_session_cookie(cookie_val) == user_id
+
+
+def test_session_cookie_expired_fails():
+    user_id = 55
+    past_ts = int(time.time()) - (SESSION_COOKIE_MAX_AGE_SECONDS + 10)
+    expired_cookie = sign_session_cookie(user_id, issued_at=past_ts)
+    assert verify_session_cookie(expired_cookie) is None
+
+
+def test_session_cookie_future_clock_skew_fails():
+    user_id = 55
+    future_ts = int(time.time()) + 120  # More than 60s skew allowance
+    future_cookie = sign_session_cookie(user_id, issued_at=future_ts)
+    assert verify_session_cookie(future_cookie) is None
+
+
+def test_session_cookie_tampered_fails():
+    user_id = 77
+    cookie_val = sign_session_cookie(user_id)
+    parts = cookie_val.split(".")
+    tampered = f"{parts[0]}.{parts[1]}.badhexsignature"
+    assert verify_session_cookie(tampered) is None
+
+
+def test_session_cookie_signed_with_internal_secret_fails():
+    """SESSION_SECRET and INTERNAL_SECRET must be separated and not interchangeable."""
+    import hmac
+    import hashlib
+    user_id = 99
+    now_ts = int(time.time())
+    payload = f"{user_id}.{now_ts}".encode("utf-8")
+    fake_sig = hmac.new(
+        os.environ["INTERNAL_SECRET"].encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    wrong_key_cookie = f"{user_id}.{now_ts}.{fake_sig}"
+    assert verify_session_cookie(wrong_key_cookie) is None
+
+
 # ---------------------------------------------------------------------------
 # Inter-node Delivery Tests
 # ---------------------------------------------------------------------------
@@ -456,7 +523,7 @@ def test_websocket_missing_cookie_closed_with_4401():
 def test_websocket_invalid_signed_cookie_closed_with_4401():
     """Connections with tampered/invalid session signature close with 4401."""
     headers = {"Origin": "http://localhost:8000"}
-    cookies = {"session": "42.tampered-signature-value"}
+    cookies = {"session": "42.1700000000.tampered-signature-value"}
     with test_client.websocket_connect("/ws", headers=headers, cookies=cookies) as ws:
         msg = ws.receive()
         assert msg["type"] == "websocket.close"
@@ -464,7 +531,7 @@ def test_websocket_invalid_signed_cookie_closed_with_4401():
 
 
 def test_websocket_valid_session_connected_and_handles_events():
-    """Connections with valid signed cookie connect, register, and process events."""
+    """Connections with valid signed cookie connect, register, and process events in contract stub mode."""
     user_id = 99
     valid_cookie = sign_session_cookie(user_id)
     headers = {"Origin": "http://localhost:8000"}
@@ -475,12 +542,21 @@ def test_websocket_valid_session_connected_and_handles_events():
         assert len(active_connections) == 1
         registered_conn_id = list(active_connections.keys())[0]
 
-        # 1. Send ping
+        # 1. Send ping (keepalive, accepted without error)
         ws.send_text('{"type": "ping"}')
-        resp = ws.receive_json()
-        assert resp["type"] == "dialog_sync"
 
-        # 2. Deliver event via /internal/deliver to this active connection
+        # 2. Send send_message -> stub explicitly returns error informing that real seq/DB is in next task (no fake seq)
+        client_msg_id = str(uuid4())
+        ws.send_text(
+            f'{{"type": "send_message", "client_msg_id": "{client_msg_id}", "conversation_id": 1, "kind": "text", "payload": {{"text": "Hello"}}}}'
+        )
+        stub_resp = ws.receive_json()
+        assert stub_resp["type"] == "error"
+        assert stub_resp["code"] == "INTERNAL_ERROR"
+        assert "contract verification stub" in stub_resp["message"]
+        assert stub_resp["client_msg_id"] == client_msg_id
+
+        # 3. Deliver event via /internal/deliver to this active connection
         secret = os.environ["INTERNAL_SECRET"]
         deliver_payload = {
             "targets": [{"user_id": user_id, "connection_id": str(registered_conn_id)}],
