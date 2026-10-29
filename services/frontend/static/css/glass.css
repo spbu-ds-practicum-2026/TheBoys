@@ -48,7 +48,7 @@
   /* Status Colors & Brand Accents */
   --accent-mint: #22c55e;
   --accent-blue: #38bdf8;
-  --accent-blurple: #5865f2;  /* Declared for switch active states */
+  --accent-blurple: #5865f2;
   --accent-silver: #d1d5db;
 
   /* Glass Filter Variable */
@@ -100,20 +100,9 @@ body {
   display: none !important;
 }
 
-/* Typewriter Blinking Cursor */
+/* Typewriter Blinking Cursor (Disabled) */
 .typewriter-cursor {
-  display: inline-block;
-  width: 7px;
-  height: 15px;
-  background: #ffffff;
-  vertical-align: middle;
-  margin-left: 2px;
-  animation: typewriterBlink 1s step-start infinite;
-}
-
-@keyframes typewriterBlink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  display: none !important;
 }
 
 /* Glass Panels in Deep Black */

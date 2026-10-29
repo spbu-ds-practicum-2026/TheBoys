@@ -825,6 +825,8 @@ function renderChatMessages(chat) {
               </div>
               <button 
                 class="sound-play-orb ${isPlaying ? 'playing' : ''}" 
+                tabindex="-1" 
+                onfocus="this.blur()" 
                 data-action="play-track-card"
                 data-track-id="${escapeHtml(msg.track_id)}"
                 data-track-title="${escapeHtml(msg.title)}"
@@ -1308,6 +1310,8 @@ function renderCatalogTracksGrid(tracks) {
         <div class="track-row-left">
           <button 
             class="track-row-play-btn ${isPlaying ? 'playing' : ''}" 
+            tabindex="-1" 
+            onfocus="this.blur()" 
             data-action="play-track"
             data-track-id="${escapeHtml(track.id)}"
             data-track-title="${escapeHtml(track.title)}"
@@ -1619,6 +1623,7 @@ document.addEventListener('click', event => {
   if (!target) return;
 
   const action = target.getAttribute('data-action');
+  try { target.blur(); } catch (e) {}
 
   if (action === 'play-track' || action === 'play-track-card') {
     event.preventDefault();
@@ -1642,6 +1647,43 @@ document.addEventListener('click', event => {
     openShareTrackModal(trackId, title, artist, duration);
   }
 });
+
+// Ensure music playback and seeking can ONLY be controlled by mouse/cursor, never keyboard
+window.addEventListener('keydown', (event) => {
+  const target = event.target;
+  const isPlayerControl = target && (
+    target.closest('#persistent-mini-player') ||
+    target.matches('.player-scrub-input, .player-vol-slider, .track-row-play-btn, .sound-play-orb, .player-main-orb-btn, .player-mini-btn')
+  );
+
+  if (isPlayerControl) {
+    event.preventDefault();
+    event.stopPropagation();
+    try { target.blur(); } catch (e) {}
+    return false;
+  }
+
+  // Block media keys
+  if (['MediaPlayPause', 'MediaTrackNext', 'MediaTrackPrevious', 'MediaStop'].includes(event.key)) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
+
+  // Prevent spacebar from toggling playback outside text inputs
+  if (event.key === ' ' || event.code === 'Space') {
+    const isTextInput = target && (
+      target.tagName === 'INPUT' || 
+      target.tagName === 'TEXTAREA' || 
+      target.isContentEditable
+    );
+    if (!isTextInput) {
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    }
+  }
+}, true);
 
 // Hotkey listener (Ctrl+B to toggle drawer)
 document.addEventListener('keydown', event => {

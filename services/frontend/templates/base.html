@@ -173,14 +173,14 @@
         </div>
 
         <div class="player-shell-center">
-          <!-- Control Buttons -->
+          <!-- Control Buttons (Mouse/Cursor control ONLY - keyboard focus disabled) -->
           <div class="player-btn-row">
-            <button class="tactile-btn player-mini-btn" id="btn-player-shuffle" onclick="togglePlayerShuffle()" title="Перемешать / Shuffle">
+            <button class="tactile-btn player-mini-btn" id="btn-player-shuffle" tabindex="-1" onfocus="this.blur()" onclick="togglePlayerShuffle()" title="Перемешать / Shuffle">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/>
               </svg>
             </button>
-            <button class="tactile-btn player-mini-btn" id="btn-player-prev" onclick="playPrevTrack()" title="Предыдущий / Prev">
+            <button class="tactile-btn player-mini-btn" id="btn-player-prev" tabindex="-1" onfocus="this.blur()" onclick="playPrevTrack()" title="Предыдущий / Prev">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                 <polygon points="19 20 9 12 19 4 19 20"></polygon>
                 <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"></line>
@@ -188,7 +188,7 @@
             </button>
             
             <!-- Global Play/Pause Button -->
-            <button class="player-main-orb-btn" id="global-play-pause-btn" onclick="toggleGlobalAudioPlay()" title="Воспроизведение / Пауза">
+            <button class="player-main-orb-btn" id="global-play-pause-btn" tabindex="-1" onfocus="this.blur()" onclick="toggleGlobalAudioPlay()" title="Воспроизведение / Пауза">
               <svg viewBox="0 0 24 24" class="orb-play-icon" width="16" height="16" fill="currentColor">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
@@ -198,13 +198,13 @@
               </svg>
             </button>
 
-            <button class="tactile-btn player-mini-btn" id="btn-player-next" onclick="playNextTrack()" title="Следующий / Next">
+            <button class="tactile-btn player-mini-btn" id="btn-player-next" tabindex="-1" onfocus="this.blur()" onclick="playNextTrack()" title="Следующий / Next">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                 <polygon points="5 4 15 12 5 20 5 4"></polygon>
                 <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line>
               </svg>
             </button>
-            <button class="tactile-btn player-mini-btn" id="btn-player-repeat" onclick="togglePlayerRepeat()" title="Повтор / Repeat">
+            <button class="tactile-btn player-mini-btn" id="btn-player-repeat" tabindex="-1" onfocus="this.blur()" onclick="togglePlayerRepeat()" title="Повтор / Repeat">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <polyline points="17 1 21 5 17 9"></polyline>
                 <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
@@ -214,7 +214,7 @@
             </button>
           </div>
 
-          <!-- Scrub Slider & Time Row (TR 1.7: Range requests on scrub) -->
+          <!-- Scrub Slider & Time Row (Mouse/Cursor seek ONLY) -->
           <div class="player-progress-bar-row">
             <span class="player-time-num typewriter-font" id="player-current-time">0:00</span>
             <input 
@@ -225,6 +225,9 @@
               max="222" 
               value="0" 
               step="1" 
+              tabindex="-1"
+              onfocus="this.blur()"
+              onkeydown="event.preventDefault(); this.blur();"
               oninput="handleScrubSeek(this.value)"
             >
             <span class="player-time-num typewriter-font" id="player-total-time">3:42</span>
@@ -245,6 +248,9 @@
               max="1" 
               step="0.05" 
               value="0.8" 
+              tabindex="-1"
+              onfocus="this.blur()"
+              onkeydown="event.preventDefault(); this.blur();"
               oninput="handleVolumeChange(this.value)"
             >
           </div>

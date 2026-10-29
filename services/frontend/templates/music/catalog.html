@@ -52,6 +52,8 @@
         <div class="track-row-left">
           <button 
             class="track-row-play-btn" 
+            tabindex="-1"
+            onfocus="this.blur()"
             data-action="play-track"
             data-track-id="{{ track.id }}"
             data-track-title="{{ track.title }}"

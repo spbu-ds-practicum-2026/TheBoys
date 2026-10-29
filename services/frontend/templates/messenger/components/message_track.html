@@ -19,9 +19,11 @@
     </div>
   </div>
 
-  <!-- Play / Pause Button with multi-card synchronization -->
+  <!-- Play / Pause Button (Mouse/Cursor control ONLY) -->
   <button 
     class="sound-play-orb" 
+    tabindex="-1"
+    onfocus="this.blur()"
     data-action="play-track-card"
     data-track-id="{{ track_id | default('00000000-0000-0000-0000-000000000001') }}"
     data-track-title="{{ title | default('Midnight Echoes') }}"
