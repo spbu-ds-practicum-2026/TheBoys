@@ -1,8 +1,12 @@
 .vscode/
 .idea/
+.venv/
+venv/
 __pycache__/
 *.py[cod]
 *$py.class
+.env
 .pytest_cache/
-.venv/
-venv/
+*.egg-info/
+dist/
+build/

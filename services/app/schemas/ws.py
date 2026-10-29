@@ -97,6 +97,11 @@ class ClientSyncMessage(BaseModel):
     - since_seq: fetch forward (strictly seq > since_seq)
     - before_seq: fetch backward (strictly seq < before_seq) for older history scrolling
     - limit: max messages to return (1..100, default 50)
+
+    Semantics:
+    - since_seq and before_seq are mutually exclusive pagination directions.
+    - If neither is provided, defaults to since_seq = 0 (load initial history from start).
+    - When scrolling backward from a conversation last_seq, client passes before_seq = last_seq + 1.
     """
     model_config = ConfigDict(extra="forbid")
     type: Literal["sync"] = "sync"
@@ -107,6 +112,8 @@ class ClientSyncMessage(BaseModel):
 
     @model_validator(mode="after")
     def validate_bounds(self) -> "ClientSyncMessage":
+        if self.since_seq is not None and self.before_seq is not None:
+            raise ValueError("since_seq and before_seq are mutually exclusive")
         if self.since_seq is None and self.before_seq is None:
             self.since_seq = 0
         return self
@@ -191,6 +198,13 @@ class ServerDialogSyncMessage(BaseModel):
 
 
 class ServerHistoryMessage(BaseModel):
+    """
+    History response slice.
+    - messages: ordered strictly ascending by seq.
+    - has_more:
+        - When querying with since_seq: has_more=True if there are newer messages beyond max(returned_seq).
+        - When querying with before_seq: has_more=True if there are older messages remaining before min(returned_seq), i.e. min(returned_seq) > 1.
+    """
     model_config = ConfigDict(extra="forbid")
     type: Literal["history"] = "history"
     conversation_id: int = Field(..., gt=0)
@@ -209,7 +223,7 @@ class ServerPeerTypingMessage(BaseModel):
 class ServerErrorMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["error"] = "error"
-    code: ErrorCode | str
+    code: ErrorCode
     message: str
     client_msg_id: UUID | None = None
 
