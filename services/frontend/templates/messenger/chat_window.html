@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <!-- Header Tools: Search & Recipient Info -->
+    <!-- Header Tools: Search & Recipient Info Modal -->
     <div style="display: flex; align-items: center; gap: 8px;">
       <button class="tactile-btn header-tool-btn" id="btn-chat-search" onclick="toggleChatSearch()" title="Search conversation" data-ru="Поиск по переписке" data-i18n-title="search_chat_tooltip">
         <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
@@ -51,7 +51,7 @@
     <!-- Centered Date Pill -->
     <div class="chat-timeline-pill typewriter-pill" data-i18n="timeline_today" data-ru="Сегодня">Today</div>
 
-    <!-- Initial Messages rendered by default (Hydrated dynamically by selectChat) -->
+    <!-- Initial Messages rendered for SSR (Hydrated dynamically by selectChat in JS) -->
     <div class="msg-row incoming" data-seq="1">
       <div class="msg-bubble typewriter-bubble">
         <span class="msg-author-tag">@alisa • seq #1</span>
@@ -128,8 +128,8 @@
           type="text" 
           class="composer-input-field typewriter-input" 
           id="composer-input" 
-          placeholder="Write a message to Alice..." 
-          data-ru="Написать сообщение Алисе..." 
+          placeholder="Write a message..." 
+          data-ru="Написать сообщение..." 
           data-i18n-placeholder="composer_placeholder" 
           onkeydown="handleComposerKey(event)"
         >

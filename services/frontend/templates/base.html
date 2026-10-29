@@ -22,7 +22,15 @@
     <!-- 1. LEFT DISCORD / TELEGRAM NAVIGATION RAIL -->
     <aside class="discord-rail" id="discord-nav-rail">
       <!-- Top Brand Logo (Squircle) -->
-      <div class="rail-brand-container" onclick="switchNavTab('music')" title="Boysic">
+      <div 
+        class="rail-brand-container" 
+        hx-get="/music" 
+        hx-target="#main-viewport-content" 
+        hx-swap="innerHTML" 
+        hx-push-url="true" 
+        style="cursor: pointer;" 
+        title="Boysic"
+      >
         <img src="/static/img/logo.jpg" alt="Boysic" class="rail-brand-logo">
       </div>
 
@@ -34,10 +42,10 @@
         <button 
           class="rail-tab-btn {% if active_tab == 'music' or not active_tab %}active{% endif %}" 
           id="btn-tab-music" 
-          onclick="switchNavTab('music')"
-          hx-get="/htmx/views/music"
+          hx-get="/music"
           hx-target="#main-viewport-content"
-          hx-push-url="/music"
+          hx-swap="innerHTML"
+          hx-push-url="true"
           title="Музыка / Music" 
           data-i18n-title="nav_music"
         >
@@ -54,10 +62,10 @@
         <button 
           class="rail-tab-btn {% if active_tab == 'chats' %}active{% endif %}" 
           id="btn-tab-chats" 
-          onclick="switchNavTab('chats')"
-          hx-get="/htmx/views/chats"
+          hx-get="/chats"
           hx-target="#main-viewport-content"
-          hx-push-url="/chats"
+          hx-swap="innerHTML"
+          hx-push-url="true"
           title="Чаты / Chats" 
           data-i18n-title="nav_chats"
         >
@@ -72,10 +80,10 @@
         <button 
           class="rail-tab-btn {% if active_tab == 'import' %}active{% endif %}" 
           id="btn-tab-import" 
-          onclick="switchNavTab('import')"
-          hx-get="/htmx/views/import"
+          hx-get="/import"
           hx-target="#main-viewport-content"
-          hx-push-url="/import"
+          hx-swap="innerHTML"
+          hx-push-url="true"
           title="Импорт MP3 / Import" 
           data-i18n-title="nav_import"
         >
@@ -92,10 +100,10 @@
         <button 
           class="rail-tab-btn {% if active_tab == 'settings' %}active{% endif %}" 
           id="btn-tab-settings" 
-          onclick="switchNavTab('settings')"
-          hx-get="/htmx/views/settings"
+          hx-get="/settings"
           hx-target="#main-viewport-content"
-          hx-push-url="/settings"
+          hx-swap="innerHTML"
+          hx-push-url="true"
           title="Параметры / Settings" 
           data-i18n-title="nav_settings"
         >
@@ -116,7 +124,17 @@
           <span class="lang-badge" id="lang-badge-ru">RU</span>
         </div>
 
-        <div class="rail-user-avatar avatar-gray" id="rail-profile-avatar" onclick="switchNavTab('settings')" title="Dmitry Byzov (online)" data-i18n-title="user_status_online">
+        <div 
+          class="rail-user-avatar avatar-gray" 
+          id="rail-profile-avatar" 
+          hx-get="/settings" 
+          hx-target="#main-viewport-content" 
+          hx-swap="innerHTML" 
+          hx-push-url="true" 
+          style="cursor: pointer;" 
+          title="Dmitry Byzov (online)" 
+          data-i18n-title="user_status_online"
+        >
           DB
           <span class="rail-presence-dot"></span>
         </div>
@@ -206,7 +224,7 @@
               min="0" 
               max="222" 
               value="0" 
-              step="1"
+              step="1" 
               oninput="handleScrubSeek(this.value)"
             >
             <span class="player-time-num typewriter-font" id="player-total-time">3:42</span>
@@ -255,7 +273,7 @@
     </div>
   </div>
 
-  <!-- MODAL: Find User / New Dialog (TR 1.8: "Алиса находит Боба по логину и открывает диалог с ним") -->
+  <!-- MODAL 1: Find User / New Dialog (TR 1.8: "Алиса находит Боба по логину и открывает диалог с ним") -->
   <div class="app-modal-overlay" id="user-search-modal" style="display: none;" onclick="closeModalOnBackdrop(event, this)">
     <div class="app-modal-box">
       <div class="modal-header">
@@ -281,7 +299,46 @@
     </div>
   </div>
 
-  <!-- MODAL: Share Track Card to Dialog (TR FT5: Send Track Card to Chat) -->
+  <!-- MODAL 2: Recipient Profile Info (Opened via header details button) -->
+  <div class="app-modal-overlay" id="recipient-profile-modal" style="display: none;" onclick="closeModalOnBackdrop(event, this)">
+    <div class="app-modal-box">
+      <div class="modal-header">
+        <h3 class="typewriter-text" data-i18n="modal_recipient_details_title" data-ru="Информация о собеседнике">Conversation Details</h3>
+        <button class="modal-close-btn" onclick="closeRecipientProfileModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="recipient-profile-modal-body">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+          <div class="deck-item-avatar avatar-gray" id="modal-recipient-avatar" style="width: 52px; height: 52px; font-size: 18px;">AS</div>
+          <div>
+            <div class="typewriter-text" id="modal-recipient-name" style="font-size: 16px; font-weight: 700;">Alice Smirnova</div>
+            <div class="typewriter-font" id="modal-recipient-handle" style="font-size: 13px; color: var(--text-muted);">@alisa</div>
+          </div>
+        </div>
+        
+        <div class="cluster-specs-grid" style="margin-bottom: 14px;">
+          <div class="cluster-spec-box">
+            <div class="spec-box-label typewriter-font">Connection Node</div>
+            <div class="spec-box-val typewriter-text" id="modal-recipient-node">app-2:8001</div>
+          </div>
+          <div class="cluster-spec-box">
+            <div class="spec-box-label typewriter-font">Presence Status</div>
+            <div class="spec-box-val typewriter-text" id="modal-recipient-status" style="color: #4ade80;">Active / Online</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="tactile-btn" onclick="openAttachTrackModal(); closeRecipientProfileModal();">
+            🎵 Send Track Card
+          </button>
+          <button class="tactile-btn" onclick="closeRecipientProfileModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Share Track Card to Dialog (TR FT5: Send Track Card to Chat) -->
   <div class="app-modal-overlay" id="share-track-modal" style="display: none;" onclick="closeModalOnBackdrop(event, this)">
     <div class="app-modal-box">
       <div class="modal-header">
@@ -303,17 +360,52 @@
     </div>
   </div>
 
-  <!-- MODAL: User Switch / Login (TR FT1: Registration & Login by Login/Password) -->
+  <!-- MODAL 4: User Switch / Login & Registration (TR FT1: Registration & Login by Login/Password) -->
   <div class="app-modal-overlay" id="user-auth-modal" style="display: none;" onclick="closeModalOnBackdrop(event, this)">
     <div class="app-modal-box">
       <div class="modal-header">
-        <h3 class="typewriter-text" data-i18n="modal_auth_title" data-ru="Вход в систему">Login & Account Switcher</h3>
+        <h3 class="typewriter-text" data-i18n="modal_auth_title" data-ru="Вход и регистрация">Login & Registration</h3>
         <button class="modal-close-btn" onclick="closeUserLoginModal()">&times;</button>
       </div>
       <div class="modal-body">
+        <!-- Direct Login / Register Form (TR FT1) -->
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+          <div>
+            <label class="typewriter-font" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Username / Login:</label>
+            <input 
+              type="text" 
+              class="deck-search-input typewriter-input" 
+              id="auth-input-login" 
+              placeholder="e.g. byzov or bob" 
+              value="byzov"
+            >
+          </div>
+          <div>
+            <label class="typewriter-font" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Password:</label>
+            <input 
+              type="password" 
+              class="deck-search-input typewriter-input" 
+              id="auth-input-password" 
+              placeholder="Enter password..." 
+              value="password123"
+            >
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button class="tactile-btn" style="flex: 1;" onclick="submitAuthLogin()">
+              Sign In (POST /api/login)
+            </button>
+            <button class="tactile-btn" style="flex: 1;" onclick="submitAuthRegister()">
+              Register (POST /api/register)
+            </button>
+          </div>
+          <div id="auth-status-message" class="typewriter-font" style="font-size: 12px; min-height: 16px; color: #4ade80;"></div>
+        </div>
+
+        <div class="rail-separator" style="margin: 12px 0;"></div>
+
         <div class="auth-demo-accounts">
           <p class="typewriter-font" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="select_account_prompt" data-ru="Быстрое переключение между пользователями кластера:">
-            Switch active participant session:
+            Quick switch active cluster participant:
           </p>
           <div class="auth-account-row" onclick="switchActiveUserAccount('dmitry')">
             <div class="deck-item-avatar avatar-gray">ДБ</div>

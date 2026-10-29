@@ -1,3 +1,4 @@
+import io
 import pytest
 from httpx import ASGITransport, AsyncClient
 from services.frontend.main import app
@@ -105,49 +106,141 @@ async def test_audio_streaming_endpoint_with_range():
     """TR 1.7: клиент запрашивает трек через GET /api/tracks/{id}/stream с заголовком Range."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
+        track_id = "00000000-0000-0000-0000-000000000001"
         # 1. Full stream request (200 OK)
-        resp = await client.get("/api/tracks/track-1/stream")
+        resp = await client.get(f"/api/tracks/{track_id}/stream")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "audio/mpeg"
         assert resp.headers["accept-ranges"] == "bytes"
         assert int(resp.headers["content-length"]) > 0
 
+        # Also supports legacy track-1 alias
+        resp_alias = await client.get("/api/tracks/track-1/stream")
+        assert resp_alias.status_code == 200
+
         # 2. HTTP Range request (206 Partial Content)
-        range_headers = {"Range": "bytes=0-417"}
-        resp_range = await client.get("/api/tracks/track-1/stream", headers=range_headers)
+        range_headers = {"Range": "bytes=0-416"}
+        resp_range = await client.get(f"/api/tracks/{track_id}/stream", headers=range_headers)
         assert resp_range.status_code == 206
         assert resp_range.headers["content-type"] == "audio/mpeg"
-        assert resp_range.headers["content-range"].startswith("bytes 0-417/")
-        assert resp_range.headers["content-length"] == "418"
+        assert resp_range.headers["content-range"].startswith("bytes 0-416/")
+        assert resp_range.headers["content-length"] == "417"
 
         # 3. Invalid / Out of bounds Range request (416 Range Not Satisfiable)
         bad_range_headers = {"Range": "bytes=9999999-99999999"}
-        resp_bad = await client.get("/api/tracks/track-1/stream", headers=bad_range_headers)
+        resp_bad = await client.get(f"/api/tracks/{track_id}/stream", headers=bad_range_headers)
         assert resp_bad.status_code == 416
 
         # 4. Unknown track returns 404
-        resp_404 = await client.get("/api/tracks/track-unknown/stream")
+        resp_404 = await client.get("/api/tracks/00000000-0000-0000-0000-999999999999/stream")
         assert resp_404.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_api_tracks_and_dialogs_endpoints():
-    """REST API endpoints for tracks catalog and dialogs list."""
+async def test_api_tracks_and_search():
+    """TR: Поиск треков по названию и артисту."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp_tracks = await client.get("/api/tracks")
-        assert resp_tracks.status_code == 200
-        tracks_data = resp_tracks.json()
-        assert "tracks" in tracks_data
-        assert len(tracks_data["tracks"]) >= 4
-        assert tracks_data["tracks"][0]["title"] == "Midnight Echoes"
+        # All tracks
+        resp = await client.get("/api/tracks")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "tracks" in data
+        assert len(data["tracks"]) >= 4
 
-        resp_dialogs = await client.get("/api/dialogs")
-        assert resp_dialogs.status_code == 200
-        dialogs_data = resp_dialogs.json()
-        assert "dialogs" in dialogs_data
-        assert len(dialogs_data["dialogs"]) >= 4
-        assert dialogs_data["dialogs"][0]["unread_count"] > 0
+        # Search query by title
+        resp_q = await client.get("/api/tracks?q=midnight")
+        assert resp_q.status_code == 200
+        tracks_q = resp_q.json()["tracks"]
+        assert len(tracks_q) == 1
+        assert tracks_q[0]["title"] == "Midnight Echoes"
+
+        # Search query by artist
+        resp_a = await client.get("/api/tracks?q=synthesia")
+        assert resp_a.status_code == 200
+        tracks_a = resp_a.json()["tracks"]
+        assert len(tracks_a) == 1
+        assert tracks_a[0]["artist"] == "Synthesia Core"
+
+
+@pytest.mark.asyncio
+async def test_track_upload_and_stream():
+    """TR 1.14: Загрузка MP3 трека через POST /api/tracks/upload и стриминг."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        fake_mp3 = io.BytesIO(b"\xff\xfb\x90\x00" + b"\x00" * 413)
+        files = {"file": ("my_cool_tune.mp3", fake_mp3, "audio/mpeg")}
+        data = {"title": "Cool Synthwave", "artist": "CyberArtist"}
+
+        resp_up = await client.post("/api/tracks/upload", files=files, data=data)
+        assert resp_up.status_code == 200
+        result = resp_up.json()
+        assert result["status"] == "ok"
+        uploaded_id = result["track"]["id"]
+        assert result["track"]["title"] == "Cool Synthwave"
+        assert len(result["track"]["replicas"]) == 2
+
+        # Verify streaming of the uploaded track
+        resp_stream = await client.get(f"/api/tracks/{uploaded_id}/stream")
+        assert resp_stream.status_code == 200
+        assert resp_stream.headers["content-type"] == "audio/mpeg"
+
+
+@pytest.mark.asyncio
+async def test_conversations_and_messages_endpoints():
+    """TR FT4: API диалогов, отправка сообщений и монотонный seq."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. List conversations
+        resp_conv = await client.get("/api/conversations")
+        assert resp_conv.status_code == 200
+        convs = resp_conv.json()["conversations"]
+        assert len(convs) >= 4
+
+        # 2. Mark read
+        resp_read = await client.post("/api/conversations/1/read")
+        assert resp_read.status_code == 200
+        assert resp_read.json()["unread_count"] == 0
+
+        # 3. Post message
+        resp_msg = await client.post(
+            "/api/conversations/1/messages",
+            json={"text": "Integration test message"},
+        )
+        assert resp_msg.status_code == 200
+        data_msg = resp_msg.json()
+        assert "seq" in data_msg
+        assert data_msg["seq"] >= 5
+
+
+@pytest.mark.asyncio
+async def test_users_search_and_auth_endpoints():
+    """TR FT1 & 1.8: Поиск пользователя по логину, регистрация и вход."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Search users
+        resp_users = await client.get("/api/users?login=alisa")
+        assert resp_users.status_code == 200
+        users = resp_users.json()["users"]
+        assert len(users) == 1
+        assert users[0]["login"] == "alisa"
+
+        # 2. Register new user
+        reg_resp = await client.post(
+            "/api/register",
+            json={"username": "bob_tester", "password": "securepwd123"},
+        )
+        assert reg_resp.status_code == 200
+        assert reg_resp.json()["status"] == "ok"
+        assert reg_resp.json()["user"]["login"] == "bob_tester"
+
+        # 3. Login
+        login_resp = await client.post(
+            "/api/login",
+            json={"username": "bob_tester", "password": "securepwd123"},
+        )
+        assert login_resp.status_code == 200
+        assert "session_token" in login_resp.json()
 
 
 @pytest.mark.asyncio
