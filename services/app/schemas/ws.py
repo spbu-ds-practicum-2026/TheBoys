@@ -1,7 +1,24 @@
 from datetime import datetime
-from typing import Annotated, Any, Literal, Union
+from enum import StrEnum
+from typing import Annotated, Literal, Union
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+# ---------------------------------------------------------------------------
+# Error Codes
+# ---------------------------------------------------------------------------
+
+class ErrorCode(StrEnum):
+    CONVERSATION_NOT_FOUND = "CONVERSATION_NOT_FOUND"
+    NOT_A_MEMBER = "NOT_A_MEMBER"
+    TRACK_NOT_FOUND = "TRACK_NOT_FOUND"
+    INVALID_PAYLOAD = "INVALID_PAYLOAD"
+    INVALID_READ_POSITION = "INVALID_READ_POSITION"
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    RATE_LIMITED = "RATE_LIMITED"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
 # ---------------------------------------------------------------------------
@@ -12,8 +29,28 @@ class TextPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(..., min_length=1, max_length=4000)
 
+    @field_validator("text")
+    @classmethod
+    def validate_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Text cannot be empty or contain only whitespace")
+        return v
+
+
+class TrackSendPayload(BaseModel):
+    """
+    Client sends only track_id; metadata (title, artist, duration) is fetched
+    securely by the server from the catalog in PostgreSQL to prevent spoofing.
+    """
+    model_config = ConfigDict(extra="forbid")
+    track_id: UUID
+
 
 class TrackPayload(BaseModel):
+    """
+    Server-provided verified track metadata attached to delivered chat messages
+    and history events.
+    """
     model_config = ConfigDict(extra="forbid")
     track_id: UUID
     title: str = Field(..., min_length=1, max_length=255)
@@ -31,18 +68,23 @@ class ClientSendMessage(BaseModel):
     client_msg_id: UUID
     conversation_id: int = Field(..., gt=0)
     kind: Literal["text", "track"]
-    payload: Union[TextPayload, TrackPayload]
+    payload: Union[TextPayload, TrackSendPayload]
 
     @model_validator(mode="after")
     def validate_payload_matches_kind(self) -> "ClientSendMessage":
         if self.kind == "text" and not isinstance(self.payload, TextPayload):
             raise ValueError("Payload must be TextPayload when kind is 'text'")
-        if self.kind == "track" and not isinstance(self.payload, TrackPayload):
-            raise ValueError("Payload must be TrackPayload when kind is 'track'")
+        if self.kind == "track" and not isinstance(self.payload, TrackSendPayload):
+            raise ValueError("Payload must be TrackSendPayload when kind is 'track'")
         return self
 
 
 class ClientReadMessage(BaseModel):
+    """
+    Client reports the end of its continuous window of delivered messages (up_to_seq).
+    Only accepted from conversation participants where up_to_seq > current_last_read_seq
+    and up_to_seq <= last_seq.
+    """
     model_config = ConfigDict(extra="forbid")
     type: Literal["read"] = "read"
     conversation_id: int = Field(..., gt=0)
@@ -50,10 +92,24 @@ class ClientReadMessage(BaseModel):
 
 
 class ClientSyncMessage(BaseModel):
+    """
+    Sync missing messages after connection loss, gaps in seq, or scrolling history.
+    - since_seq: fetch forward (strictly seq > since_seq)
+    - before_seq: fetch backward (strictly seq < before_seq) for older history scrolling
+    - limit: max messages to return (1..100, default 50)
+    """
     model_config = ConfigDict(extra="forbid")
     type: Literal["sync"] = "sync"
     conversation_id: int = Field(..., gt=0)
-    since_seq: int = Field(default=0, ge=0)
+    since_seq: int | None = Field(default=None, ge=0)
+    before_seq: int | None = Field(default=None, ge=1)
+    limit: int = Field(default=50, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def validate_bounds(self) -> "ClientSyncMessage":
+        if self.since_seq is None and self.before_seq is None:
+            self.since_seq = 0
+        return self
 
 
 class ClientPingMessage(BaseModel):
@@ -62,6 +118,7 @@ class ClientPingMessage(BaseModel):
 
 
 class ClientTypingMessage(BaseModel):
+    """Optional UX typing indicator extension."""
     model_config = ConfigDict(extra="forbid")
     type: Literal["typing"] = "typing"
     conversation_id: int = Field(..., gt=0)
@@ -87,7 +144,7 @@ class ServerAckMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["ack"] = "ack"
     client_msg_id: UUID
-    conversation_id: int
+    conversation_id: int = Field(..., gt=0)
     seq: int = Field(..., ge=1)
     created_at: datetime
 
@@ -95,26 +152,34 @@ class ServerAckMessage(BaseModel):
 class ServerChatMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["message"] = "message"
-    conversation_id: int
+    conversation_id: int = Field(..., gt=0)
     seq: int = Field(..., ge=1)
-    sender_id: int
+    sender_id: int = Field(..., gt=0)
     client_msg_id: UUID
     kind: Literal["text", "track"]
-    payload: Union[TextPayload, TrackPayload, dict[str, Any]]
+    payload: Union[TextPayload, TrackPayload]
     created_at: datetime
+
+    @model_validator(mode="after")
+    def validate_payload_matches_kind(self) -> "ServerChatMessage":
+        if self.kind == "text" and not isinstance(self.payload, TextPayload):
+            raise ValueError("Payload must be TextPayload when kind is 'text'")
+        if self.kind == "track" and not isinstance(self.payload, TrackPayload):
+            raise ValueError("Payload must be TrackPayload when kind is 'track'")
+        return self
 
 
 class ServerReadAckMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["read_ack"] = "read_ack"
-    conversation_id: int
+    conversation_id: int = Field(..., gt=0)
     last_read_seq: int = Field(..., ge=0)
     unread_count: int = Field(..., ge=0)
 
 
 class DialogSyncItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    conversation_id: int
+    conversation_id: int = Field(..., gt=0)
     last_seq: int = Field(..., ge=0)
     unread_count: int = Field(..., ge=0)
 
@@ -128,21 +193,23 @@ class ServerDialogSyncMessage(BaseModel):
 class ServerHistoryMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["history"] = "history"
-    conversation_id: int
+    conversation_id: int = Field(..., gt=0)
     messages: list[ServerChatMessage]
+    has_more: bool = False
 
 
 class ServerPeerTypingMessage(BaseModel):
+    """Optional UX typing indicator extension."""
     model_config = ConfigDict(extra="forbid")
     type: Literal["peer_typing"] = "peer_typing"
-    conversation_id: int
-    user_id: int
+    conversation_id: int = Field(..., gt=0)
+    user_id: int = Field(..., gt=0)
 
 
 class ServerErrorMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: Literal["error"] = "error"
-    code: str
+    code: ErrorCode | str
     message: str
     client_msg_id: UUID | None = None
 
@@ -165,14 +232,24 @@ ServerOutgoingEvent = Annotated[
 # Inter-node Delivery (/internal/deliver)
 # ---------------------------------------------------------------------------
 
-class InternalDeliverRequest(BaseModel):
+class DeliveryTarget(BaseModel):
+    """Target session connection on remote application node."""
     model_config = ConfigDict(extra="forbid")
-    connection_ids: list[str] = Field(..., min_length=1)
-    user_id: int
+    user_id: int = Field(..., gt=0)
+    connection_id: UUID
+
+
+class InternalDeliverRequest(BaseModel):
+    """
+    Inter-node delivery envelope sent via POST /internal/deliver.
+    Allows targeting multiple connections across multiple users on the same node.
+    """
+    model_config = ConfigDict(extra="forbid")
+    targets: list[DeliveryTarget] = Field(..., min_length=1)
     event: ServerOutgoingEvent
 
 
 class InternalDeliverResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    delivered: list[str]
-    missed: list[str]
+    delivered: list[UUID]
+    missed: list[UUID]
