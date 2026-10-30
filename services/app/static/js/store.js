@@ -29,6 +29,12 @@ export class Store {
     return [...this.convs.values()].sort((a, b) => b.activity - a.activity || a.id - b.id);
   }
 
+  // Диалоги для показа: пустой диалог (его только что нашли по логину, сообщений ещё нет) скрыт,
+  // пока он не открыт сейчас или в нём нет неотправленного сообщения. Из хранилища он не удаляется.
+  visibleList(currentId) {
+    return this.list().filter((conv) => conv.knownSeq > 0 || conv.id === currentId || conv.pending.length > 0);
+  }
+
   ensure(id, peer) {
     let conv = this.convs.get(id);
     if (!conv) {
@@ -57,7 +63,7 @@ export class Store {
   // Список диалогов: добавляет незнакомые и поднимает known_seq известных, окна не трогает.
   applyConversations(list) {
     for (const item of list) {
-      const conv = this.ensure(item.id, item.peer);
+      const conv = this.ensure(item.conversation_id, item.peer);
       conv.peer = item.peer;
       conv.knownSeq = Math.max(conv.knownSeq, item.last_seq);
       conv.unread = item.unread_count;

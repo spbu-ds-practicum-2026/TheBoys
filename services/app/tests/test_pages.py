@@ -187,3 +187,10 @@ def test_stream_supports_range(client):
 
 def test_stream_requires_login(client):
     assert client.get(f"/api/tracks/{server.TRACKS[0]['id']}/stream").status_code == 401
+
+
+def test_navigation_requests_replace_each_other(client):
+    # Быстрый переход «Музыка» → «Чаты»: запоздавший ответ первого раздела не должен заменить второй.
+    register(client, "alice")
+    links = re.findall(r'<a [^>]*hx-get="[^"]*"[^>]*>', client.get("/music").text)
+    assert links and all('hx-sync="#main:replace"' in link for link in links)

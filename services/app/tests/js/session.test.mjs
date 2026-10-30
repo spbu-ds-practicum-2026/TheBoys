@@ -9,7 +9,7 @@ function makeSession(lastSeq) {
   const session = new Session(1);
   const sent = [];
   session.connection = { state: 'open', send: (event) => { sent.push(event); return true; } };
-  session.store.applyConversations([{ id: CONV, peer: { id: 2, login: 'bob' }, last_seq: lastSeq, unread_count: 0 }]);
+  session.store.applyConversations([{ conversation_id: CONV, peer: { id: 2, login: 'bob' }, last_seq: lastSeq, unread_count: 0 }]);
   const syncs = () => sent.filter((event) => event.type === 'sync');
   return { session, syncs };
 }

@@ -59,7 +59,7 @@ function render() {
 
 function renderDialogs() {
   const list = $('dialogs-list');
-  const convs = session.store.list();
+  const convs = session.store.visibleList(session.currentId);
   $('dialogs-empty').hidden = convs.length > 0;
   list.replaceChildren(...convs.map((conv) => dialogItem(conv)));
 }
@@ -183,46 +183,39 @@ async function refreshStatus() {
 
 // ---------- окна ----------
 
+const SEARCH_ERRORS = {
+  USER_NOT_FOUND: 'Пользователь не найден',
+  INVALID_INPUT: 'Введите логин другого пользователя',
+};
+const SEARCH_FAILED = 'Не удалось выполнить поиск';
+
+// Окно «Найти собеседника»: запрос уходит только по кнопке или Enter, поиска по мере ввода нет.
+// Узел ищет логин целиком и сразу открывает диалог (ТР, технический сценарий 4, п. 1).
 export function openUserSearch() {
-  const input = h('input', { class: 'field', type: 'search', placeholder: 'Логин собеседника', 'aria-label': 'Логин собеседника', autocomplete: 'off' });
-  const results = h('div', { class: 'track-list', 'aria-live': 'polite' });
-  let timer = null;
-  let token = 0;
-
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(async () => {
-      const query = input.value.trim();
-      const mine = ++token;
-      if (!query) { results.replaceChildren(); return; }
-      let response;
-      try { response = await api.users(query); } catch { response = null; }
-      if (mine !== token) return;
-      if (!response || !response.ok) {
-        results.replaceChildren(h('p', { class: 'empty', text: 'Не удалось выполнить поиск' }));
-      } else if (response.data.length === 0) {
-        results.replaceChildren(h('p', { class: 'empty', text: 'Пользователь не найден' }));
-      } else {
-        results.replaceChildren(...response.data.map((user) => userButton(user)));
-      }
-    }, SEARCH_DEBOUNCE_MS);
+  const input = h('input', {
+    class: 'field', name: 'login', placeholder: 'Логин собеседника', 'aria-label': 'Логин собеседника',
+    autocomplete: 'off', autocapitalize: 'none',
   });
+  const submit = h('button', { class: 'btn btn-primary', type: 'submit', text: 'Найти' });
+  const message = h('p', { class: 'form-error', role: 'alert' });
+  const form = h('form', { class: 'user-search' }, h('div', { class: 'user-search-row' }, input, submit), message);
 
-  openModal('Найти собеседника', input, results);
-  input.focus();
-}
-
-function userButton(user) {
-  const button = h('button', { class: 'pick-item', type: 'button' },
-    h('div', { class: 'avatar avatar-sm', 'aria-hidden': 'true', text: initials(user.login) }),
-    h('span', { text: user.login }));
-  button.addEventListener('click', async () => {
-    const id = await session.openWithUser(user);
-    if (id === null) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message.textContent = '';
+    submit.disabled = true;
+    const result = await session.openByLogin(input.value);
+    submit.disabled = false;
+    if (!result.ok) {
+      message.textContent = SEARCH_ERRORS[result.code] ?? SEARCH_FAILED;
+      return;
+    }
     closeModal();
-    openDialog(id);
+    openDialog(result.id);
   });
-  return button;
+
+  openModal('Найти собеседника', form);
+  input.focus();
 }
 
 export function openAttachTrack() {

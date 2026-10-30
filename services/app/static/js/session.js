@@ -7,6 +7,12 @@ import { Store } from './store.js';
 
 const PAGE_SIZE = 50;
 
+// Ошибки отправки, которые не исчезнут при повторе: сообщение помечается «не отправлено».
+// Остальные (INTERNAL_ERROR и неизвестные коды) временные: сообщение остаётся «отправляется» и уходит снова
+// с тем же client_msg_id — повтор не создаёт дубль (ТР, сценарий 7, п. 4; технический сценарий 6, п. 3).
+const PERMANENT_SEND_ERRORS = new Set(['CONVERSATION_NOT_FOUND', 'NOT_A_MEMBER', 'TRACK_NOT_FOUND', 'INVALID_PAYLOAD']);
+const SEND_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 15000];
+
 export class Session {
   constructor(userId) {
     this.userId = userId;
@@ -20,6 +26,7 @@ export class Session {
     this.currentId = null;      // диалог, открытый сейчас в разделе «Чаты»
     this.inflight = new Set();  // запросы sync, на которые ещё нет ответа
     this.reloading = false;
+    this.sendRetries = new Map(); // client_msg_id -> { attempts, timer }
   }
 
   onState(listener) {
@@ -103,7 +110,8 @@ export class Session {
   handleError(event) {
     if (event.code === 'UNAUTHORIZED') { location.href = '/login'; return; }
     if (event.client_msg_id) {
-      this.store.markFailed(event.client_msg_id);
+      if (PERMANENT_SEND_ERRORS.has(event.code)) this.store.markFailed(event.client_msg_id);
+      else this.retrySend(event.client_msg_id);
       return;
     }
     // Ошибка на read или sync: ответа history не будет, поэтому запрос можно будет повторить.
@@ -168,12 +176,22 @@ export class Session {
     }
   }
 
-  // Найти собеседника и открыть диалог — существующий или новый.
-  async openWithUser(user) {
-    const response = await api.openConversation(user.id);
-    if (!response.ok) return null;
-    this.store.applyConversations([response.data]);
-    return response.data.id;
+  // Найти собеседника по логину: узел сразу открывает диалог — существующий или новый (ТР, сценарий 4, п. 1).
+  // Возвращает { ok: true, id } или { ok: false, code } с кодом ошибки узла.
+  async openByLogin(login) {
+    let response;
+    try {
+      response = await api.findUser(login);
+    } catch {
+      return { ok: false, code: 'NETWORK_ERROR' };
+    }
+    if (response.status === 401) {
+      location.href = '/login';
+      return { ok: false, code: 'UNAUTHORIZED' };
+    }
+    if (!response.ok) return { ok: false, code: response.data?.code ?? 'UNKNOWN' };
+    this.store.applyConversations([response.data.conversation]);
+    return { ok: true, id: response.data.conversation.conversation_id };
   }
 
   sendText(conversationId, text) {
@@ -184,6 +202,20 @@ export class Session {
     this.queue(conversationId, 'track', { track_id: track.id }, {
       track_id: track.id, title: track.title, artist: track.artist, duration_s: track.duration_s,
     });
+  }
+
+  // Временная ошибка узла: повторить отправку с растущей паузой, пока не придёт ack или постоянная ошибка.
+  retrySend(clientMsgId) {
+    const entry = this.sendRetries.get(clientMsgId) ?? { attempts: 0, timer: null };
+    const delay = SEND_RETRY_DELAYS_MS[Math.min(entry.attempts, SEND_RETRY_DELAYS_MS.length - 1)];
+    entry.attempts += 1;
+    clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => {
+      const item = this.store.unconfirmed().find((p) => p.clientMsgId === clientMsgId);
+      if (item) this.transmit(item);
+      else this.sendRetries.delete(clientMsgId);
+    }, delay);
+    this.sendRetries.set(clientMsgId, entry);
   }
 
   queue(conversationId, kind, wirePayload, payload) {

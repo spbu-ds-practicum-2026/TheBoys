@@ -295,6 +295,9 @@ input[type="range"] { accent-color: #e5e7eb; }
 .modal-head h2 { font-size: 16px; }
 .modal-close { background: none; border: 0; font-size: 22px; line-height: 1; color: var(--text-muted); }
 .modal-body { display: grid; gap: 10px; padding: 16px; max-height: 60vh; overflow: auto; }
+.user-search { display: grid; gap: 4px; }
+.user-search-row { display: flex; gap: 8px; }
+.user-search-row .field { flex: 1; min-width: 0; }
 .pick-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; background: var(--bg-surface); border: var(--border); border-radius: var(--r-sm); text-align: left; }
 .pick-item:hover { background: var(--bg-surface-2); }
 

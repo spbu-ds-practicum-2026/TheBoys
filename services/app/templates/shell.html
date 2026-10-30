@@ -10,15 +10,15 @@
 
 <div class="app-shell" id="app" data-user-id="{{ user.id }}" data-user-login="{{ user.login }}">
   <aside class="rail">
-    <a class="rail-brand" href="/music" hx-get="/music" hx-target="#main" hx-push-url="true" aria-label="Boysic">
+    <a class="rail-brand" href="/music" hx-get="/music" hx-target="#main" hx-push-url="true" hx-sync="#main:replace" aria-label="Boysic">
       <img src="/static/img/logo.jpg" alt="">
     </a>
     <nav class="rail-nav" aria-label="Разделы">
-      <a class="rail-link" href="/music" hx-get="/music" hx-target="#main" hx-push-url="true" data-nav="/music"
+      <a class="rail-link" href="/music" hx-get="/music" hx-target="#main" hx-push-url="true" hx-sync="#main:replace" data-nav="/music"
          {% if active == 'music' %}aria-current="page"{% endif %}>
         <svg><use href="#i-music"/></svg><span>Музыка</span>
       </a>
-      <a class="rail-link" href="/chats" hx-get="/chats" hx-target="#main" hx-push-url="true" data-nav="/chats"
+      <a class="rail-link" href="/chats" hx-get="/chats" hx-target="#main" hx-push-url="true" hx-sync="#main:replace" data-nav="/chats"
          {% if active == 'chats' %}aria-current="page"{% endif %}>
         <svg><use href="#i-chat"/></svg><span>Чаты</span>
       </a>

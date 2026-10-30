@@ -127,8 +127,8 @@ def _public(user: dict) -> dict:
     return {"id": user["id"], "login": user["login"]}
 
 
-def _error(status: int, code: str, message: str) -> JSONResponse:
-    return JSONResponse({"code": code, "message": message}, status_code=status)
+def _error(status: int, code: str, message: str, headers: dict | None = None) -> JSONResponse:
+    return JSONResponse({"code": code, "message": message}, status_code=status, headers=headers)
 
 
 def _with_cookie(response: JSONResponse, user: dict) -> JSONResponse:
@@ -228,13 +228,27 @@ def stream_track(track_id: str, request: Request, range: str | None = Header(def
 # ---------------------------------------------------------------------------
 
 @app.get("/api/users")
-def find_users(request: Request, login: str = ""):
+def find_user(request: Request, login: str):
+    """Поиск собеседника по логину целиком (ТР, технический сценарий 4, п. 1): в ответ сразу открывается диалог."""
+    no_store = {"Cache-Control": "no-store"}  # ответ создаёт диалог, кэшировать его нельзя
     me = _require_user(request)
     if not me:
-        return _error(401, "UNAUTHORIZED", "Требуется вход.")
-    needle = login.strip().lower().lstrip("@")
-    found = [u for u in users.values() if u["id"] != me["id"] and needle and needle in u["login"].lower()]
-    return [_public(u) for u in found[:10]]
+        return _error(401, "UNAUTHORIZED", "Требуется вход.", no_store)
+    needle = login.strip().lower()
+    if not needle or needle == me["login"].lower():
+        return _error(422, "INVALID_INPUT", "Введите логин другого пользователя.", no_store)
+    peer = next((u for u in users.values() if u["login"].lower() == needle), None)
+    if peer is None:
+        return _error(404, "USER_NOT_FOUND", "Пользователь не найден.", no_store)
+
+    members = tuple(sorted((me["id"], peer["id"])))  # одна пара — один диалог
+    conv = next((c for c in conversations.values() if c["members"] == members), None)
+    if conv is None:
+        conv = {"id": next(conversation_ids), "members": members, "last_seq": 0, "messages": [], "last_read": {}}
+        conversations[conv["id"]] = conv
+    return JSONResponse(
+        {"user": _public(peer), "conversation": _conversation_view(conv, me["id"])}, headers=no_store,
+    )
 
 
 @app.get("/api/users/{user_id}/status")
@@ -250,10 +264,10 @@ def _unread(conv: dict, user_id: int) -> int:
 
 
 def _conversation_view(conv: dict, user_id: int) -> dict:
-    peer_id = conv["members"][0] if conv["members"][1] == user_id else conv["members"][1]
+    other_id = conv["members"][0] if conv["members"][1] == user_id else conv["members"][1]
     return {
-        "id": conv["id"],
-        "peer": _public(users[peer_id]),
+        "conversation_id": conv["id"],
+        "peer": _public(users[other_id]),
         "last_seq": conv["last_seq"],
         "unread_count": _unread(conv, user_id),
     }
@@ -265,25 +279,6 @@ def list_conversations(request: Request):
     if not me:
         return _error(401, "UNAUTHORIZED", "Требуется вход.")
     return [_conversation_view(c, me["id"]) for c in conversations.values() if me["id"] in c["members"]]
-
-
-class OpenConversation(BaseModel):
-    peer_id: int
-
-
-@app.post("/api/conversations")
-def open_conversation(body: OpenConversation, request: Request):
-    me = _require_user(request)
-    if not me:
-        return _error(401, "UNAUTHORIZED", "Требуется вход.")
-    if body.peer_id == me["id"] or body.peer_id not in users:
-        return _error(404, "USER_NOT_FOUND", "Пользователь не найден.")
-    members = tuple(sorted((me["id"], body.peer_id)))  # одна пара — один диалог
-    conv = next((c for c in conversations.values() if c["members"] == members), None)
-    if conv is None:
-        conv = {"id": next(conversation_ids), "members": members, "last_seq": 0, "messages": [], "last_read": {}}
-        conversations[conv["id"]] = conv
-    return _conversation_view(conv, me["id"])
 
 
 # ---------------------------------------------------------------------------

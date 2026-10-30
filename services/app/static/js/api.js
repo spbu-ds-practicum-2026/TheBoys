@@ -19,8 +19,7 @@ export const api = {
   login: (login, password) => request('POST', '/api/login', { login, password }),
   logout: () => request('POST', '/api/logout'),
   tracks: (q = '') => request('GET', `/api/tracks?q=${encodeURIComponent(q)}`),
-  users: (login) => request('GET', `/api/users?login=${encodeURIComponent(login)}`),
+  findUser: (login) => request('GET', `/api/users?login=${encodeURIComponent(login)}`),
   userStatus: (id) => request('GET', `/api/users/${id}/status`),
   conversations: () => request('GET', '/api/conversations'),
-  openConversation: (peerId) => request('POST', '/api/conversations', { peer_id: peerId }),
 };

@@ -60,6 +60,7 @@ function row(track) {
 export function openShare(session, trackId) {
   const track = tracksById.get(trackId);
   if (!track) return;
+  // Все существующие диалоги, в том числе только что найденный по логину и ещё пустой (ТР, сценарий 5, п. 1).
   const convs = session.store.list();
   const body = convs.length === 0
     ? [h('p', { class: 'empty', text: 'Диалогов пока нет. Откройте диалог в разделе «Чаты».' })]

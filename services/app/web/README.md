@@ -68,15 +68,13 @@ Dev-сервер хранит всё в памяти (после перезап�
 | `POST /api/logout` | `204`, cookie удаляется | |
 | `GET /api/tracks?q=` | `200 [{id, title, artist, duration_s}]`; поиск по названию и исполнителю без учёта регистра, пустой `q` — весь каталог | |
 | `GET /api/tracks/{id}/stream` | `200` / `206` с заголовком `Range`, `audio/mpeg` | `404 TRACK_NOT_FOUND`, `416` |
-| `GET /api/users?login=` | `200 [{id, login}]`; совпадение по части логина, без самого пользователя | |
+| `GET /api/users?login=` | `200 {user: {id, login}, conversation: {conversation_id, peer: {id, login}, last_seq, unread_count}}`: логин ищется целиком, без учёта регистра, пробелы по краям обрезаются; диалог существующий или новый, на пару пользователей ровно один; заголовок `Cache-Control: no-store` | `404 USER_NOT_FOUND` (диалог не создаётся); `422 INVALID_INPUT` — пустой или собственный логин (без параметра `login` тоже `422`) |
 | `GET /api/users/{id}/status` | `200 {online: bool}` | |
-| `GET /api/conversations` | `200 [{id, peer: {id, login}, last_seq, unread_count}]` | |
-| `POST /api/conversations` `{peer_id}` | `200` тот же объект; диалог существующий или новый | `404 USER_NOT_FOUND` |
+| `GET /api/conversations` | `200 [{conversation_id, peer: {id, login}, last_seq, unread_count}]` — объекты того же вида, что `conversation` выше | |
 
 WebSocket `/ws` — события и схемы из `services/app/README.md`. Закрытие с кодом `4401` — клиент уходит на `/login`; `4403` (недопустимый `Origin`) — клиент не повторяет подключение и сообщает об отказе.
 
 ## Расхождения с ТР и открытые вопросы
 
-- ТР не называет эндпоинт открытия диалога (сказано, что диалог открывается после `GET /api/users?login=…`) и выход из системы. Здесь введены `POST /api/conversations` и `POST /api/logout`; их нужно согласовать с бэкендом и внести в ТР в одном PR с узлом приложения.
+- ТР не называет выход из системы. Здесь введён `POST /api/logout`; его нужно согласовать с бэкендом и внести в ТР в одном PR с узлом приложения.
 - Список диалогов по ТР возвращает только `last_seq` и счётчик, поэтому превью последнего сообщения показывается лишь у диалогов, чьё окно уже загружено.
-- В `GET /api/conversations` поля названы `id`, `last_seq`, `unread_count`, а в событии `dialog_sync` — `conversation_id`, `last_seq`, `unread_count`; имена стоит согласовать с бэкендом, пока API не реализован.

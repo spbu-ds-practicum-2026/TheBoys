@@ -8,7 +8,7 @@ const CONV = 10;
 
 function makeStore() {
   const store = new Store(ME, () => 1000);
-  store.applyConversations([{ id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 0, unread_count: 0 }]);
+  store.applyConversations([{ conversation_id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 0, unread_count: 0 }]);
   return store;
 }
 
@@ -26,7 +26,7 @@ function seqs(store) {
 
 test('диалог открывается с последних сообщений, старые подгружаются вверх', () => {
   const store = makeStore();
-  store.applyConversations([{ id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 6, unread_count: 2 }]);
+  store.applyConversations([{ conversation_id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 6, unread_count: 2 }]);
   store.applyHistory(CONV, [msg(5), msg(6)], true);
   assert.deepEqual(seqs(store), [5, 6]);
   assert.equal(store.get(CONV).hasOlder, true);
@@ -95,16 +95,16 @@ test('сверка находит потерянное последнее соо
 
 test('known_seq только растёт', () => {
   const store = makeStore();
-  store.applyConversations([{ id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 8, unread_count: 0 }]);
+  store.applyConversations([{ conversation_id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 8, unread_count: 0 }]);
   store.applyDialogSync([{ conversation_id: CONV, last_seq: 5, unread_count: 0 }]);
-  store.applyConversations([{ id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 3, unread_count: 0 }]);
+  store.applyConversations([{ conversation_id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 3, unread_count: 0 }]);
   assert.equal(store.get(CONV).knownSeq, 8);
 });
 
 test('перезагрузка списка диалогов не трогает окно', () => {
   const store = makeStore();
   store.applyHistory(CONV, [msg(1), msg(2)], false);
-  store.applyConversations([{ id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 4, unread_count: 2 }]);
+  store.applyConversations([{ conversation_id: CONV, peer: { id: PEER, login: 'bob' }, last_seq: 4, unread_count: 2 }]);
   assert.deepEqual(seqs(store), [1, 2]);
   assert.equal(store.get(CONV).knownSeq, 4);
 });
