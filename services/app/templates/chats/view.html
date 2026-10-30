@@ -1,0 +1,31 @@
+<section class="chats" id="chats-root">
+  <aside class="dialogs" aria-label="Диалоги">
+    <div class="dialogs-head">
+      <button class="btn" type="button" data-action="find-user">Найти собеседника</button>
+    </div>
+    <ul class="dialogs-list" id="dialogs-list"></ul>
+    <p class="empty" id="dialogs-empty" hidden>Диалогов пока нет. Найдите собеседника по логину.</p>
+  </aside>
+
+  <section class="chat" aria-label="Переписка">
+    <p class="chat-placeholder" id="chat-placeholder">Выберите диалог</p>
+    <div class="chat-active" id="chat-active" hidden>
+      <header class="chat-head">
+        <button class="btn chat-head-back" type="button" data-action="close-chat" aria-label="К списку диалогов">←</button>
+        <div class="avatar avatar-sm" id="chat-avatar" aria-hidden="true"></div>
+        <div>
+          <div class="chat-title" id="chat-title"></div>
+          <div class="chat-status" id="chat-status"></div>
+        </div>
+      </header>
+      <div class="messages" id="messages"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <button class="btn" type="button" data-action="attach-track" aria-label="Отправить трек">
+          <svg width="16" height="16"><use href="#i-music"/></svg>
+        </button>
+        <input class="field" name="text" placeholder="Написать сообщение…" aria-label="Сообщение" maxlength="4000">
+        <button class="btn btn-primary" type="submit">Отправить</button>
+      </form>
+    </div>
+  </section>
+</section>
