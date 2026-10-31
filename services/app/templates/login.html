@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Вход — Boysic{% endblock %}
+{% block body %}
+<div class="auth-page">
+  <form class="auth-card" id="auth-form" method="post" novalidate>
+    <div class="auth-brand">
+      <img src="/static/img/logo.jpg" alt="Boysic">
+    </div>
+    <div class="auth-field">
+      <label for="auth-login">Логин</label>
+      <input class="field" id="auth-login" name="login" autocomplete="username" autocapitalize="none" required>
+    </div>
+    <div class="auth-field">
+      <label for="auth-password">Пароль</label>
+      <input class="field" id="auth-password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <p class="form-error" id="auth-error" role="alert"></p>
+    <div class="auth-actions">
+      <button class="btn btn-primary" type="submit" data-mode="login">Войти</button>
+      <button class="btn" type="submit" data-mode="register">Зарегистрироваться</button>
+    </div>
+  </form>
+</div>
+<script type="module" src="/static/js/login.js"></script>
+{% endblock %}
