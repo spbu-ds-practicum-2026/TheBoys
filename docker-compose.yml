@@ -12,8 +12,11 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./infra/postgres/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - ./infra/postgres/migrate.sh:/docker-entrypoint-initdb.d/migrate.sh:ro
     ports:
-      - "5432:5432"
+      # Bound strictly to localhost for debugging to avoid exposing DB to external interfaces
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-theboys_user} -d ${POSTGRES_DB:-theboys}"]
       interval: 5s
@@ -28,10 +31,12 @@ services:
       dockerfile: services/app/Dockerfile
     restart: unless-stopped
     environment:
+      # Secrets default to local dev dummy keys; must be overridden via .env in production
       INTERNAL_SECRET: ${INTERNAL_SECRET:-cluster-super-secret-key-32bytes}
       SESSION_SECRET: ${SESSION_SECRET:-session-cookie-secret-key-32bytes}
+      SESSION_COOKIE_MAX_AGE_SECONDS: ${SESSION_COOKIE_MAX_AGE_SECONDS:-86400}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-theboys_user}:${POSTGRES_PASSWORD:-theboys_secret_pass}@postgres:5432/${POSTGRES_DB:-theboys}
-      ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8000"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
