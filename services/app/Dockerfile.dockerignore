@@ -1,0 +1,22 @@
+# Dockerfile.dockerignore for context root
+.git
+.github
+.gitignore
+CODEOWNERS
+LICENSE
+.env
+.env.*
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+.venv
+venv
+env
+docs
+infra
+mkdocs.yaml
+*.md
