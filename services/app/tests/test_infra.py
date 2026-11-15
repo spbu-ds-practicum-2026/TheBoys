@@ -338,7 +338,6 @@ async def test_postgres_schema_and_constraints_live():
         # --------------------------------------------------------------------
         # 5. Sessions node_id foreign key constraint
         # --------------------------------------------------------------------
-        # Inserting session for non-existent node must fail
         with pytest.raises(asyncpg.ForeignKeyViolationError):
             async with conn.transaction():
                 await conn.execute(
@@ -357,7 +356,6 @@ async def test_postgres_schema_and_constraints_live():
             "app-node-1",
         )
 
-        # Now session insert succeeds
         session_id = uuid4()
         await conn.execute(
             "INSERT INTO sessions (connection_id, user_id, node_id) VALUES ($1, $2, $3);",
@@ -385,14 +383,12 @@ async def test_postgres_schema_and_constraints_live():
         # --------------------------------------------------------------------
         # 7. Job constraints
         # --------------------------------------------------------------------
-        # task_type = 'replicate' requires track_id
         with pytest.raises(asyncpg.CheckViolationError):
             async with conn.transaction():
                 await conn.execute(
                     "INSERT INTO jobs (task_type, track_id, status) VALUES ('replicate', NULL, 'pending');"
                 )
 
-        # status = 'running' requires non-empty worker_id and lease_until
         with pytest.raises(asyncpg.CheckViolationError):
             async with conn.transaction():
                 await conn.execute(
@@ -406,11 +402,18 @@ async def test_postgres_schema_and_constraints_live():
 
 
 @pytest.mark.asyncio
-async def test_migration_atomic_rollback_on_conflict():
+async def test_migration_0002_atomic_rollback_on_conflicting_data_live():
     """
-    Verify atomic rollback: if a migration encounters conflicting data (e.g. existing 'Oleg'
-    and 'oleg' when creating case-insensitive index), the transaction is fully rolled back,
-    no partial DDL changes persist, and no entry is recorded in schema_migrations.
+    Regression Test for Migration #2 Rollback:
+    Simulates an old schema (v1) with pre-existing conflicting user logins ('Oleg' and 'oleg').
+    When migration #2 runs via the atomic migration runner:
+    1. It drops old constraints and attempts to create the lower(login) unique index.
+    2. The index creation fails due to duplicate key 'oleg'.
+    3. The transaction MUST roll back completely:
+       - The old constraint (users_login_key) is preserved.
+       - The old message idempotency constraint (unique_conversation_client_msg) is preserved.
+       - Pre-existing user data ('Oleg', 'oleg') is NOT deleted or renamed.
+       - Migration version 2 is NOT recorded in schema_migrations.
     """
     db_url = get_test_db_url()
     if not db_url:
@@ -426,41 +429,117 @@ async def test_migration_atomic_rollback_on_conflict():
     except Exception as e:
         pytest.skip(f"Could not connect to PostgreSQL at {db_url}: {e}")
 
+    test_schema = "test_rollback_isolated_schema"
     try:
-        # Create an isolated test table simulating pre-migration users
-        await conn.execute("""
-            CREATE TEMP TABLE temp_migration_test_users (
-                id SERIAL PRIMARY KEY,
-                login VARCHAR(64) UNIQUE NOT NULL
-            );
-            INSERT INTO temp_migration_test_users (login) VALUES ('Oleg'), ('oleg');
-        """)
+        # Create an isolated temporary test schema
+        await conn.execute(f"DROP SCHEMA IF EXISTS {test_schema} CASCADE;")
+        await conn.execute(f"CREATE SCHEMA {test_schema};")
+        await conn.execute(f"SET search_path TO {test_schema}, public;")
 
-        # Attempt atomic migration in transaction that fails halfway
-        failed = False
+        # 1. Apply Migration 1 (old schema v1)
+        mig1_path = REPO_ROOT / "infra" / "postgres" / "migrations" / "0001_initial_schema.sql"
+        assert mig1_path.exists(), "0001_initial_schema.sql must exist"
+        sql_v1 = mig1_path.read_text(encoding="utf-8")
+        async with conn.transaction():
+            await conn.execute(sql_v1)
+
+        # 2. Insert pre-existing conflicting data that v1 allowed (case-sensitive Oleg and oleg)
+        await conn.execute("INSERT INTO users (login, password_hash) VALUES ('Oleg', 'pass1');")
+        await conn.execute("INSERT INTO users (login, password_hash) VALUES ('oleg', 'pass2');")
+
+        # Insert a sample message to verify old constraint
+        u1_id = await conn.fetchval("SELECT id FROM users WHERE login = 'Oleg';")
+        u2_id = await conn.fetchval("SELECT id FROM users WHERE login = 'oleg';")
+        cid = await conn.fetchval("INSERT INTO conversations (user1_id, user2_id) VALUES ($1, $2) RETURNING id;", u1_id, u2_id)
+        msg_uuid = uuid4()
+        await conn.execute(
+            "INSERT INTO messages (conversation_id, seq, sender_id, client_msg_id, kind, payload) VALUES ($1, 1, $2, $3, 'text', '{}'::jsonb);",
+            cid, u1_id, msg_uuid
+        )
+
+        # Verify old constraints exist in pg_constraint before running migration 2
+        old_user_constr_before = await conn.fetchval(f"""
+            SELECT conname FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = '{test_schema}' AND t.relname = 'users' AND c.conname = 'users_login_key';
+        """)
+        assert old_user_constr_before == "users_login_key", "Pre-condition: users_login_key must exist in v1"
+
+        old_msg_constr_before = await conn.fetchval(f"""
+            SELECT conname FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = '{test_schema}' AND t.relname = 'messages' AND c.conname = 'unique_conversation_client_msg';
+        """)
+        assert old_msg_constr_before == "unique_conversation_client_msg", "Pre-condition: unique_conversation_client_msg must exist in v1"
+
+        # 3. Attempt Migration 2 in atomic transaction runner
+        mig2_path = REPO_ROOT / "infra" / "postgres" / "migrations" / "0002_constraints_and_idempotency.sql"
+        assert mig2_path.exists(), "0002_constraints_and_idempotency.sql must exist"
+        sql_v2 = mig2_path.read_text(encoding="utf-8")
+
+        failed_with_unique_violation = False
         try:
             async with conn.transaction():
-                # Step 1: drop old constraint (would succeed)
-                await conn.execute("ALTER TABLE temp_migration_test_users DROP CONSTRAINT temp_migration_test_users_login_key;")
-                # Step 2: create lower index (MUST fail because 'Oleg' and 'oleg' collide on lower())
-                await conn.execute("CREATE UNIQUE INDEX temp_idx_users_lower ON temp_migration_test_users (LOWER(login));")
+                await conn.execute(sql_v2)
         except asyncpg.UniqueViolationError:
-            failed = True
+            failed_with_unique_violation = True
 
-        assert failed, "Expected UniqueViolationError when indexing colliding logins"
+        assert failed_with_unique_violation, "Migration 2 must fail on conflicting logins ('Oleg' vs 'oleg')"
 
-        # Verify full rollback: the index MUST NOT exist
-        idx_exists = await conn.fetchval("""
+        # 4. Strict assertions after atomic rollback:
+        # A) Old constraint users_login_key MUST STILL EXIST (it was dropped in script, but rolled back!)
+        old_user_constr_after = await conn.fetchval(f"""
+            SELECT conname FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = '{test_schema}' AND t.relname = 'users' AND c.conname = 'users_login_key';
+        """)
+        assert old_user_constr_after == "users_login_key", (
+            "Rollback verification failed: old users_login_key constraint must be preserved after failed migration!"
+        )
+
+        # B) Old message constraint unique_conversation_client_msg MUST STILL EXIST
+        old_msg_constr_after = await conn.fetchval(f"""
+            SELECT conname FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = '{test_schema}' AND t.relname = 'messages' AND c.conname = 'unique_conversation_client_msg';
+        """)
+        assert old_msg_constr_after == "unique_conversation_client_msg", (
+            "Rollback verification failed: old unique_conversation_client_msg must be preserved after failed migration!"
+        )
+
+        # C) New index unique_users_login_lower MUST NOT EXIST
+        idx_lower_exists = await conn.fetchval(f"""
             SELECT EXISTS (
-                SELECT 1 FROM pg_indexes WHERE indexname = 'temp_idx_users_lower'
+                SELECT 1 FROM pg_indexes WHERE schemaname = '{test_schema}' AND indexname = 'unique_users_login_lower'
             );
         """)
-        assert not idx_exists, "Failed migration must roll back completely; index must not exist"
+        assert not idx_lower_exists, "New index must NOT exist after rollback"
 
-        # Conflicting user data must NOT be touched or lost
-        count = await conn.fetchval("SELECT count(*) FROM temp_migration_test_users;")
-        assert count == 2, "Conflicting user data must remain untouched without deletion"
+        # D) New constraint unique_conversation_sender_client_msg MUST NOT EXIST
+        new_msg_constr = await conn.fetchval(f"""
+            SELECT conname FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = '{test_schema}' AND t.relname = 'messages' AND c.conname = 'unique_conversation_sender_client_msg';
+        """)
+        assert new_msg_constr is None, "New sender idempotency constraint must NOT exist after rollback"
+
+        # E) User data MUST NOT BE MODIFIED OR DELETED
+        user_rows = await conn.fetch("SELECT login FROM users ORDER BY id;")
+        logins = [r["login"] for r in user_rows]
+        assert logins == ["Oleg", "oleg"], f"User data must remain intact, found: {logins}"
+
+        # F) Version 2 MUST NOT be recorded in schema_migrations
+        versions = await conn.fetch("SELECT version FROM schema_migrations ORDER BY version;")
+        version_list = [r["version"] for r in versions]
+        assert version_list == [1], f"schema_migrations must only contain [1], found: {version_list}"
+
     finally:
+        await conn.execute(f"DROP SCHEMA IF EXISTS {test_schema} CASCADE;")
         await conn.close()
 
 
@@ -494,8 +573,8 @@ def test_nginx_live_routing():
             resp = client.get(f"{nginx_url}/nginx-health")
             if resp.status_code != 200:
                 pytest.skip(f"Nginx reverse proxy is not running on {nginx_url}")
-    except Exception:
-        pytest.skip(f"Nginx reverse proxy is not running on {nginx_url}")
+    except Exception as e:
+        pytest.skip(f"Nginx reverse proxy is not reachable at {nginx_url}: {e}")
 
     with httpx.Client(timeout=5.0) as client:
         # 1. External access to /internal/* MUST be blocked with 403 Forbidden
@@ -517,97 +596,119 @@ def test_nginx_dynamic_scaling_and_failover():
     Test Nginx dynamic service discovery and failure recovery:
     1. New app instances start receiving traffic WITHOUT reloading Nginx (resolver TTL = 5s).
     2. Stopping one instance leaves remaining instances serving requests without 502/504 downtime.
+
+    Strict environment separation:
+    - Missing environment/stack: pytest.skip with detailed explanation.
+    - Available environment: full assertions on scale-up, discovery, failover, and exact restoration.
     """
     nginx_url = get_nginx_url()
 
     try:
         import httpx
     except ImportError:
-        pytest.skip("httpx is required")
+        pytest.skip("httpx is required for live Nginx scaling test")
 
+    # 1. Precondition: Check Nginx reachable
     try:
         with httpx.Client(timeout=3.0) as client:
             resp = client.get(f"{nginx_url}/nginx-health")
             if resp.status_code != 200:
-                pytest.skip("Nginx is not running")
-    except Exception:
-        pytest.skip("Nginx is not running")
+                pytest.skip(f"Nginx is not healthy at {nginx_url} (HTTP {resp.status_code})")
+    except Exception as e:
+        pytest.skip(f"Nginx reverse proxy is not reachable at {nginx_url}: {e}")
 
-    # Check if Docker Compose CLI is available to scale instances
-    has_docker = False
+    # 2. Precondition: Check Docker Compose CLI availability
     try:
         res = subprocess.run(["docker", "compose", "version"], capture_output=True, text=True, timeout=5)
-        has_docker = (res.returncode == 0)
-    except Exception:
-        has_docker = False
+        if res.returncode != 0:
+            pytest.skip(f"Docker Compose CLI check failed (exit {res.returncode}): {res.stderr}")
+    except (FileNotFoundError, subprocess.SubprocessError) as e:
+        pytest.skip(f"Docker Compose CLI not found in environment: {e}")
+
+    # 3. Precondition: Check that docker compose stack is running
+    ps_proc = subprocess.run(
+        ["docker", "compose", "ps", "-q", "app"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if ps_proc.returncode != 0:
+        pytest.skip(f"'docker compose ps' failed (exit {ps_proc.returncode}): {ps_proc.stderr}")
+
+    initial_cids = [cid.strip() for cid in ps_proc.stdout.splitlines() if cid.strip()]
+    initial_count = len(initial_cids)
+    if initial_count < 1:
+        pytest.skip("No running 'app' instances found in docker compose stack. Run 'docker compose up -d' first.")
+
+    target_scale = initial_count + 1
 
     with httpx.Client(timeout=5.0) as client:
-        # Make a series of requests to observe responses and node_ids
-        responses = [client.get(f"{nginx_url}/health") for _ in range(10)]
-        for r in responses:
-            assert r.status_code == 200, f"Request to /health failed with status {r.status_code}"
-        node_ids = {r.json().get("node_id") for r in responses}
-
-        # If already multi-node (e.g. running in scaled CI environment)
-        if len(node_ids) > 1:
-            # Verified dynamic load balancing across multiple active node_ids
-            return
-
-        if not has_docker:
-            # If running in environment without direct docker daemon access,
-            # we confirm all requests to /health are healthy and served.
-            return
-
-        # Dynamically scale to 2 instances to test discovery without nginx reload
         try:
+            # ----------------------------------------------------------------
+            # Scenario 1: Scale-up new instance without Nginx reload
+            # ----------------------------------------------------------------
             scale_up = subprocess.run(
-                ["docker", "compose", "up", "-d", "--scale", "app=2", "--no-recreate"],
+                ["docker", "compose", "up", "-d", "--scale", f"app={target_scale}", "--no-recreate"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=45,
             )
-            if scale_up.returncode != 0:
-                return
+            assert scale_up.returncode == 0, (
+                f"Failed to scale up app to {target_scale} instances (exit {scale_up.returncode}):\n"
+                f"stdout: {scale_up.stdout}\nstderr: {scale_up.stderr}"
+            )
 
             # Wait slightly longer than Nginx DNS TTL (valid=5s)
             time.sleep(6)
 
-            # Check that new instance starts receiving traffic without Nginx reload
+            # Poll /health to verify traffic reaches both old and new instances
             seen_nodes = set()
-            for _ in range(20):
+            for _ in range(30):
                 res = client.get(f"{nginx_url}/health")
-                assert res.status_code == 200
-                seen_nodes.add(res.json().get("node_id"))
-                time.sleep(0.2)
+                assert res.status_code == 200, f"Expected 200 OK from /health during scale-up, got {res.status_code}"
+                node_id = res.json().get("node_id")
+                if node_id:
+                    seen_nodes.add(node_id)
+                time.sleep(0.15)
 
-            assert len(seen_nodes) >= 2, (
-                f"Expected requests to be distributed to newly scaled instance without nginx reload, seen: {seen_nodes}"
+            assert len(seen_nodes) >= target_scale, (
+                f"Dynamic discovery failed: expected requests to reach at least {target_scale} distinct node_ids "
+                f"without Nginx reload, but saw {len(seen_nodes)}: {seen_nodes}"
             )
 
-            # Test failover: scale back down to 1 instance
+            # ----------------------------------------------------------------
+            # Scenario 2: Failover - stop one instance and verify seamless traffic
+            # ----------------------------------------------------------------
             scale_down = subprocess.run(
-                ["docker", "compose", "up", "-d", "--scale", "app=1", "--no-recreate"],
+                ["docker", "compose", "up", "-d", "--scale", f"app={initial_count}", "--no-recreate"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=45,
             )
-            if scale_down.returncode != 0:
-                return
+            assert scale_down.returncode == 0, (
+                f"Failed to scale down app to {initial_count} instances (exit {scale_down.returncode}):\n"
+                f"stdout: {scale_down.stdout}\nstderr: {scale_down.stderr}"
+            )
 
             time.sleep(6)
 
-            # Remaining instance must continue serving requests seamlessly
-            for _ in range(10):
+            # Requests must continue being served by remaining instance without 502/504 errors
+            for _ in range(15):
                 res = client.get(f"{nginx_url}/health")
-                assert res.status_code == 200, f"Expected 200 OK during failover, got {res.status_code}"
+                assert res.status_code == 200, f"Failover failed: expected 200 OK from /health, got {res.status_code}"
+                time.sleep(0.1)
 
         finally:
-            # Restore baseline scale of 1
-            subprocess.run(
-                ["docker", "compose", "up", "-d", "--scale", "app=1", "--no-recreate"],
+            # Strictly restore the exact initial number of instances and verify result
+            restore_res = subprocess.run(
+                ["docker", "compose", "up", "-d", "--scale", f"app={initial_count}", "--no-recreate"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=45,
+            )
+            assert restore_res.returncode == 0, (
+                f"Cleanup failed to restore initial scale of {initial_count} instances (exit {restore_res.returncode}):\n"
+                f"stdout: {restore_res.stdout}\nstderr: {restore_res.stderr}"
             )
 
 

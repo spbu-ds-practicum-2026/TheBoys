@@ -37,10 +37,11 @@ def get_db_params():
     }
 
 
-def list_migration_files():
-    if not MIGRATIONS_DIR.exists():
+def list_migration_files(target_dir=None):
+    mig_dir = Path(target_dir) if target_dir else MIGRATIONS_DIR
+    if not mig_dir.exists():
         return []
-    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    files = sorted(mig_dir.glob("*.sql"))
     parsed = []
     for f in files:
         match = re.match(r"^(\d+)_(.*)\.sql$", f.name)
@@ -51,19 +52,19 @@ def list_migration_files():
     return sorted(parsed, key=lambda x: x[0])
 
 
-def connect_postgres():
+def connect_postgres(params=None):
     """Connect using available PostgreSQL driver: psycopg, psycopg2, or asyncpg."""
-    params = get_db_params()
+    db_params = params or get_db_params()
 
     # Try psycopg (v3)
     try:
         import psycopg
         conn = psycopg.connect(
-            dbname=params["database"],
-            user=params["user"],
-            password=params["password"],
-            host=params["host"],
-            port=params["port"],
+            dbname=db_params["database"],
+            user=db_params["user"],
+            password=db_params["password"],
+            host=db_params["host"],
+            port=db_params["port"],
             autocommit=False,
         )
         return "psycopg", conn
@@ -74,11 +75,11 @@ def connect_postgres():
     try:
         import psycopg2
         conn = psycopg2.connect(
-            dbname=params["database"],
-            user=params["user"],
-            password=params["password"],
-            host=params["host"],
-            port=params["port"],
+            dbname=db_params["database"],
+            user=db_params["user"],
+            password=db_params["password"],
+            host=db_params["host"],
+            port=db_params["port"],
         )
         conn.autocommit = False
         return "psycopg2", conn
@@ -114,11 +115,11 @@ def connect_postgres():
         loop = asyncio.new_event_loop()
         conn = loop.run_until_complete(
             asyncpg.connect(
-                user=params["user"],
-                password=params["password"],
-                host=params["host"],
-                port=params["port"],
-                database=params["database"],
+                user=db_params["user"],
+                password=db_params["password"],
+                host=db_params["host"],
+                port=db_params["port"],
+                database=db_params["database"],
             )
         )
         return "asyncpg", AsyncpgSyncAdapter(loop, conn)
@@ -157,17 +158,19 @@ def get_applied_versions(driver, conn) -> set[int]:
     return set()
 
 
-def apply_migrations():
-    migration_files = list_migration_files()
+def apply_migrations(params=None, migrations_dir=None, raise_on_error=False):
+    target_dir = Path(migrations_dir) if migrations_dir else MIGRATIONS_DIR
+    migration_files = list_migration_files(target_dir)
     if not migration_files:
-        print("No migration files found in", MIGRATIONS_DIR)
+        print("No migration files found in", target_dir)
         return 0
 
-    driver, conn = connect_postgres()
+    driver, conn = connect_postgres(params=params)
     if not conn:
-        print("Error: No PostgreSQL driver found (install psycopg, psycopg2, or asyncpg).")
-        print("Alternatively, execute migrations inside Docker container via migrate.sh:")
-        print("  docker compose exec -T postgres sh /docker-entrypoint-initdb.d/migrate.sh")
+        err_msg = "Error: No PostgreSQL driver found (install psycopg, psycopg2, or asyncpg)."
+        print(err_msg, file=sys.stderr)
+        if raise_on_error:
+            raise RuntimeError(err_msg)
         return 1
 
     try:
@@ -204,15 +207,18 @@ def apply_migrations():
         return 0
     except Exception as e:
         print(f"Migration failed: {e}", file=sys.stderr)
+        if raise_on_error:
+            raise
         return 1
     finally:
         if conn:
             conn.close()
 
 
-def show_status():
-    migration_files = list_migration_files()
-    driver, conn = connect_postgres()
+def show_status(params=None, migrations_dir=None):
+    target_dir = Path(migrations_dir) if migrations_dir else MIGRATIONS_DIR
+    migration_files = list_migration_files(target_dir)
+    driver, conn = connect_postgres(params=params)
     if not conn:
         print("Warning: Cannot connect to database (no driver or DB unreachable). Listing files on disk:")
         for version, name, _ in migration_files:
