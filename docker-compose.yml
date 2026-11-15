@@ -30,6 +30,8 @@ services:
       context: .
       dockerfile: services/app/Dockerfile
     restart: unless-stopped
+    # Run 2 application instances by default for horizontal scaling and high availability
+    scale: 2
     environment:
       # Secrets default to local dev dummy keys; must be overridden via .env in production
       INTERNAL_SECRET: ${INTERNAL_SECRET:-cluster-super-secret-key-32bytes}

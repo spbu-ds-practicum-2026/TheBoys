@@ -174,14 +174,19 @@ def test_docker_compose_and_dockerignore_compliance():
         "PostgreSQL must not be exposed on all interfaces (0.0.0.0:5432)"
     )
 
-    # 2. Environment passing: ALLOWED_ORIGINS and SESSION_COOKIE_MAX_AGE_SECONDS
+    # 2. 2 App Instances by default for high availability
+    assert "scale: 2" in content or "replicas: 2" in content, (
+        "Service 'app' must run 2 instances by default (scale: 2)"
+    )
+
+    # 3. Environment passing: ALLOWED_ORIGINS and SESSION_COOKIE_MAX_AGE_SECONDS
     assert "ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-" in content or "ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}" in content
     assert "SESSION_COOKIE_MAX_AGE_SECONDS:" in content
 
-    # 3. Mounts for migrations
+    # 4. Mounts for migrations
     assert "migrations" in content, "docker-compose.yml must mount migrations directory"
 
-    # 4. Root .dockerignore existence for root context builds
+    # 5. Root .dockerignore existence for root context builds
     root_dockerignore = REPO_ROOT / ".dockerignore"
     assert root_dockerignore.exists(), "Root .dockerignore must exist for build context '.'"
     ignore_content = root_dockerignore.read_text(encoding="utf-8")
@@ -560,6 +565,7 @@ def test_nginx_live_routing():
     Test basic live Nginx reverse proxy behaviors:
     1. /internal/* is blocked from external access (403 Forbidden).
     2. /health proxying to app service works.
+    3. Multiple default app instances receive requests with distinct node_ids.
     """
     nginx_url = get_nginx_url()
 
@@ -594,8 +600,9 @@ def test_nginx_live_routing():
 def test_nginx_dynamic_scaling_and_failover():
     """
     Test Nginx dynamic service discovery and failure recovery:
-    1. New app instances start receiving traffic WITHOUT reloading Nginx (resolver TTL = 5s).
-    2. Stopping one instance leaves remaining instances serving requests without 502/504 downtime.
+    1. Verify requests are balanced across distinct node_ids (default 2 instances).
+    2. Stopping one instance leaves remaining instance serving requests without downtime (failover).
+    3. Scaling back up makes the restored instance receive traffic WITHOUT reloading Nginx.
 
     Strict environment separation:
     - Missing environment/stack: pytest.skip with detailed explanation.
@@ -640,13 +647,59 @@ def test_nginx_dynamic_scaling_and_failover():
     if initial_count < 1:
         pytest.skip("No running 'app' instances found in docker compose stack. Run 'docker compose up -d' first.")
 
-    target_scale = initial_count + 1
-
     with httpx.Client(timeout=5.0) as client:
+        # A) Verify initial traffic distribution across instances
+        initial_seen_nodes = set()
+        for _ in range(30):
+            res = client.get(f"{nginx_url}/health")
+            assert res.status_code == 200, f"Expected 200 OK from /health, got {res.status_code}"
+            nid = res.json().get("node_id")
+            if nid:
+                initial_seen_nodes.add(nid)
+            time.sleep(0.1)
+
+        # If running with default 2 instances, assert both receive traffic with distinct node_ids
+        if initial_count >= 2:
+            assert len(initial_seen_nodes) >= 2, (
+                f"Expected traffic to be distributed across at least 2 distinct node_ids by default, "
+                f"but saw {len(initial_seen_nodes)}: {initial_seen_nodes}"
+            )
+
         try:
             # ----------------------------------------------------------------
-            # Scenario 1: Scale-up new instance without Nginx reload
+            # Scenario 1: Failover - stop one instance and verify seamless traffic
             # ----------------------------------------------------------------
+            failover_scale = max(1, initial_count - 1)
+            scale_down = subprocess.run(
+                ["docker", "compose", "up", "-d", "--scale", f"app={failover_scale}", "--no-recreate"],
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )
+            assert scale_down.returncode == 0, (
+                f"Failed to scale down app to {failover_scale} instances (exit {scale_down.returncode}):\n"
+                f"stdout: {scale_down.stdout}\nstderr: {scale_down.stderr}"
+            )
+
+            # Wait slightly longer than Nginx DNS TTL (valid=5s)
+            time.sleep(6)
+
+            # Requests must continue being served by remaining instance without 502/504 errors
+            remaining_seen_nodes = set()
+            for _ in range(20):
+                res = client.get(f"{nginx_url}/health")
+                assert res.status_code == 200, f"Failover failed: expected 200 OK from /health, got {res.status_code}"
+                nid = res.json().get("node_id")
+                if nid:
+                    remaining_seen_nodes.add(nid)
+                time.sleep(0.1)
+
+            assert len(remaining_seen_nodes) >= 1, "Remaining instance must serve traffic during failover"
+
+            # ----------------------------------------------------------------
+            # Scenario 2: Scale-up / Recovery without Nginx reload
+            # ----------------------------------------------------------------
+            target_scale = initial_count
             scale_up = subprocess.run(
                 ["docker", "compose", "up", "-d", "--scale", f"app={target_scale}", "--no-recreate"],
                 capture_output=True,
@@ -654,49 +707,27 @@ def test_nginx_dynamic_scaling_and_failover():
                 timeout=45,
             )
             assert scale_up.returncode == 0, (
-                f"Failed to scale up app to {target_scale} instances (exit {scale_up.returncode}):\n"
+                f"Failed to restore/scale up app to {target_scale} instances (exit {scale_up.returncode}):\n"
                 f"stdout: {scale_up.stdout}\nstderr: {scale_up.stderr}"
             )
 
-            # Wait slightly longer than Nginx DNS TTL (valid=5s)
             time.sleep(6)
 
-            # Poll /health to verify traffic reaches both old and new instances
-            seen_nodes = set()
+            # Poll /health to verify traffic reaches both restored instances with distinct node_ids
+            restored_seen_nodes = set()
             for _ in range(30):
                 res = client.get(f"{nginx_url}/health")
-                assert res.status_code == 200, f"Expected 200 OK from /health during scale-up, got {res.status_code}"
-                node_id = res.json().get("node_id")
-                if node_id:
-                    seen_nodes.add(node_id)
-                time.sleep(0.15)
-
-            assert len(seen_nodes) >= target_scale, (
-                f"Dynamic discovery failed: expected requests to reach at least {target_scale} distinct node_ids "
-                f"without Nginx reload, but saw {len(seen_nodes)}: {seen_nodes}"
-            )
-
-            # ----------------------------------------------------------------
-            # Scenario 2: Failover - stop one instance and verify seamless traffic
-            # ----------------------------------------------------------------
-            scale_down = subprocess.run(
-                ["docker", "compose", "up", "-d", "--scale", f"app={initial_count}", "--no-recreate"],
-                capture_output=True,
-                text=True,
-                timeout=45,
-            )
-            assert scale_down.returncode == 0, (
-                f"Failed to scale down app to {initial_count} instances (exit {scale_down.returncode}):\n"
-                f"stdout: {scale_down.stdout}\nstderr: {scale_down.stderr}"
-            )
-
-            time.sleep(6)
-
-            # Requests must continue being served by remaining instance without 502/504 errors
-            for _ in range(15):
-                res = client.get(f"{nginx_url}/health")
-                assert res.status_code == 200, f"Failover failed: expected 200 OK from /health, got {res.status_code}"
+                assert res.status_code == 200, f"Expected 200 OK from /health, got {res.status_code}"
+                nid = res.json().get("node_id")
+                if nid:
+                    restored_seen_nodes.add(nid)
                 time.sleep(0.1)
+
+            if target_scale >= 2:
+                assert len(restored_seen_nodes) >= 2, (
+                    f"Dynamic recovery failed: expected traffic across at least 2 distinct node_ids without Nginx reload, "
+                    f"seen {len(restored_seen_nodes)}: {restored_seen_nodes}"
+                )
 
         finally:
             # Strictly restore the exact initial number of instances and verify result
