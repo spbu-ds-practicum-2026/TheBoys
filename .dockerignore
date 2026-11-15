@@ -1,0 +1,28 @@
+# Git and repository metadata
+.git
+.github
+.gitignore
+CODEOWNERS
+LICENSE
+
+# Environment and secrets
+.env
+.env.*
+
+# Python caches and virtualenvs
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+.venv
+venv
+env
+
+# Documentation and project infrastructure files not needed in app container
+docs
+infra
+mkdocs.yaml
+*.md

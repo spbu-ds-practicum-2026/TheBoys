@@ -325,20 +325,26 @@ pytest services/app/tests/ -v
    - Если сверка (`dialog_sync`) или сообщение получены для диалога, которого нет в локальном списке, клиент перезагружает список диалогов (`GET /api/conversations`).
 
 3. **Счётчик непрочитанных сообщений (Технический сценарий 5 ТР, п. 5):**
-   - Счётчики всех диалогов пользователя считаются одним запросом — и для списка диалогов, и для ответа на `ping` (технический сценарий 5, п. 5). Собственные сообщения пользователя в счётчик не входят:
+   - Счётчики всех диалогов пользователя считаются одним агрегирующим запросом — и для списка диалогов, и для ответа на `ping`. Собственные сообщения пользователя в счётчик не входят.
+   - **Согласование структуры схемы (`conversation_reads` vs `conversation_members`):**
+     В ТР и ранних набросках упоминалась сущность участников диалога. В утвержденной реляционной схеме PostgreSQL (`infra/postgres/init.sql`) каждый диалог строго парный (`conversations.user1_id`, `conversations.user2_id`), а позиции прочтения вынесены в нормализованную таблицу `conversation_reads(conversation_id, user_id, last_read_seq)`.
+   - Запрос подсчёта непрочитанных для схемы с `conversation_reads`:
      ```sql
      SELECT c.id AS conversation_id,
             c.last_seq,
             count(m.seq) AS unread_count
-     FROM conversation_members cm
-     JOIN conversations c ON c.id = cm.conversation_id
+     FROM conversations c
+     LEFT JOIN conversation_reads cr
+            ON cr.conversation_id = c.id
+           AND cr.user_id = :current_user_id
      LEFT JOIN messages m
-            ON m.conversation_id = cm.conversation_id
-           AND m.seq > cm.last_read_seq
-           AND m.sender_id <> cm.user_id
-     WHERE cm.user_id = :current_user_id
+            ON m.conversation_id = c.id
+           AND m.seq > COALESCE(cr.last_read_seq, 0)
+           AND m.sender_id <> :current_user_id
+     WHERE :current_user_id IN (c.user1_id, c.user2_id)
      GROUP BY c.id, c.last_seq;
      ```
+   *(Альтернативный вариант для модели со связующей таблицей `conversation_members` использует JOIN по `cm.conversation_id` и `cm.last_read_seq`; на этапе интеграции с PostgreSQL используется запрос выше с `conversation_reads`).*
 
 4. **Алгоритм восстановления после обрыва связи (Пользовательский сценарий 7, технический сценарий 6 ТР «Потеря соединения»):**
    1. Клиент отображает плашку «Переподключение…», а новые сообщения помечает статусом «отправляется».
