@@ -3,7 +3,7 @@ set -e
 
 # ============================================================================
 # TheBoys Database Migration Runner (Shell / psql)
-# Applies pending SQL migrations in transactional order
+# Applies pending SQL migrations in strict single-transaction order
 # ============================================================================
 
 PG_USER="${POSTGRES_USER:-theboys_user}"
@@ -12,7 +12,7 @@ MIGRATIONS_DIR="$(dirname "$0")/migrations"
 
 echo "=== Running PostgreSQL Migrations for ${PG_DB} as ${PG_USER} ==="
 
-psql -v ON_ERROR_STOP=1 --username "$PG_USER" --dbname "$PG_DB" <<-EOSQL
+psql -v ON_ERROR_STOP=1 --single-transaction --username "$PG_USER" --dbname "$PG_DB" <<-EOSQL
     CREATE TABLE IF NOT EXISTS schema_migrations (
         version INT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -29,8 +29,9 @@ for file in $(ls -1 "$MIGRATIONS_DIR"/*.sql | sort); do
         "SELECT count(*) FROM schema_migrations WHERE version = ${version};")
 
     if [ "$applied" -eq 0 ]; then
-        echo "Applying migration ${filename} (version ${version})..."
-        psql -v ON_ERROR_STOP=1 --username "$PG_USER" --dbname "$PG_DB" -f "$file"
+        echo "Applying migration ${filename} (version ${version}) in a single transaction..."
+        # --single-transaction ensures atomic rollback if any statement inside fails
+        psql -v ON_ERROR_STOP=1 --single-transaction --username "$PG_USER" --dbname "$PG_DB" -f "$file"
         echo "Migration ${filename} successfully applied."
     else
         echo "Migration ${filename} (version ${version}) is already applied. Skipping."

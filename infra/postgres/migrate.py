@@ -2,7 +2,7 @@
 Database Migration Manager for TheBoys Distributed System.
 
 Provides versioned schema migration tracking, execution of pending migrations,
-and schema inspection for PostgreSQL.
+atomic transactional guarantees, and schema inspection for PostgreSQL.
 """
 
 import argparse
@@ -19,7 +19,6 @@ MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 def get_db_params():
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Strip async driver prefix if present (e.g. postgresql+asyncpg://)
         clean_url = re.sub(r"^postgresql\+[a-zA-Z0-9_]+://", "postgresql://", database_url)
         parsed = urlparse(clean_url)
         return {
@@ -53,7 +52,7 @@ def list_migration_files():
 
 
 def connect_postgres():
-    """Connect using available PostgreSQL driver: psycopg, asyncpg, or fallback."""
+    """Connect using available PostgreSQL driver: psycopg, psycopg2, or asyncpg."""
     params = get_db_params()
 
     # Try psycopg (v3)
@@ -98,6 +97,12 @@ def connect_postgres():
 
             def execute(self, query):
                 return self.loop.run_until_complete(self.conn.execute(query))
+
+            def execute_in_transaction(self, query):
+                async def _run():
+                    async with self.conn.transaction():
+                        await self.conn.execute(query)
+                return self.loop.run_until_complete(_run())
 
             def fetch(self, query):
                 return self.loop.run_until_complete(self.conn.fetch(query))
@@ -176,21 +181,28 @@ def apply_migrations():
 
         print(f"Found {len(pending)} pending migration(s):")
         for version, name, path in pending:
-            print(f"Applying migration {name} (v{version})...")
+            print(f"Applying migration {name} (v{version}) in a single transaction...")
             sql_content = path.read_text(encoding="utf-8")
+
             if driver in ("psycopg", "psycopg2"):
-                with conn.cursor() as cur:
-                    cur.execute(sql_content)
-                conn.commit()
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(sql_content)
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    raise RuntimeError(f"Migration {name} failed and rolled back: {e}") from e
             elif driver == "asyncpg":
-                conn.execute(sql_content)
+                try:
+                    conn.execute_in_transaction(sql_content)
+                except Exception as e:
+                    raise RuntimeError(f"Migration {name} failed and rolled back: {e}") from e
+
             print(f"Successfully applied {name}.")
 
         print("All migrations applied successfully!")
         return 0
     except Exception as e:
-        if driver in ("psycopg", "psycopg2") and conn:
-            conn.rollback()
         print(f"Migration failed: {e}", file=sys.stderr)
         return 1
     finally:
