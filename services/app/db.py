@@ -12,8 +12,6 @@ Implements all database operations required by Technical Requirements (docs/tr.m
 """
 
 import asyncio
-import hashlib
-import hmac
 import json
 import logging
 import os
