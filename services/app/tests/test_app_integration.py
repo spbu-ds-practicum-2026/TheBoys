@@ -11,7 +11,7 @@ Verifies full alignment with Technical Requirements (docs/tr.md):
 """
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -27,6 +27,7 @@ from services.app.main import (
     app,
     sign_session_cookie,
     verify_session_cookie,
+    hash_password,
 )
 
 ORIGIN = "http://localhost:8000"
@@ -35,9 +36,20 @@ ORIGIN = "http://localhost:8000"
 @pytest.fixture(autouse=True)
 def clean_app_state():
     db.memory.clear()
+    db.enable_in_memory = True
     app.state.enable_persistence = True
+    from services.app.main import NODE_ID
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry[NODE_ID] = {
+        "node_id": NODE_ID,
+        "role": "app",
+        "endpoint_url": f"http://{NODE_ID}:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
     yield
     app.state.enable_persistence = False
+    db.enable_in_memory = False
     db.memory.clear()
 
 
@@ -181,80 +193,80 @@ def test_websocket_chat_monotonic_seq_and_idempotency(api_client):
     with TestClient(app, follow_redirects=False) as bob_client:
         register_user(bob_client, "bob")
 
-    conv_id = api_client.get("/api/users", params={"login": "bob"}).json()["conversation"]["conversation_id"]
+        conv_id = api_client.get("/api/users", params={"login": "bob"}).json()["conversation"]["conversation_id"]
 
-    # Both users connect via WebSocket
-    with connect_ws(api_client) as ws_alice, connect_ws(bob_client) as ws_bob:
-        # Ping returns dialog_sync
-        ws_alice.send_text('{"type": "ping"}')
-        sync_alice = ws_alice.receive_json()
-        assert sync_alice["type"] == "dialog_sync"
-        assert len(sync_alice["dialogs"]) == 1
-        assert sync_alice["dialogs"][0]["last_seq"] == 0
+        # Both users connect via WebSocket
+        with connect_ws(api_client) as ws_alice, connect_ws(bob_client) as ws_bob:
+            # Ping returns dialog_sync
+            ws_alice.send_text('{"type": "ping"}')
+            sync_alice = ws_alice.receive_json()
+            assert sync_alice["type"] == "dialog_sync"
+            assert len(sync_alice["dialogs"]) == 1
+            assert sync_alice["dialogs"][0]["last_seq"] == 0
 
-        ws_bob.send_text('{"type": "ping"}')
-        sync_bob = ws_bob.receive_json()
-        assert sync_bob["type"] == "dialog_sync"
+            ws_bob.send_text('{"type": "ping"}')
+            sync_bob = ws_bob.receive_json()
+            assert sync_bob["type"] == "dialog_sync"
 
-        # Alice sends first text message
-        msg_id_1 = str(uuid4())
-        ws_alice.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{msg_id_1}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Привет, Боб!"}}}}'
-        )
+            # Alice sends first text message
+            msg_id_1 = str(uuid4())
+            ws_alice.send_text(
+                f'{{"type": "send_message", "client_msg_id": "{msg_id_1}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Привет, Боб!"}}}}'
+            )
 
-        # Alice receives ACK with monotonic seq = 1
-        ack_1 = ws_alice.receive_json()
-        assert ack_1["type"] == "ack"
-        assert ack_1["seq"] == 1
-        assert ack_1["client_msg_id"] == msg_id_1
+            # Alice receives ACK with monotonic seq = 1
+            ack_1 = ws_alice.receive_json()
+            assert ack_1["type"] == "ack"
+            assert ack_1["seq"] == 1
+            assert ack_1["client_msg_id"] == msg_id_1
 
-        # Bob receives incoming chat message with seq = 1
-        bob_msg_1 = ws_bob.receive_json()
-        assert bob_msg_1["type"] == "message"
-        assert bob_msg_1["seq"] == 1
-        assert bob_msg_1["payload"]["text"] == "Привет, Боб!"
+            # Bob receives incoming chat message with seq = 1
+            bob_msg_1 = ws_bob.receive_json()
+            assert bob_msg_1["type"] == "message"
+            assert bob_msg_1["seq"] == 1
+            assert bob_msg_1["payload"]["text"] == "Привет, Боб!"
 
-        # Alice resends same message (same client_msg_id): idempotent, seq remains 1
-        ws_alice.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{msg_id_1}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Привет, Боб!"}}}}'
-        )
-        ack_dup = ws_alice.receive_json()
-        assert ack_dup["type"] == "ack"
-        assert ack_dup["seq"] == 1  # No duplicate seq consumed!
+            # Alice resends same message (same client_msg_id): idempotent, seq remains 1
+            ws_alice.send_text(
+                f'{{"type": "send_message", "client_msg_id": "{msg_id_1}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Привет, Боб!"}}}}'
+            )
+            ack_dup = ws_alice.receive_json()
+            assert ack_dup["type"] == "ack"
+            assert ack_dup["seq"] == 1  # No duplicate seq consumed!
 
-        # Alice sends track card: server populates verified metadata
-        track = api_client.get("/api/tracks").json()[0]
-        track_msg_id = str(uuid4())
-        ws_alice.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{track_msg_id}", "conversation_id": {conv_id}, "kind": "track", "payload": {{"track_id": "{track["id"]}"}}}}'
-        )
+            # Alice sends track card: server populates verified metadata
+            track = api_client.get("/api/tracks").json()[0]
+            track_msg_id = str(uuid4())
+            ws_alice.send_text(
+                f'{{"type": "send_message", "client_msg_id": "{track_msg_id}", "conversation_id": {conv_id}, "kind": "track", "payload": {{"track_id": "{track["id"]}"}}}}'
+            )
 
-        ack_track = ws_alice.receive_json()
-        assert ack_track["type"] == "ack"
-        assert ack_track["seq"] == 2
+            ack_track = ws_alice.receive_json()
+            assert ack_track["type"] == "ack"
+            assert ack_track["seq"] == 2
 
-        bob_track = ws_bob.receive_json()
-        assert bob_track["type"] == "message"
-        assert bob_track["seq"] == 2
-        assert bob_track["kind"] == "track"
-        assert bob_track["payload"]["title"] == track["title"]
-        assert bob_track["payload"]["artist"] == track["artist"]
+            bob_track = ws_bob.receive_json()
+            assert bob_track["type"] == "message"
+            assert bob_track["seq"] == 2
+            assert bob_track["kind"] == "track"
+            assert bob_track["payload"]["title"] == track["title"]
+            assert bob_track["payload"]["artist"] == track["artist"]
 
-        # Bob marks read up to seq = 2
-        ws_bob.send_text(f'{{"type": "read", "conversation_id": {conv_id}, "up_to_seq": 2}}')
-        read_ack = ws_bob.receive_json()
-        assert read_ack["type"] == "read_ack"
-        assert read_ack["last_read_seq"] == 2
-        assert read_ack["unread_count"] == 0
+            # Bob marks read up to seq = 2
+            ws_bob.send_text(f'{{"type": "read", "conversation_id": {conv_id}, "up_to_seq": 2}}')
+            read_ack = ws_bob.receive_json()
+            assert read_ack["type"] == "read_ack"
+            assert read_ack["last_read_seq"] == 2
+            assert read_ack["unread_count"] == 0
 
-        # Bob syncs history
-        ws_bob.send_text(f'{{"type": "sync", "conversation_id": {conv_id}, "since_seq": 0, "limit": 10}}')
-        history = ws_bob.receive_json()
-        assert history["type"] == "history"
-        assert len(history["messages"]) == 2
-        assert history["messages"][0]["seq"] == 1
-        assert history["messages"][1]["seq"] == 2
-        assert history["has_more"] is False
+            # Bob syncs history
+            ws_bob.send_text(f'{{"type": "sync", "conversation_id": {conv_id}, "since_seq": 0, "limit": 10}}')
+            history = ws_bob.receive_json()
+            assert history["type"] == "history"
+            assert len(history["messages"]) == 2
+            assert history["messages"][0]["seq"] == 1
+            assert history["messages"][1]["seq"] == 2
+            assert history["has_more"] is False
 
 
 def test_online_status_via_rest(api_client):
@@ -273,3 +285,202 @@ def test_online_status_via_rest(api_client):
 
         # Bob disconnects -> offline
         assert api_client.get(f"/api/users/{bob['id']}/status").json()["online"] is False
+
+
+def test_main_app_pages_render_and_auth_redirection(api_client):
+    """
+    Regression test for Oleg's review comment:
+    Ensures web/pages.py properly awaits async get_user_from_request on main app.
+    - Unauthenticated /login must NOT redirect to /music and must NOT crash with coroutine error.
+    - Unauthenticated /music must redirect to /login.
+    - Authenticated /music must render page with user login.
+    """
+    # 1. Anonymous user visiting / redirects to /login
+    resp_root = api_client.get("/")
+    assert resp_root.status_code == 303
+    assert resp_root.headers["location"] == "/login"
+
+    # 2. Anonymous user visiting /login renders 200 login page
+    resp_login = api_client.get("/login")
+    assert resp_login.status_code == 200
+    assert "Вход" in resp_login.text or "login" in resp_login.text.lower()
+    assert "coroutine" not in resp_login.text.lower()
+
+    # 3. Anonymous user visiting /music redirects to /login
+    resp_music = api_client.get("/music")
+    assert resp_music.status_code == 303
+    assert resp_music.headers["location"] == "/login"
+
+    # 4. Logged in user visiting /login redirects to /music
+    register_user(api_client, "alice")
+    resp_login_authed = api_client.get("/login")
+    assert resp_login_authed.status_code == 303
+    assert resp_login_authed.headers["location"] == "/music"
+
+    # 5. Logged in user visiting /music renders 200 with username
+    resp_music_authed = api_client.get("/music")
+    assert resp_music_authed.status_code == 200
+    assert "alice" in resp_music_authed.text
+
+    # 6. Logged in user visiting /chats renders 200
+    resp_chats_authed = api_client.get("/chats")
+    assert resp_chats_authed.status_code == 200
+    assert "alice" in resp_chats_authed.text
+
+
+def test_user_lookup_returns_actual_unread_count_for_existing_conversation(api_client):
+    """
+    Regression test for Oleg's review comment:
+    GET /api/users?login=bob must return actual unread_count, not hardcoded 0.
+    """
+    alice = register_user(api_client, "alice")
+
+    with TestClient(app, follow_redirects=False) as bob_client:
+        bob = register_user(bob_client, "bob")
+        conv_id = api_client.get("/api/users", params={"login": "bob"}).json()["conversation"]["conversation_id"]
+
+        # Bob sends 2 messages to Alice
+        with connect_ws(bob_client) as ws_bob:
+            for i in range(2):
+                ws_bob.send_text(
+                    f'{{"type": "send_message", "client_msg_id": "{uuid4()}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "msg {i}"}}}}'
+                )
+                ack = ws_bob.receive_json()
+                assert ack["type"] == "ack"
+
+        # Alice looks up Bob: unread_count must be 2, not 0!
+        lookup_resp = api_client.get("/api/users", params={"login": "bob"})
+        assert lookup_resp.status_code == 200
+        data = lookup_resp.json()
+        assert data["conversation"]["unread_count"] == 2
+        assert data["conversation"]["last_seq"] == 2
+
+
+@pytest.mark.asyncio
+async def test_storage_replica_retrieval_and_failover_scenarios_3_and_7(api_client, monkeypatch):
+    """
+    TR Scenarios 3 & 7:
+    App node looks up active replicas in node_registry/replicas, queries the storage node,
+    and if the primary replica fails, fails over to the secondary replica.
+    """
+    alice = register_user(api_client, "alice")
+    track = api_client.get("/api/tracks").json()[0]
+    track_id = UUID(track["id"])
+
+    # Register two storage nodes
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry["storage-1"] = {
+        "node_id": "storage-1",
+        "role": "storage",
+        "endpoint_url": "http://storage-1:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    db.memory.node_registry["storage-2"] = {
+        "node_id": "storage-2",
+        "role": "storage",
+        "endpoint_url": "http://storage-2:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    await db.add_track_replica(track_id, "storage-1", status="active")
+    await db.add_track_replica(track_id, "storage-2", status="active")
+
+    # Mock httpx to simulate storage-1 failing, but storage-2 succeeding
+    import httpx
+
+    audio_bytes = b"ID3\x03\x00\x00\x00\x00\x00\x00" + b"\xff\xfb\x90\x00" * 20
+
+    async def mock_get(self, url, *args, **kwargs):
+        if "storage-1" in url:
+            raise httpx.ConnectError("Node storage-1 failed (simulated failure)")
+        if "storage-2" in url:
+            range_hdr = kwargs.get("headers", {}).get("Range")
+            if range_hdr == "bytes=0-9":
+                chunk = audio_bytes[0:10]
+                headers = {
+                    "Content-Type": "audio/mpeg",
+                    "Accept-Ranges": "bytes",
+                    "Content-Range": f"bytes 0-9/{len(audio_bytes)}",
+                    "Content-Length": "10",
+                }
+                return httpx.Response(206, content=chunk, headers=headers)
+            headers = {
+                "Content-Type": "audio/mpeg",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(len(audio_bytes)),
+            }
+            return httpx.Response(200, content=audio_bytes, headers=headers)
+        raise httpx.ConnectError("Unknown host")
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    # 1. Full stream request fails over to storage-2
+    resp_full = api_client.get(f"/api/tracks/{track_id}/stream")
+    assert resp_full.status_code == 200
+    assert resp_full.content == audio_bytes
+
+    # 2. Range request forwarded to storage-2
+    resp_range = api_client.get(f"/api/tracks/{track_id}/stream", headers={"Range": "bytes=0-9"})
+    assert resp_range.status_code == 206
+    assert resp_range.content == audio_bytes[0:10]
+    assert resp_range.headers["Content-Range"] == f"bytes 0-9/{len(audio_bytes)}"
+
+
+@pytest.mark.asyncio
+async def test_stale_node_heartbeat_is_excluded_from_delivery_and_online_status():
+    """
+    Regression test for Oleg's review comment on db.py:159:
+    A node with heartbeat older than 15 seconds must be treated as dead,
+    and sessions on that node must not be reported as online or used for delivery.
+    """
+    u1 = await db.create_user("david", hash_password("pass"))
+    user_id = u1["id"]
+
+    now = datetime.now(timezone.utc)
+    # Stale node heartbeat 20 seconds ago (> 15s)
+    stale_time = now - timedelta(seconds=20)
+    db.memory.node_registry["stale-node"] = {
+        "node_id": "stale-node",
+        "role": "app",
+        "endpoint_url": "http://stale-node:8000",
+        "last_heartbeat": stale_time,
+        "status": "alive",
+    }
+
+    # Session ping was very recent (5s ago), but node heartbeat is stale!
+    conn_id = uuid4()
+    db.memory.sessions[conn_id] = {
+        "connection_id": conn_id,
+        "user_id": user_id,
+        "node_id": "stale-node",
+        "last_seen": now - timedelta(seconds=5),
+    }
+
+    # Node endpoint lookup must exclude stale node
+    endpoint = await db.get_node_endpoint("stale-node")
+    assert endpoint is None, "Stale node must not be returned for endpoint resolution"
+
+    # User online status must be False because node heartbeat is stale
+    is_online = await db.get_user_online_status(user_id)
+    assert is_online is False, "User on a node with stale heartbeat must not be online"
+
+    # Delivery sessions query must exclude stale node
+    active_sessions = await db.get_active_sessions_for_users([user_id])
+    assert active_sessions == [], "Sessions on stale nodes must not receive inter-node deliveries"
+
+
+@pytest.mark.asyncio
+async def test_db_operational_mode_rejects_in_memory_without_test_flag(monkeypatch):
+    """
+    Regression test for Oleg's review comment on db.py:96:
+    In operational mode without DATABASE_URL, connect() must raise RuntimeError,
+    refusing to pretend data is persistently saved in local memory.
+    """
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("TESTING", raising=False)
+    db.enable_in_memory = False
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await db.connect()
+    assert "DATABASE_URL environment variable is required in operational mode" in str(exc_info.value)
