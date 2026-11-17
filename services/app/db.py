@@ -53,9 +53,25 @@ class InMemoryStore:
         self.sessions: dict[UUID, dict[str, Any]] = {}  # conn_id -> session info
         self.node_registry: dict[str, dict[str, Any]] = {}
         self.tracks: dict[UUID, dict[str, Any]] = {t["id"]: dict(t) for t in INITIAL_TRACKS}
+        self.replicas: dict[UUID, list[dict[str, Any]]] = {}
         self.user_ids = count(1)
         self.conversation_ids = count(1)
-        self._lock = asyncio.Lock()
+        self._real_lock: asyncio.Lock | None = None
+
+    @property
+    def _lock(self) -> asyncio.Lock:
+        curr_loop = None
+        try:
+            curr_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        if self._real_lock is None or (
+            curr_loop is not None
+            and getattr(self._real_lock, "_loop", None) is not None
+            and self._real_lock._loop is not curr_loop
+        ):
+            self._real_lock = asyncio.Lock()
+        return self._real_lock
 
     def clear(self):
         self.users.clear()
@@ -65,12 +81,15 @@ class InMemoryStore:
         self.sessions.clear()
         self.node_registry.clear()
         self.tracks = {t["id"]: dict(t) for t in INITIAL_TRACKS}
+        self.replicas.clear()
+        self._real_lock = None
 
 
 class Database:
     def __init__(self):
         self.pool: asyncpg.Pool | None = None
         self.memory = InMemoryStore()
+        self.enable_in_memory: bool = False
 
     @property
     def is_connected(self) -> bool:
@@ -78,9 +97,15 @@ class Database:
 
     async def connect(self, dsn: str | None = None) -> bool:
         target_dsn = clean_postgres_dsn(dsn or os.getenv("DATABASE_URL"))
+        is_test_mode = os.getenv("TESTING") == "1" or self.enable_in_memory
         if not target_dsn:
-            logger.info("DATABASE_URL not set; running with in-memory persistence.")
-            return False
+            if is_test_mode:
+                logger.info("TESTING mode: running with in-memory persistence.")
+                return False
+            raise RuntimeError(
+                "DATABASE_URL environment variable is required in operational mode. "
+                "In-memory persistence is strictly restricted to explicit testing mode."
+            )
 
         try:
             self.pool = await asyncpg.create_pool(
@@ -93,9 +118,12 @@ class Database:
             await self.seed_tracks_if_empty()
             return True
         except Exception as e:
-            logger.warning("Could not connect to PostgreSQL (%s). Falling back to in-memory persistence.", e)
-            self.pool = None
-            return False
+            if is_test_mode:
+                logger.warning("Could not connect to PostgreSQL (%s). Falling back to in-memory persistence for test mode.", e)
+                self.pool = None
+                return False
+            logger.error("Could not connect to PostgreSQL: %s", e)
+            raise RuntimeError(f"Could not connect to PostgreSQL: {e}")
 
     async def disconnect(self):
         if self.pool:
@@ -156,14 +184,21 @@ class Database:
         if self.pool:
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow(
-                    "SELECT endpoint_url FROM node_registry WHERE node_id = $1 AND status = 'alive'",
+                    """
+                    SELECT endpoint_url FROM node_registry
+                    WHERE node_id = $1
+                      AND status = 'alive'
+                      AND last_heartbeat >= now() - INTERVAL '15 seconds'
+                    """,
                     node_id,
                 )
                 return row["endpoint_url"] if row else None
         else:
             node = self.memory.node_registry.get(node_id)
             if node and node["status"] == "alive":
-                return node["endpoint_url"]
+                now = datetime.now(timezone.utc)
+                if (now - node["last_heartbeat"]).total_seconds() <= 15:
+                    return node["endpoint_url"]
             return None
 
     # ---------------------------------------------------------------------------
@@ -288,6 +323,64 @@ class Database:
             t = self.memory.tracks.get(tid)
             return dict(t) if t else None
 
+    async def get_track_replicas(self, track_id: UUID | str) -> list[dict[str, Any]]:
+        """
+        Returns active replicas on live storage nodes with fresh heartbeat (TR: Technical Scenario 3, 7).
+        """
+        tid = UUID(str(track_id))
+        if self.pool:
+            async with self.pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT r.node_id, n.endpoint_url
+                    FROM replicas r
+                    JOIN node_registry n ON n.node_id = r.node_id
+                    WHERE r.track_id = $1
+                      AND r.status = 'active'
+                      AND n.status = 'alive'
+                      AND n.last_heartbeat >= now() - INTERVAL '15 seconds'
+                    ORDER BY r.id ASC
+                    """,
+                    tid,
+                )
+                return [dict(r) for r in rows]
+        else:
+            now = datetime.now(timezone.utc)
+            reps = self.memory.replicas.get(tid, [])
+            alive = []
+            for r in reps:
+                if r.get("status") == "active":
+                    node = self.memory.node_registry.get(r["node_id"])
+                    if node and node["status"] == "alive":
+                        if (now - node["last_heartbeat"]).total_seconds() <= 15:
+                            alive.append({
+                                "node_id": r["node_id"],
+                                "endpoint_url": node["endpoint_url"],
+                            })
+            return alive
+
+    async def add_track_replica(self, track_id: UUID | str, node_id: str, status: str = "active"):
+        tid = UUID(str(track_id))
+        if self.pool:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO replicas (track_id, node_id, status)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (track_id, node_id) DO UPDATE SET status = EXCLUDED.status
+                    """,
+                    tid,
+                    node_id,
+                    status,
+                )
+        else:
+            reps = self.memory.replicas.setdefault(tid, [])
+            for r in reps:
+                if r["node_id"] == node_id:
+                    r["status"] = status
+                    return
+            reps.append({"track_id": tid, "node_id": node_id, "status": status})
+
     # ---------------------------------------------------------------------------
     # Conversations & User Lookup (TR: Сценарий 4, п. 1; Сценарий 5)
     # ---------------------------------------------------------------------------
@@ -393,10 +486,34 @@ class Database:
                 })
             return result
 
+    async def get_conversation_unread_count(self, conv_id: int, user_id: int) -> int:
+        """Computes exact unread count for user in specific conversation (TR Technical Scenario 5, p. 5)."""
+        if self.pool:
+            async with self.pool.acquire() as conn:
+                val = await conn.fetchval(
+                    """
+                    SELECT count(m.seq)
+                    FROM messages m
+                    LEFT JOIN conversation_reads cr
+                           ON cr.conversation_id = m.conversation_id
+                          AND cr.user_id = $2
+                    WHERE m.conversation_id = $1
+                      AND m.sender_id != $2
+                      AND m.seq > COALESCE(cr.last_read_seq, 0)
+                    """,
+                    conv_id,
+                    user_id,
+                )
+                return val or 0
+        else:
+            last_read = self.memory.reads.get((conv_id, user_id), 0)
+            msgs = self.memory.messages.get(conv_id, [])
+            return sum(1 for m in msgs if m["sender_id"] != user_id and m["seq"] > last_read)
+
     async def get_user_online_status(self, user_id: int) -> bool:
         if self.pool:
             async with self.pool.acquire() as conn:
-                # Online if active session has ping <= 30 seconds on an alive node (TR: Scenario 5, p. 2)
+                # Online if active session has ping <= 30 seconds on a node with heartbeat <= 15s (TR: Scenario 5, p. 2)
                 val = await conn.fetchval(
                     """
                     SELECT EXISTS(
@@ -404,6 +521,7 @@ class Database:
                         JOIN node_registry n ON n.node_id = s.node_id
                         WHERE s.user_id = $1
                           AND n.status = 'alive'
+                          AND n.last_heartbeat >= now() - INTERVAL '15 seconds'
                           AND s.last_seen >= now() - INTERVAL '30 seconds'
                     )
                     """,
@@ -414,8 +532,14 @@ class Database:
             now = datetime.now(timezone.utc)
             for s in self.memory.sessions.values():
                 if s["user_id"] == user_id:
-                    diff = (now - s["last_seen"]).total_seconds()
-                    if diff <= 30:
+                    session_diff = (now - s["last_seen"]).total_seconds()
+                    if session_diff > 30:
+                        continue
+                    node = self.memory.node_registry.get(s["node_id"])
+                    if not node or node["status"] != "alive":
+                        continue
+                    node_diff = (now - node["last_heartbeat"]).total_seconds()
+                    if node_diff <= 15:
                         return True
             return False
 
@@ -501,6 +625,10 @@ class Database:
                 for m in msgs:
                     if m["sender_id"] == sender_id and m["client_msg_id"] == client_msg_id:
                         return m["seq"], m["created_at"], False, members
+
+                # Realistic async context switch point: guarantees that atomicity
+                # and lack of duplicate seqs is strictly enforced by self.memory._lock.
+                await asyncio.sleep(0.0001)
 
                 conv["last_seq"] += 1
                 seq = conv["last_seq"]
@@ -722,7 +850,7 @@ class Database:
             return []
         if self.pool:
             async with self.pool.acquire() as conn:
-                # Fresh sessions <= 30 seconds on alive nodes
+                # Fresh sessions <= 30s on alive nodes with heartbeat <= 15s (TR: Scenario 4, 5, failure detection)
                 rows = await conn.fetch(
                     """
                     SELECT s.connection_id, s.user_id, s.node_id
@@ -730,6 +858,7 @@ class Database:
                     JOIN node_registry n ON n.node_id = s.node_id
                     WHERE s.user_id = ANY($1::int[])
                       AND n.status = 'alive'
+                      AND n.last_heartbeat >= now() - INTERVAL '15 seconds'
                       AND s.last_seen >= now() - INTERVAL '30 seconds'
                     """,
                     user_ids,
@@ -740,8 +869,14 @@ class Database:
             results = []
             for s in self.memory.sessions.values():
                 if s["user_id"] in user_ids:
-                    diff = (now - s["last_seen"]).total_seconds()
-                    if diff <= 30:
+                    session_diff = (now - s["last_seen"]).total_seconds()
+                    if session_diff > 30:
+                        continue
+                    node = self.memory.node_registry.get(s["node_id"])
+                    if not node or node["status"] != "alive":
+                        continue
+                    node_diff = (now - node["last_heartbeat"]).total_seconds()
+                    if node_diff <= 15:
                         results.append({
                             "connection_id": s["connection_id"],
                             "user_id": s["user_id"],
