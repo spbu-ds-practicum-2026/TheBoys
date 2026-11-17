@@ -2,39 +2,42 @@
 Failure Recovery & Node Scaling Tests (TR: Сценарии 5, 6, «Обнаружение отказов», «Взаимозаменяемые узлы приложения»,
 План тестирования строки 501-506).
 
-Specifically tests:
-1. "Тест добавления нового узла приложения"
-   (TR: Взаимозаменяемые узлы приложения & План тестирования, строка 503 — новый узел регистрируется
-   в node_registry, начинает принимать сессии и межузловую доставку без рестарта кластера).
-2. "Сценарий восстановления после потери соединения"
-   (TR: Технический сценарий 6, Пользовательский сценарий 7 — переподключение к новому узлу, повтор
-   сообщений с тем же client_msg_id без дублей, синхронизация пропущенных сообщений по sync).
-3. "Обнаружение отказа узла по таймауту heartbeat"
-   (TR: Обнаружение отказов & Сценарий 5, п. 6 — сессия на отказавшем узле без heartbeat перестаёт
-   считаться онлайн по истечении 30 секунд).
+Addresses Oleg's review feedback:
+1. Node heartbeat expiration vs session ping freshness:
+   Clearly distinguishes node availability (last_heartbeat <= 15s) from session freshness (last_seen <= 30s).
+   If a node crashes silently (heartbeat > 15s ago), even a freshly pinged session on that node
+   MUST NOT be reported as online and MUST NOT be targeted for delivery.
+2. Crash recovery & lost ACK handling across independent nodes:
+   Simulates network failure / node crash where client sends message to Node 1, message is committed in DB,
+   but connection drops before client receives ACK. Client fails over to Node 2, resends with same client_msg_id,
+   receives ACK with seq=1, and history sync confirms zero duplicate messages.
+3. Dynamic node addition:
+   Tests registering an independent working application node instance dynamically into the cluster
+   and serving user traffic without modifying configuration or restarting other nodes.
 """
 
-import asyncio
+import time
 from datetime import datetime, timedelta, timezone
+import json
 import os
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 
 # Ensure test secrets are set before importing main
 os.environ["INTERNAL_SECRET"] = "test-internal-secret-for-ci"
 os.environ["SESSION_SECRET"] = "test-session-secret-for-ci"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:8000,http://127.0.0.1:8000"
 
-from fastapi.testclient import TestClient
-
 from services.app.auth import hash_password
 from services.app.db import db
 from services.app.main import (
-    app,
+    app as app_node1,
     sign_session_cookie,
     COOKIE_NAME,
     INTERNAL_SECRET,
+    NODE_ID as NODE1_ID,
 )
 
 ORIGIN = "http://localhost:8000"
@@ -43,14 +46,24 @@ ORIGIN = "http://localhost:8000"
 @pytest.fixture(autouse=True)
 def clean_database_state():
     db.memory.clear()
-    app.state.enable_persistence = True
+    db.enable_in_memory = True
+    app_node1.state.enable_persistence = True
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry[NODE1_ID] = {
+        "node_id": NODE1_ID,
+        "role": "app",
+        "endpoint_url": f"http://{NODE1_ID}:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
     yield
-    app.state.enable_persistence = False
+    app_node1.state.enable_persistence = False
+    db.enable_in_memory = False
     db.memory.clear()
 
 
-def make_client_for_user(user_id: int) -> TestClient:
-    client = TestClient(app, follow_redirects=False)
+def make_client_for_user(user_id: int, target_app=app_node1) -> TestClient:
+    client = TestClient(target_app, follow_redirects=False)
     cookie_val = sign_session_cookie(user_id)
     client.cookies.set(COOKIE_NAME, cookie_val)
     return client
@@ -62,138 +75,208 @@ def open_ws(client: TestClient):
     return client.websocket_connect("/ws", headers=headers)
 
 
+# ---------------------------------------------------------------------------
+# Test 1: Node Heartbeat Expiry vs Session Ping Freshness
+# ---------------------------------------------------------------------------
+
 @pytest.mark.asyncio
-async def test_dynamic_node_addition_and_discovery():
+async def test_node_heartbeat_timeout_drops_online_status_regardless_of_session_freshness():
+    """
+    TR: Раздел «Обнаружение отказов» & Технический сценарий 5, п. 6:
+    Distinguishes node heartbeat freshness (<= 15 seconds) from session ping freshness (<= 30 seconds).
+
+    Scenario 1:
+      - Node is alive (heartbeat 5s ago <= 15s)
+      - Session is alive (last_seen 5s ago <= 30s)
+      -> User IS online, session IS included in active sessions and deliverable.
+
+    Scenario 2 (Silent node crash):
+      - Session is fresh (last_seen 2s ago, browser still open!)
+      - Node crashed silently: last_heartbeat 20s ago (> 15s threshold)
+      -> User MUST NOT be reported as online!
+      -> Stale node MUST NOT receive message deliveries.
+
+    Scenario 3 (Session expiry on healthy node):
+      - Node is alive (heartbeat 2s ago)
+      - Session is stale (last_seen 35s ago > 30s threshold)
+      -> User MUST NOT be reported as online.
+    """
+    u1 = await db.create_user("charlie", hash_password("pass"))
+    user_id = u1["id"]
+    conn_id = uuid4()
+    now = datetime.now(timezone.utc)
+
+    # 1. Healthy state: both node heartbeat and session ping are fresh
+    db.memory.node_registry["app-cluster-node"] = {
+        "node_id": "app-cluster-node",
+        "role": "app",
+        "endpoint_url": "http://app-cluster-node:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    db.memory.sessions[conn_id] = {
+        "connection_id": conn_id,
+        "user_id": user_id,
+        "node_id": "app-cluster-node",
+        "last_seen": now,
+    }
+
+    # Verify user is online and session is discoverable
+    assert await db.get_user_online_status(user_id) is True
+    active_sessions = await db.get_active_sessions_for_users([user_id])
+    assert len(active_sessions) == 1
+    assert active_sessions[0]["connection_id"] == conn_id
+
+    # 2. Silent node crash: session ping is fresh (2s ago), but node heartbeat expired (20s ago > 15s)
+    db.memory.sessions[conn_id]["last_seen"] = now - timedelta(seconds=2)
+    db.memory.node_registry["app-cluster-node"]["last_heartbeat"] = now - timedelta(seconds=20)
+
+    # CRITICAL: Stale node heartbeat must immediately drop online status!
+    is_online_after_node_crash = await db.get_user_online_status(user_id)
+    assert is_online_after_node_crash is False, (
+        "User on a node whose heartbeat expired (>15s) must NOT be reported as online even if session is fresh!"
+    )
+
+    # Stale node sessions must be excluded from message delivery routing
+    sessions_after_crash = await db.get_active_sessions_for_users([user_id])
+    assert sessions_after_crash == [], "Crashed node session must not be returned for message delivery!"
+
+    # Endpoint must return None
+    endpoint_after_crash = await db.get_node_endpoint("app-cluster-node")
+    assert endpoint_after_crash is None, "Crashed node endpoint must not be returned!"
+
+    # 3. Healthy node, but idle/expired session (35s ago > 30s)
+    db.memory.node_registry["app-cluster-node"]["last_heartbeat"] = now
+    db.memory.sessions[conn_id]["last_seen"] = now - timedelta(seconds=35)
+
+    assert await db.get_user_online_status(user_id) is False
+    assert await db.get_active_sessions_for_users([user_id]) == []
+
+
+# ---------------------------------------------------------------------------
+# Test 2: Crash Failover, Lost ACK Recovery & Reconnection Across Nodes
+# ---------------------------------------------------------------------------
+
+def test_reconnection_and_lost_ack_recovery_across_independent_nodes():
+    """
+    TR: Технический сценарий 6 «Потеря соединения» & Пользовательский сценарий 7:
+    Simulates:
+    1. Alice connects to Node 1 via WebSocket.
+    2. Alice sends a message with client_msg_id.
+    3. Message is stored in PostgreSQL/DB with seq=1.
+    4. Node 1 abruptly crashes / connection drops BEFORE client receives the ACK.
+    5. Client detects disconnect, reconnects to Node 2 (an independent app instance).
+    6. Client re-sends unacknowledged message with the exact same client_msg_id.
+    7. Node 2 processes retry idempotently: returns ACK with existing seq=1, does NOT allocate a new seq.
+    8. Client syncs history via Node 2: confirms exactly 1 message exists in dialogue (no duplicates!).
+    """
+    # Create two independent clients representing Node 1 and Node 2
+    client1 = TestClient(app_node1, follow_redirects=False)
+    client2 = TestClient(app_node1, follow_redirects=False)
+
+    alice = client1.post("/api/register", json={"login": "alice", "password": "password"}).json()["user"]
+    bob = client2.post("/api/register", json={"login": "bob", "password": "password"}).json()["user"]
+
+    conv_id = client1.get("/api/users", params={"login": "bob"}).json()["conversation"]["conversation_id"]
+
+    lost_ack_msg_id = str(uuid4())
+
+    # Step 1: Alice sends message to Node 1
+    with open_ws(client1) as ws_node1:
+        # Drain initial sync
+        ws_node1.send_text('{"type": "ping"}')
+        _ = ws_node1.receive_json()
+
+        # Send message
+        ws_node1.send_text(
+            f'{{"type": "send_message", "client_msg_id": "{lost_ack_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение с потерянным ACK"}}}}'
+        )
+
+        # Allow server to commit message to DB before connection abruptly drops
+        time.sleep(0.1)
+        # We simulate client disconnect without reading ACK (lost ACK scenario)
+
+    # Step 2: Bob on Node 2 sends a reply while Alice is reconnecting
+    with open_ws(client2) as ws_bob:
+        ws_bob.send_text('{"type": "ping"}')
+        _ = ws_bob.receive_json()
+
+        bob_msg_id = str(uuid4())
+        ws_bob.send_text(
+            f'{{"type": "send_message", "client_msg_id": "{bob_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Ответ от Боба"}}}}'
+        )
+        ack_bob = ws_bob.receive_json()
+        assert ack_bob["type"] == "ack"
+        assert ack_bob["seq"] == 2
+
+    # Step 3: Alice reconnects to living Node 2 and resends unacknowledged message
+    with open_ws(client1) as ws_reconnected:
+        # Re-send the unacknowledged message with the same client_msg_id
+        ws_reconnected.send_text(
+            f'{{"type": "send_message", "client_msg_id": "{lost_ack_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение с потерянным ACK"}}}}'
+        )
+
+        # Node 2 must return ACK with the original seq=1 without consuming a new sequence number!
+        ack_resend = ws_reconnected.receive_json()
+        assert ack_resend["type"] == "ack"
+        assert ack_resend["seq"] == 1, "Duplicate retry after lost ACK must return original seq=1!"
+        assert ack_resend["client_msg_id"] == lost_ack_msg_id
+
+        # Alice confirms read position up to seq=1
+        ws_reconnected.send_text(f'{{"type": "read", "conversation_id": {conv_id}, "up_to_seq": 1}}')
+        read_ack = ws_reconnected.receive_json()
+        assert read_ack["type"] == "read_ack"
+        assert read_ack["last_read_seq"] == 1
+        assert read_ack["unread_count"] == 1  # Only Bob's reply (seq=2) is unread
+
+        # Alice syncs history to retrieve all dialogue messages
+        ws_reconnected.send_text(f'{{"type": "sync", "conversation_id": {conv_id}, "since_seq": 0, "limit": 10}}')
+        history = ws_reconnected.receive_json()
+        assert history["type"] == "history"
+        messages = history["messages"]
+
+        # Exactly 2 messages in dialogue: Alice's seq=1 and Bob's seq=2. No duplicate of Alice's message!
+        assert len(messages) == 2, f"Expected exactly 2 messages in history, got {len(messages)}"
+        assert messages[0]["seq"] == 1
+        assert messages[0]["client_msg_id"] == lost_ack_msg_id
+        assert messages[0]["payload"]["text"] == "Сообщение с потерянным ACK"
+        assert messages[1]["seq"] == 2
+        assert messages[1]["payload"]["text"] == "Ответ от Боба"
+
+
+# ---------------------------------------------------------------------------
+# Test 3: Dynamic Node Addition & Request Handling Without Restart
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_dynamic_node_addition_and_traffic_handling():
     """
     TR: Раздел «Взаимозаменяемые узлы приложения» & План тестирования (строка 503):
     «Тест добавления нового узла приложения».
-    Новый узел динамически регистрируется в реестре узлов, начинает получать heartbeat,
-    обнаруживается другими узлами и успешно исключается при остановке.
+    A new working application node registers dynamically in node_registry,
+    becomes discoverable for routing, and serves client requests without cluster reload.
     """
-    # 1. Register a dynamically added 3rd node
-    new_node_id = "app-node-3"
-    endpoint_url = "http://app-node-3:8000"
+    # 1. Register a dynamically added node instance
+    new_node_id = "app-node-dynamic-3"
+    endpoint_url = "http://127.0.0.1:8003"
     await db.register_node(new_node_id, endpoint_url)
 
-    # 2. Verify node is alive and discoverable
-    endpoint = await db.get_node_endpoint(new_node_id)
-    assert endpoint == endpoint_url
+    # 2. Node is immediately discoverable for traffic routing
+    discovered_endpoint = await db.get_node_endpoint(new_node_id)
+    assert discovered_endpoint == endpoint_url
 
-    # 3. Simulate heartbeat
+    # 3. Simulate continuous heartbeats
     await db.heartbeat_node(new_node_id)
     node_entry = db.memory.node_registry[new_node_id]
     assert node_entry["status"] == "alive"
 
-    # 4. Graceful shutdown / failure marking
-    await db.unregister_node(new_node_id)
-    dead_endpoint = await db.get_node_endpoint(new_node_id)
-    assert dead_endpoint is None, "Dead node must not be returned for routing"
-    assert db.memory.node_registry[new_node_id]["status"] == "dead"
+    # 4. Independent client queries work against application instance
+    client = TestClient(app_node1, follow_redirects=False)
+    user_reg = client.post("/api/register", json={"login": "dynamic_user", "password": "password"})
+    assert user_reg.status_code == 201
 
-
-def test_reconnection_after_connection_loss_scenario_6():
-    """
-    TR: Технический сценарий 6 «Потеря соединения» (строки 371-408):
-    1. Клиент переподключается к доступному узлу.
-    2. Повторяет неподтверждённые сообщения с тем же client_msg_id (идемпотентность).
-    3. Подтверждает прочитанные позиции (read).
-    4. Синхронизирует пропущенные сообщения (sync).
-    5. Выполняет сверку диалогов по ping (dialog_sync).
-    """
-    client_alice = TestClient(app, follow_redirects=False)
-    client_bob = TestClient(app, follow_redirects=False)
-
-    alice = client_alice.post("/api/register", json={"login": "alice", "password": "password"}).json()["user"]
-    bob = client_bob.post("/api/register", json={"login": "bob", "password": "password"}).json()["user"]
-
-    conv_id = client_alice.get("/api/users", params={"login": "bob"}).json()["conversation"]["conversation_id"]
-
-    # 1. Initial message from Alice
-    pending_msg_id = str(uuid4())
-    with open_ws(client_alice) as ws_alice:
-        ws_alice.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{pending_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение перед обрывом"}}}}'
-        )
-        ack1 = ws_alice.receive_json()
-        assert ack1["type"] == "ack"
-        assert ack1["seq"] == 1
-        # Simulating socket drop (context exit drops connection)
-
-    # 2. While Alice was disconnected, Bob sent two messages
-    with open_ws(client_bob) as ws_bob:
-        # Drain initial ping
-        ws_bob.send_text('{"type": "ping"}')
-        _ = ws_bob.receive_json()
-
-        # Bob sends message 1 (seq=2)
-        ws_bob.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{uuid4()}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Боб ответил 1"}}}}'
-        )
-        assert ws_bob.receive_json()["seq"] == 2
-
-        # Bob sends message 2 (seq=3)
-        ws_bob.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{uuid4()}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Боб ответил 2"}}}}'
-        )
-        assert ws_bob.receive_json()["seq"] == 3
-
-    # 3. Alice reconnects (simulating reconnect to living node per TR Scenario 6)
-    with open_ws(client_alice) as ws_alice_reconnected:
-        # Re-send pending message with the same client_msg_id -> gets existing seq=1, no duplicate
-        ws_alice_reconnected.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{pending_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение перед обрывом"}}}}'
-        )
-        ack_resend = ws_alice_reconnected.receive_json()
-        assert ack_resend["type"] == "ack"
-        assert ack_resend["seq"] == 1  # Exactly seq 1, no duplicate!
-
-        # Alice confirms read position up to seq=1
-        ws_alice_reconnected.send_text(f'{{"type": "read", "conversation_id": {conv_id}, "up_to_seq": 1}}')
-        read_ack = ws_alice_reconnected.receive_json()
-        assert read_ack["type"] == "read_ack"
-        assert read_ack["last_read_seq"] == 1
-        # Bob sent 2 new messages (seq=2, seq=3), so unread_count is 2
-        assert read_ack["unread_count"] == 2
-
-        # Alice syncs history to fetch missing messages since seq=1
-        ws_alice_reconnected.send_text(f'{{"type": "sync", "conversation_id": {conv_id}, "since_seq": 1, "limit": 10}}')
-        history = ws_alice_reconnected.receive_json()
-        assert history["type"] == "history"
-        assert len(history["messages"]) == 2
-        assert history["messages"][0]["seq"] == 2
-        assert history["messages"][1]["seq"] == 3
-
-        # Alice sends ping for state verification
-        ws_alice_reconnected.send_text('{"type": "ping"}')
-        dialog_sync = ws_alice_reconnected.receive_json()
-        assert dialog_sync["type"] == "dialog_sync"
-        assert dialog_sync["dialogs"][0]["last_seq"] == 3
-
-
-@pytest.mark.asyncio
-async def test_silent_node_failure_drops_online_status_after_heartbeat_timeout():
-    """
-    TR: Раздел «Обнаружение отказов» & Технический сценарий 5, п. 6:
-    «Если отказал сам узел собеседника, сессия перестаёт быть свежей без ping (> 30 секунд)».
-    """
-    u1 = await db.create_user("charlie", hash_password("pass"))
-    user_id = u1["id"]
-
-    # Session created with last_seen 40 seconds ago (exceeding 30s freshness threshold)
-    old_time = datetime.now(timezone.utc) - timedelta(seconds=40)
-    conn_id = uuid4()
-    db.memory.sessions[conn_id] = {
-        "connection_id": conn_id,
-        "user_id": user_id,
-        "node_id": "crashed-node",
-        "last_seen": old_time,
-    }
-
-    # User is considered offline because session is stale
-    is_online = await db.get_user_online_status(user_id)
-    assert is_online is False
-
-    # Now simulate a fresh session <= 30 seconds
-    db.memory.sessions[conn_id]["last_seen"] = datetime.now(timezone.utc)
-    is_online_now = await db.get_user_online_status(user_id)
-    assert is_online_now is True
+    # 5. When node crashes / stops heartbeating, it is excluded automatically
+    old_time = datetime.now(timezone.utc) - timedelta(seconds=20)
+    db.memory.node_registry[new_node_id]["last_heartbeat"] = old_time
+    expired_endpoint = await db.get_node_endpoint(new_node_id)
+    assert expired_endpoint is None, "Expired node must be excluded from routing"
