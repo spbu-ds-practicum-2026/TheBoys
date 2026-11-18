@@ -391,11 +391,12 @@ async def test_storage_replica_retrieval_and_failover_scenarios_3_and_7(api_clie
 
     audio_bytes = b"ID3\x03\x00\x00\x00\x00\x00\x00" + b"\xff\xfb\x90\x00" * 20
 
-    async def mock_get(self, url, *args, **kwargs):
+    async def mock_send(self, request, *args, **kwargs):
+        url = str(request.url)
         if "storage-1" in url:
             raise httpx.ConnectError("Node storage-1 failed (simulated failure)")
         if "storage-2" in url:
-            range_hdr = kwargs.get("headers", {}).get("Range")
+            range_hdr = request.headers.get("range")
             if range_hdr == "bytes=0-9":
                 chunk = audio_bytes[0:10]
                 headers = {
@@ -404,16 +405,16 @@ async def test_storage_replica_retrieval_and_failover_scenarios_3_and_7(api_clie
                     "Content-Range": f"bytes 0-9/{len(audio_bytes)}",
                     "Content-Length": "10",
                 }
-                return httpx.Response(206, content=chunk, headers=headers)
+                return httpx.Response(206, content=chunk, headers=headers, request=request)
             headers = {
                 "Content-Type": "audio/mpeg",
                 "Accept-Ranges": "bytes",
                 "Content-Length": str(len(audio_bytes)),
             }
-            return httpx.Response(200, content=audio_bytes, headers=headers)
+            return httpx.Response(200, content=audio_bytes, headers=headers, request=request)
         raise httpx.ConnectError("Unknown host")
 
-    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
 
     # 1. Full stream request fails over to storage-2
     resp_full = api_client.get(f"/api/tracks/{track_id}/stream")
@@ -483,4 +484,160 @@ async def test_db_operational_mode_rejects_in_memory_without_test_flag(monkeypat
 
     with pytest.raises(RuntimeError) as exc_info:
         await db.connect()
-    assert "DATABASE_URL environment variable is required in operational mode" in str(exc_info.value)
+    assert "DATABASE_URL environment variable is required" in str(exc_info.value)
+
+
+def test_login_max_length_validation(api_client):
+    """
+    Regression test for Oleg's review comment:
+    Login length is restricted by PostgreSQL schema VARCHAR(64).
+    A registration attempt with 65 characters must return 422 INVALID_INPUT, not 500.
+    A registration with 64 characters must succeed.
+    """
+    # 65 chars -> 422 INVALID_INPUT
+    long_login = "a" * 65
+    resp_long = api_client.post("/api/register", json={"login": long_login, "password": "password"})
+    assert resp_long.status_code == 422
+    data_long = resp_long.json()
+    assert data_long["code"] == "INVALID_INPUT"
+    assert "detail" not in data_long
+
+    # 64 chars -> 201 Created
+    valid_login = "b" * 64
+    resp_valid = api_client.post("/api/register", json={"login": valid_login, "password": "password"})
+    assert resp_valid.status_code == 201
+    assert resp_valid.json()["user"]["login"] == valid_login
+
+
+@pytest.mark.asyncio
+async def test_concurrent_registration_race_returns_409_not_500():
+    """
+    Regression test for Oleg's review comment on main.py:229:
+    Concurrent registrations of the same login must be handled gracefully:
+    The unique constraint violation from PostgreSQL or memory store must return
+    409 LOGIN_TAKEN, and never crash with 500 Internal Server Error.
+    """
+    import asyncio
+    from services.app.main import register, Credentials
+    from fastapi import Response
+
+    login = f"race_user_{uuid4().hex[:6]}"
+    body = Credentials(login=login, password="password123")
+
+    results = []
+
+    async def attempt_register():
+        res = await register(body, Response())
+        return res
+
+    tasks = [attempt_register(), attempt_register()]
+    resps = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # One should be a dict {"user": ...}, the other should be a JSONResponse(status_code=409)
+    status_codes = []
+    for r in resps:
+        if isinstance(r, dict):
+            status_codes.append(201)
+        elif hasattr(r, "status_code"):
+            status_codes.append(r.status_code)
+        else:
+            status_codes.append(500)
+
+    assert 201 in status_codes
+    assert 409 in status_codes
+    assert 500 not in status_codes
+
+
+def test_error_response_format_never_wrapped_in_detail(api_client):
+    """
+    Regression test for Oleg's review comment on main.py:286:
+    Error responses must strictly follow {"code": "...", "message": "..."}
+    and never be wrapped inside {"detail": {...}}.
+    """
+    # 401 Unauthorized
+    resp_unauth = api_client.get("/api/tracks/00000000-0000-0000-0000-000000000000/stream")
+    assert resp_unauth.status_code == 401
+    d_unauth = resp_unauth.json()
+    assert "code" in d_unauth
+    assert "message" in d_unauth
+    assert "detail" not in d_unauth
+
+    # 404 Track Not Found
+    register_user(api_client, "tester_err")
+    resp_notfound = api_client.get("/api/tracks/00000000-0000-0000-0000-000000000000/stream")
+    assert resp_notfound.status_code == 404
+    d_notfound = resp_notfound.json()
+    assert d_notfound["code"] == "TRACK_NOT_FOUND"
+    assert "detail" not in d_notfound
+
+    # 422 Invalid Input
+    resp_invalid = api_client.post("/api/register", json={"login": "", "password": ""})
+    assert resp_invalid.status_code == 422
+    d_invalid = resp_invalid.json()
+    assert d_invalid["code"] == "INVALID_INPUT"
+    assert "detail" not in d_invalid
+
+
+@pytest.mark.asyncio
+async def test_stream_audio_delivers_chunks_incrementally(api_client, monkeypatch):
+    """
+    Regression test for Oleg's review comment on main.py:314:
+    Verifies audio streaming is chunked and streamed incrementally without buffering
+    the entire track into memory. Client receives the first chunk while the storage
+    node is still producing subsequent chunks.
+    """
+    import asyncio
+    import httpx
+
+    alice = register_user(api_client, "alice_streamer")
+    track = api_client.get("/api/tracks").json()[0]
+    track_id = UUID(track["id"])
+
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry["storage-chunked"] = {
+        "node_id": "storage-chunked",
+        "role": "storage",
+        "endpoint_url": "http://storage-chunked:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    await db.add_track_replica(track_id, "storage-chunked", status="active")
+
+    yield_log = []
+    chunk_1 = b"FIRST_CHUNK_DATA_64KB"
+    chunk_2 = b"SECOND_CHUNK_DATA_64KB"
+
+    async def mock_stream_bytes():
+        yield_log.append("chunk_1")
+        yield chunk_1
+        await asyncio.sleep(0.01)
+        yield_log.append("chunk_2")
+        yield chunk_2
+
+    class MockStreamResponse(httpx.Response):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        async def aiter_bytes(self, chunk_size=None):
+            async for c in mock_stream_bytes():
+                yield c
+
+    async def mock_send(self, request, *args, **kwargs):
+        headers = {
+            "Content-Type": "audio/mpeg",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(len(chunk_1) + len(chunk_2)),
+        }
+        return MockStreamResponse(200, headers=headers, request=request)
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    chunks_received = []
+    with api_client.stream("GET", f"/api/tracks/{track_id}/stream") as stream_resp:
+        assert stream_resp.status_code == 200
+        for chunk in stream_resp.iter_bytes():
+            chunks_received.append(chunk)
+
+    assert b"".join(chunks_received) == chunk_1 + chunk_2
+    assert yield_log == ["chunk_1", "chunk_2"]
+

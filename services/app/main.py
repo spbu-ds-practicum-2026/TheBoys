@@ -28,12 +28,14 @@ from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, TypeAdapter
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field, TypeAdapter
 import httpx
+import asyncpg
 
 from services.app.auth import hash_password, verify_password
-from services.app.db import db
+from services.app.db import db, UserAlreadyExistsError
 from services.app.schemas import (
     ClientIncomingEvent,
     DeliveryTarget,
@@ -77,6 +79,18 @@ FRAME_SECONDS = 1152 / 44100
 # In-memory registry of active local WebSocket connections: connection_id -> WebSocket
 active_connections: dict[UUID, WebSocket] = {}
 user_connections: dict[int, set[UUID]] = {}
+
+
+def get_active_connections(target_app: FastAPI | None = None) -> dict[UUID, WebSocket]:
+    if target_app and hasattr(target_app.state, "active_connections"):
+        return target_app.state.active_connections
+    return active_connections
+
+
+def get_user_connections(target_app: FastAPI | None = None) -> dict[int, set[UUID]]:
+    if target_app and hasattr(target_app.state, "user_connections"):
+        return target_app.state.user_connections
+    return user_connections
 
 incoming_event_adapter = TypeAdapter(ClientIncomingEvent)
 outgoing_event_adapter = TypeAdapter(ServerOutgoingEvent)
@@ -189,8 +203,55 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Ensure all error responses follow TR schema: {"code": "...", "message": "..."}."""
+    if isinstance(exc.detail, dict) and "code" in exc.detail:
+        return JSONResponse(exc.detail, status_code=exc.status_code, headers=exc.headers)
+    elif isinstance(exc.detail, str):
+        code_map = {
+            401: "UNAUTHORIZED",
+            403: "FORBIDDEN",
+            404: "NOT_FOUND",
+            409: "CONFLICT",
+            422: "INVALID_INPUT",
+            503: "STORAGE_UNAVAILABLE",
+        }
+        code = code_map.get(exc.status_code, "HTTP_ERROR")
+        return JSONResponse({"code": code, "message": exc.detail}, status_code=exc.status_code, headers=exc.headers)
+    return JSONResponse({"code": "HTTP_ERROR", "message": str(exc.detail)}, status_code=exc.status_code, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Validation errors format: {"code": "INVALID_INPUT", "message": "..."}."""
+    return JSONResponse({"code": "INVALID_INPUT", "message": "Некорректные входные данные."}, status_code=422)
+
+
 # Mount web UI (Jinja2 + HTMX)
 mount_web(app, get_user_from_request)
+
+
+def create_app(node_id: str | None = None) -> FastAPI:
+    nid = node_id or NODE_ID
+    app_instance = FastAPI(
+        title=f"TheBoys Application Node ({nid})",
+        version="1.0.0",
+        lifespan=lifespan if nid == NODE_ID else None,
+    )
+    app_instance.state.node_id = nid
+    app_instance.state.active_connections = {}
+    app_instance.state.user_connections = {}
+    # Include all routes from the main app (API, Web, WebSocket)
+    for route in app.routes:
+        app_instance.routes.append(route)
+    return app_instance
+
+
+app.state.node_id = NODE_ID
+app.state.active_connections = active_connections
+app.state.user_connections = user_connections
 
 
 # ---------------------------------------------------------------------------
@@ -198,8 +259,8 @@ mount_web(app, get_user_from_request)
 # ---------------------------------------------------------------------------
 
 class Credentials(BaseModel):
-    login: str
-    password: str
+    login: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1)
 
 
 def _set_auth_cookie(response: Response, user_id: int):
@@ -217,15 +278,19 @@ def _set_auth_cookie(response: Response, user_id: int):
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
 async def register(body: Credentials, response: Response):
     login = body.login.strip()
-    if not login or not body.password:
-        return JSONResponse({"code": "INVALID_INPUT", "message": "Укажите логин и пароль."}, status_code=422)
+    if not login or len(login) > 64 or not body.password:
+        return JSONResponse({"code": "INVALID_INPUT", "message": "Логин должен быть непустым и не длиннее 64 символов."}, status_code=422)
 
     existing = await db.get_user_by_login(login)
     if existing:
         return JSONResponse({"code": "LOGIN_TAKEN", "message": "Логин уже занят."}, status_code=409)
 
     hashed = hash_password(body.password)
-    user = await db.create_user(login, hashed)
+    try:
+        user = await db.create_user(login, hashed)
+    except (UserAlreadyExistsError, asyncpg.UniqueViolationError):
+        return JSONResponse({"code": "LOGIN_TAKEN", "message": "Логин уже занят."}, status_code=409)
+
     _set_auth_cookie(response, user["id"])
     return {"user": {"id": user["id"], "login": user["login"]}}
 
@@ -295,28 +360,39 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
     for rep in replicas:
         endpoint = rep["endpoint_url"].rstrip("/")
         blob_url = f"{endpoint}/blobs/{tid}"
+        client = httpx.AsyncClient(timeout=httpx.Timeout(connect=3.0, read=30.0, write=5.0, pool=5.0))
         try:
-            async with httpx.AsyncClient(timeout=3.0) as client:
-                resp = await client.get(
-                    blob_url,
-                    headers={**headers, "X-Internal-Secret": INTERNAL_SECRET},
+            req = client.build_request("GET", blob_url, headers={**headers, "X-Internal-Secret": INTERNAL_SECRET})
+            resp = await client.send(req, stream=True)
+            if resp.status_code in (200, 206, 416):
+                out_headers = {
+                    "Accept-Ranges": resp.headers.get("Accept-Ranges", "bytes"),
+                    "Content-Type": resp.headers.get("Content-Type", "audio/mpeg"),
+                }
+                if "Content-Range" in resp.headers:
+                    out_headers["Content-Range"] = resp.headers["Content-Range"]
+                if "Content-Length" in resp.headers:
+                    out_headers["Content-Length"] = resp.headers["Content-Length"]
+
+                async def stream_chunks():
+                    try:
+                        async for chunk in resp.aiter_bytes(chunk_size=65536):
+                            yield chunk
+                    finally:
+                        await resp.aclose()
+                        await client.aclose()
+
+                return StreamingResponse(
+                    stream_chunks(),
+                    status_code=resp.status_code,
+                    headers=out_headers,
                 )
-                if resp.status_code in (200, 206, 416):
-                    out_headers = {
-                        "Accept-Ranges": resp.headers.get("Accept-Ranges", "bytes"),
-                        "Content-Type": resp.headers.get("Content-Type", "audio/mpeg"),
-                    }
-                    if "Content-Range" in resp.headers:
-                        out_headers["Content-Range"] = resp.headers["Content-Range"]
-                    if "Content-Length" in resp.headers:
-                        out_headers["Content-Length"] = resp.headers["Content-Length"]
-                    return Response(
-                        resp.content,
-                        status_code=resp.status_code,
-                        headers=out_headers,
-                    )
+            else:
+                await resp.aclose()
+                await client.aclose()
         except Exception as exc:
             logger.warning("Replica on storage node %s failed: %s. Trying next replica...", rep.get("node_id"), exc)
+            await client.aclose()
             continue
 
     # 2. In explicit testing mode, fallback to synthetic audio frames
@@ -416,10 +492,10 @@ async def list_conversations(request: Request):
 # ---------------------------------------------------------------------------
 
 @app.get("/health")
-async def health_check():
+async def health_check(request: Request):
     return {
         "status": "ok",
-        "node_id": NODE_ID,
+        "node_id": getattr(request.app.state, "node_id", NODE_ID),
         "db_connected": db.is_connected,
     }
 
@@ -430,7 +506,8 @@ async def health_check():
     summary="Internal inter-node message delivery",
 )
 async def deliver_internal(
-    request: InternalDeliverRequest,
+    request: Request,
+    deliver_req: InternalDeliverRequest,
     x_internal_secret: Annotated[str | None, Header(alias="X-Internal-Secret")] = None,
 ):
     if not x_internal_secret or not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
@@ -441,11 +518,14 @@ async def deliver_internal(
 
     delivered: list[UUID] = []
     missed: list[UUID] = []
-    event_json = request.event.model_dump_json()
+    event_json = deliver_req.event.model_dump_json()
 
-    for target in request.targets:
-        ws = active_connections.get(target.connection_id)
-        belongs_to_user = target.connection_id in user_connections.get(target.user_id, set())
+    active_conns = get_active_connections(request.app)
+    user_conns = get_user_connections(request.app)
+
+    for target in deliver_req.targets:
+        ws = active_conns.get(target.connection_id)
+        belongs_to_user = target.connection_id in user_conns.get(target.user_id, set())
         if ws is not None and belongs_to_user:
             try:
                 await ws.send_text(event_json)
@@ -466,6 +546,7 @@ async def _dispatch_to_sessions(
     members: tuple[int, int],
     event: ServerOutgoingEvent,
     skip_conn_id: UUID | None = None,
+    source_app: FastAPI | None = None,
 ):
     """
     Delivers event to all active sessions of conversation members:
@@ -474,15 +555,17 @@ async def _dispatch_to_sessions(
     """
     sessions = await db.get_active_sessions_for_users(list(members))
     remote_by_node: dict[str, list[DeliveryTarget]] = {}
+    current_node = getattr(source_app.state, "node_id", NODE_ID) if source_app else NODE_ID
+    active_conns = get_active_connections(source_app)
 
     for s in sessions:
         conn_id = s["connection_id"]
         target_uid = s["user_id"]
         node = s["node_id"]
 
-        if node == NODE_ID:
+        if node == current_node:
             if conn_id != skip_conn_id:
-                ws = active_connections.get(conn_id)
+                ws = active_conns.get(conn_id)
                 if ws:
                     try:
                         await ws.send_text(event.model_dump_json())
@@ -505,7 +588,7 @@ async def _send_remote_deliver(node_id: str, targets: list[DeliveryTarget], even
     url = f"{endpoint.rstrip('/')}/internal/deliver"
     payload = InternalDeliverRequest(targets=targets, event=event).model_dump(mode="json")
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
+        async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
             await client.post(
                 url,
                 json=payload,
@@ -541,9 +624,13 @@ async def websocket_endpoint(websocket: WebSocket):
     # 3. Connection accepted & registered in active node connections
     await websocket.accept()
     connection_id = uuid4()
-    active_connections[connection_id] = websocket
-    user_connections.setdefault(user_id, set()).add(connection_id)
-    await db.register_session(connection_id, user_id, NODE_ID)
+    active_conns = get_active_connections(websocket.app)
+    user_conns = get_user_connections(websocket.app)
+    current_node = getattr(websocket.app.state, "node_id", NODE_ID)
+
+    active_conns[connection_id] = websocket
+    user_conns.setdefault(user_id, set()).add(connection_id)
+    await db.register_session(connection_id, user_id, current_node)
 
     is_live = db.is_connected or getattr(app.state, "enable_persistence", False)
 
@@ -682,7 +769,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             payload=TrackPayload(**msg_payload) if event.kind == "track" else TextPayload(**msg_payload),
                             created_at=created_at,
                         )
-                        await _dispatch_to_sessions(members, chat_msg, skip_conn_id=connection_id)
+                        await _dispatch_to_sessions(members, chat_msg, skip_conn_id=connection_id, source_app=websocket.app)
 
                 except Exception as exc:
                     err = ServerErrorMessage(
@@ -774,6 +861,8 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
-        active_connections.pop(connection_id, None)
-        user_connections.get(user_id, set()).discard(connection_id)
+        active_conns = get_active_connections(websocket.app)
+        user_conns = get_user_connections(websocket.app)
+        active_conns.pop(connection_id, None)
+        user_conns.get(user_id, set()).discard(connection_id)
         await db.remove_session(connection_id)
