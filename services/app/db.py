@@ -42,6 +42,11 @@ def clean_postgres_dsn(raw_url: str | None) -> str | None:
     return re.sub(r"^postgresql\+[a-zA-Z0-9_]+://", "postgresql://", raw_url)
 
 
+class UserAlreadyExistsError(Exception):
+    """Raised when trying to create a user with a login that already exists."""
+    pass
+
+
 class InMemoryStore:
     """Thread-safe in-memory store for unit test execution when PostgreSQL is offline."""
 
@@ -115,7 +120,8 @@ class Database:
                 command_timeout=10,
             )
             logger.info("Connected to PostgreSQL successfully.")
-            await self.seed_tracks_if_empty()
+            if is_test_mode:
+                await self.seed_tracks_if_empty()
             return True
         except Exception as e:
             if is_test_mode:
@@ -209,21 +215,24 @@ class Database:
         login_clean = login.strip()
         if self.pool:
             async with self.pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    """
-                    INSERT INTO users (login, password_hash)
-                    VALUES ($1, $2)
-                    RETURNING id, login, password_hash, created_at
-                    """,
-                    login_clean,
-                    password_hash,
-                )
-                return dict(row)
+                try:
+                    row = await conn.fetchrow(
+                        """
+                        INSERT INTO users (login, password_hash)
+                        VALUES ($1, $2)
+                        RETURNING id, login, password_hash, created_at
+                        """,
+                        login_clean,
+                        password_hash,
+                    )
+                    return dict(row)
+                except asyncpg.UniqueViolationError:
+                    raise UserAlreadyExistsError(f"User '{login_clean}' already exists")
         else:
             async with self.memory._lock:
                 for u in self.memory.users.values():
                     if u["login"].lower() == login_clean.lower():
-                        raise asyncpg.UniqueViolationError("unique_users_login_lower")
+                        raise UserAlreadyExistsError(f"User '{login_clean}' already exists")
                 new_id = next(self.memory.user_ids)
                 user = {
                     "id": new_id,

@@ -28,12 +28,14 @@ from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, TypeAdapter
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field, TypeAdapter
 import httpx
+import asyncpg
 
 from services.app.auth import hash_password, verify_password
-from services.app.db import db
+from services.app.db import db, UserAlreadyExistsError
 from services.app.schemas import (
     ClientIncomingEvent,
     DeliveryTarget,
@@ -189,6 +191,32 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Ensure all error responses follow TR schema: {"code": "...", "message": "..."}."""
+    if isinstance(exc.detail, dict) and "code" in exc.detail:
+        return JSONResponse(exc.detail, status_code=exc.status_code, headers=exc.headers)
+    elif isinstance(exc.detail, str):
+        code_map = {
+            401: "UNAUTHORIZED",
+            403: "FORBIDDEN",
+            404: "NOT_FOUND",
+            409: "CONFLICT",
+            422: "INVALID_INPUT",
+            503: "STORAGE_UNAVAILABLE",
+        }
+        code = code_map.get(exc.status_code, "HTTP_ERROR")
+        return JSONResponse({"code": code, "message": exc.detail}, status_code=exc.status_code, headers=exc.headers)
+    return JSONResponse({"code": "HTTP_ERROR", "message": str(exc.detail)}, status_code=exc.status_code, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Validation errors format: {"code": "INVALID_INPUT", "message": "..."}."""
+    return JSONResponse({"code": "INVALID_INPUT", "message": "Некорректные входные данные."}, status_code=422)
+
+
 # Mount web UI (Jinja2 + HTMX)
 mount_web(app, get_user_from_request)
 
@@ -198,8 +226,8 @@ mount_web(app, get_user_from_request)
 # ---------------------------------------------------------------------------
 
 class Credentials(BaseModel):
-    login: str
-    password: str
+    login: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1)
 
 
 def _set_auth_cookie(response: Response, user_id: int):
@@ -217,15 +245,19 @@ def _set_auth_cookie(response: Response, user_id: int):
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
 async def register(body: Credentials, response: Response):
     login = body.login.strip()
-    if not login or not body.password:
-        return JSONResponse({"code": "INVALID_INPUT", "message": "Укажите логин и пароль."}, status_code=422)
+    if not login or len(login) > 64 or not body.password:
+        return JSONResponse({"code": "INVALID_INPUT", "message": "Логин должен быть непустым и не длиннее 64 символов."}, status_code=422)
 
     existing = await db.get_user_by_login(login)
     if existing:
         return JSONResponse({"code": "LOGIN_TAKEN", "message": "Логин уже занят."}, status_code=409)
 
     hashed = hash_password(body.password)
-    user = await db.create_user(login, hashed)
+    try:
+        user = await db.create_user(login, hashed)
+    except (UserAlreadyExistsError, asyncpg.UniqueViolationError):
+        return JSONResponse({"code": "LOGIN_TAKEN", "message": "Логин уже занят."}, status_code=409)
+
     _set_auth_cookie(response, user["id"])
     return {"user": {"id": user["id"], "login": user["login"]}}
 
@@ -295,28 +327,39 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
     for rep in replicas:
         endpoint = rep["endpoint_url"].rstrip("/")
         blob_url = f"{endpoint}/blobs/{tid}"
+        client = httpx.AsyncClient(timeout=httpx.Timeout(connect=3.0, read=30.0, write=5.0, pool=5.0))
         try:
-            async with httpx.AsyncClient(timeout=3.0) as client:
-                resp = await client.get(
-                    blob_url,
-                    headers={**headers, "X-Internal-Secret": INTERNAL_SECRET},
+            req = client.build_request("GET", blob_url, headers={**headers, "X-Internal-Secret": INTERNAL_SECRET})
+            resp = await client.send(req, stream=True)
+            if resp.status_code in (200, 206, 416):
+                out_headers = {
+                    "Accept-Ranges": resp.headers.get("Accept-Ranges", "bytes"),
+                    "Content-Type": resp.headers.get("Content-Type", "audio/mpeg"),
+                }
+                if "Content-Range" in resp.headers:
+                    out_headers["Content-Range"] = resp.headers["Content-Range"]
+                if "Content-Length" in resp.headers:
+                    out_headers["Content-Length"] = resp.headers["Content-Length"]
+
+                async def stream_chunks():
+                    try:
+                        async for chunk in resp.aiter_bytes(chunk_size=65536):
+                            yield chunk
+                    finally:
+                        await resp.aclose()
+                        await client.aclose()
+
+                return StreamingResponse(
+                    stream_chunks(),
+                    status_code=resp.status_code,
+                    headers=out_headers,
                 )
-                if resp.status_code in (200, 206, 416):
-                    out_headers = {
-                        "Accept-Ranges": resp.headers.get("Accept-Ranges", "bytes"),
-                        "Content-Type": resp.headers.get("Content-Type", "audio/mpeg"),
-                    }
-                    if "Content-Range" in resp.headers:
-                        out_headers["Content-Range"] = resp.headers["Content-Range"]
-                    if "Content-Length" in resp.headers:
-                        out_headers["Content-Length"] = resp.headers["Content-Length"]
-                    return Response(
-                        resp.content,
-                        status_code=resp.status_code,
-                        headers=out_headers,
-                    )
+            else:
+                await resp.aclose()
+                await client.aclose()
         except Exception as exc:
             logger.warning("Replica on storage node %s failed: %s. Trying next replica...", rep.get("node_id"), exc)
+            await client.aclose()
             continue
 
     # 2. In explicit testing mode, fallback to synthetic audio frames
