@@ -22,7 +22,7 @@ os.environ["INTERNAL_SECRET"] = "test-internal-secret-for-ci"
 os.environ["SESSION_SECRET"] = "test-session-secret-for-ci"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:8000,http://127.0.0.1:8000"
 
-from services.app.db import db
+from services.app.db import db, Database, clean_postgres_dsn
 from services.app.main import (
     app,
     sign_session_cookie,
@@ -955,8 +955,6 @@ async def test_literal_search_in_track_catalog_special_characters(api_client):
     - Query '_' must NOT match tracks that don't contain a literal '_'.
     - Both memory Database and PostgreSQL strpos implementations must behave identically.
     """
-    from services.app.db import Database, clean_postgres_dsn
-
     # 1. Test in memory DB
     db.memory.tracks.clear()
     t1 = {"id": str(uuid4()), "title": "Track One", "artist": "Artist", "duration_s": 120}
@@ -1331,4 +1329,104 @@ async def test_live_postgres_transient_503_both_replicas_recovers_without_catalo
     finally:
         if not was_connected and db.is_connected:
             await db.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_first_replica_queries_no_ddl_race():
+    """
+    TR: Замечание Олега по PR #6:
+    Verify that concurrent first calls to get_track_replicas and mark_replica_failure
+    do NOT execute dynamic DDL (CREATE TABLE IF NOT EXISTS) during queries,
+    avoiding PostgreSQL UniqueViolationError on pg_type_typname_nsp_index.
+    """
+    import asyncio
+    from pathlib import Path
+
+    # 1. Verify schema migration 0003 exists and creates replica_failures table and index
+    mig_path = Path(__file__).resolve().parents[3] / "infra" / "postgres" / "migrations" / "0003_replica_failures.sql"
+    assert mig_path.exists(), "Migration 0003_replica_failures.sql must exist"
+    mig_sql = mig_path.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS replica_failures" in mig_sql
+    assert "idx_replica_failures_track_failed_at" in mig_sql
+
+    # 2. Verify init.sql includes replica_failures and migration 3
+    init_path = Path(__file__).resolve().parents[3] / "infra" / "postgres" / "init.sql"
+    init_sql = init_path.read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS replica_failures" in init_sql
+    assert "(3, '0003_replica_failures')" in init_sql
+
+    # 3. Simulate 10 concurrent requests to get_track_replicas and mark_replica_failure
+    tid = uuid4()
+    db.memory.tracks[tid] = {"id": tid, "title": "Test", "artist": "Art", "duration_s": 100}
+    db.memory.replicas[tid] = [
+        {"node_id": "storage-1", "status": "active"},
+        {"node_id": "storage-2", "status": "active"},
+    ]
+    db.memory.node_registry["storage-1"] = {
+        "node_id": "storage-1",
+        "role": "storage",
+        "endpoint_url": "http://s1:8000",
+        "last_heartbeat": datetime.now(timezone.utc),
+        "status": "alive",
+    }
+    db.memory.node_registry["storage-2"] = {
+        "node_id": "storage-2",
+        "role": "storage",
+        "endpoint_url": "http://s2:8000",
+        "last_heartbeat": datetime.now(timezone.utc),
+        "status": "alive",
+    }
+
+    async def worker(i):
+        if i % 2 == 0:
+            return await db.get_track_replicas(tid)
+        else:
+            await db.mark_replica_failure(tid, node_id="storage-1", endpoint_url="http://s1:8000")
+            return await db.get_track_replicas(tid)
+
+    results = await asyncio.gather(*[worker(i) for i in range(10)])
+    assert len(results) == 10
+
+    # 4. If live PostgreSQL is configured, verify concurrent queries on real database
+    db_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if db_url:
+        dsn = clean_postgres_dsn(db_url)
+        was_connected = db.is_connected
+        if not was_connected:
+            await db.connect(dsn)
+        try:
+            async with db.pool.acquire() as conn:
+                await conn.execute(
+                    "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, 'Live C', 'Art', 100) ON CONFLICT DO NOTHING;",
+                    tid,
+                )
+                await conn.execute(
+                    """
+                    INSERT INTO node_registry (node_id, role, endpoint_url, status)
+                    VALUES ('s1-test', 'storage', 'http://s1:8000', 'alive')
+                    ON CONFLICT (node_id) DO UPDATE SET last_heartbeat = now(), status = 'alive';
+                    """
+                )
+                await conn.execute(
+                    """
+                    INSERT INTO replicas (track_id, node_id, status)
+                    VALUES ($1, 's1-test', 'active')
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    tid,
+                )
+
+            async def pg_worker(i):
+                if i % 2 == 0:
+                    return await db.get_track_replicas(tid)
+                else:
+                    await db.mark_replica_failure(tid, node_id="s1-test", endpoint_url="http://s1:8000")
+                    return await db.get_track_replicas(tid)
+
+            pg_results = await asyncio.gather(*[pg_worker(i) for i in range(10)])
+            assert len(pg_results) == 10
+        finally:
+            if not was_connected and db.is_connected:
+                await db.disconnect()
+
 

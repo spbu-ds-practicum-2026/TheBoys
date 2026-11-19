@@ -79,6 +79,7 @@ def test_postgres_schema_entities_and_constraints():
         "tracks",
         "replicas",
         "jobs",
+        "replica_failures",
     ]
     for table in required_tables:
         assert f"CREATE TABLE IF NOT EXISTS {table}" in content, f"Table definition missing: {table}"
@@ -139,9 +140,11 @@ def test_migrations_structure_and_atomic_execution():
 
     mig_0001 = migrations_dir / "0001_initial_schema.sql"
     mig_0002 = migrations_dir / "0002_constraints_and_idempotency.sql"
+    mig_0003 = migrations_dir / "0003_replica_failures.sql"
 
     assert mig_0001.exists(), "Migration 0001 must exist"
     assert mig_0002.exists(), "Migration 0002 must exist"
+    assert mig_0003.exists(), "Migration 0003 must exist"
 
     # Verify that migrate.sh enforces single-transaction mode (--single-transaction)
     migrate_sh = REPO_ROOT / "infra" / "postgres" / "migrate.sh"
@@ -400,6 +403,44 @@ async def test_postgres_schema_and_constraints_live():
                     "INSERT INTO jobs (task_type, track_id, status, worker_id, lease_until) VALUES ('replicate', $1, 'running', '', now());",
                     track_id,
                 )
+
+        # --------------------------------------------------------------------
+        # 8. Replica failures foreign keys and transient failure tracking
+        # --------------------------------------------------------------------
+        await conn.execute(
+            """
+            INSERT INTO node_registry (node_id, role, endpoint_url, status)
+            VALUES ($1, 'storage', 'http://storage-1:8000', 'alive');
+            """,
+            "storage-node-1",
+        )
+        await conn.execute(
+            """
+            INSERT INTO replicas (track_id, node_id, status)
+            VALUES ($1, $2, 'active');
+            """,
+            track_id,
+            "storage-node-1",
+        )
+        with pytest.raises(asyncpg.ForeignKeyViolationError):
+            async with conn.transaction():
+                await conn.execute(
+                    "INSERT INTO replica_failures (track_id, node_id) VALUES ($1, $2);",
+                    uuid4(),
+                    "storage-node-1",
+                )
+        with pytest.raises(asyncpg.ForeignKeyViolationError):
+            async with conn.transaction():
+                await conn.execute(
+                    "INSERT INTO replica_failures (track_id, node_id) VALUES ($1, $2);",
+                    track_id,
+                    "non-existent-storage-node",
+                )
+        await conn.execute(
+            "INSERT INTO replica_failures (track_id, node_id) VALUES ($1, $2);",
+            track_id,
+            "storage-node-1",
+        )
 
         await root_tr.rollback()
     finally:
