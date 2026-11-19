@@ -529,27 +529,49 @@ def test_nginx_dynamic_scaling_discovery_and_failover_coverage():
             assert added_node_id, f"Could not determine node_id for added container {added_cid}"
 
             # 4. Verify its self-registration in PostgreSQL node_registry (status = 'alive')
+            # Extract POSTGRES_USER and POSTGRES_DB dynamically from the container environment
+            pg_env_proc = subprocess.run(
+                ["docker", "compose", "exec", "-T", "postgres", "sh", "-c", "echo -n ${POSTGRES_USER:-theboys_user},${POSTGRES_DB:-theboys}"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if pg_env_proc.returncode != 0:
+                raise RuntimeError(
+                    f"Failed to inspect PostgreSQL container environment (exit {pg_env_proc.returncode}): {pg_env_proc.stderr.strip()}"
+                )
+            pg_user, pg_db = pg_env_proc.stdout.strip().split(",", 1)
+
             registered = False
+            last_conn_error = None
+            query_stdout = ""
             for _ in range(30):
-                for pg_user in ["theboys_user", "postgres"]:
-                    psql_res = subprocess.run(
-                        [
-                            "docker", "compose", "exec", "-T", "postgres",
-                            "psql", "-U", pg_user, "-d", "theboys", "-tAc",
-                            f"SELECT status FROM node_registry WHERE node_id = '{added_node_id}';",
-                        ],
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                    )
-                    if psql_res.returncode == 0 and "alive" in psql_res.stdout:
+                psql_res = subprocess.run(
+                    [
+                        "docker", "compose", "exec", "-T", "postgres",
+                        "psql", "-U", pg_user, "-d", pg_db, "-tAc",
+                        f"SELECT status FROM node_registry WHERE node_id = '{added_node_id}';",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if psql_res.returncode != 0:
+                    last_conn_error = psql_res.stderr.strip() or f"psql exited with code {psql_res.returncode}"
+                else:
+                    last_conn_error = None
+                    query_stdout = psql_res.stdout.strip()
+                    if "alive" in query_stdout:
                         registered = True
                         break
-                if registered:
-                    break
                 time.sleep(0.5)
 
-            assert registered, f"Added node {added_node_id} did not self-register in PostgreSQL node_registry"
+            if last_conn_error:
+                raise RuntimeError(f"PostgreSQL connection error while querying node_registry: {last_conn_error}")
+
+            assert registered, (
+                f"Added node {added_node_id} did not self-register in PostgreSQL node_registry (query output: '{query_stdout}')"
+            )
 
             # 5. Poll /health through Nginx without restarting/reloading until the added_node_id is returned
             observed_added_node = False
