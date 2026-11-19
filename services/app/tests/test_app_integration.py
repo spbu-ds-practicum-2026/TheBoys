@@ -641,3 +641,171 @@ async def test_stream_audio_delivers_chunks_incrementally(api_client, monkeypatc
     assert b"".join(chunks_received) == chunk_1 + chunk_2
     assert yield_log == ["chunk_1", "chunk_2"]
 
+
+@pytest.mark.asyncio
+async def test_stream_playback_failover_to_second_replica_after_midstream_abort(api_client, monkeypatch):
+    """
+    TR: Технический сценарий 7 «Воспроизведение с резервной реплики».
+    Regression test for Oleg's review:
+    1. Two live storage replicas (storage-1 and storage-2) exist for track.
+    2. First request starts streaming from storage-1, but storage-1 aborts/breaks mid-stream after 64 KiB.
+    3. Client receives the first 64 KiB, encounters disconnect, and retries with Range: bytes=65536-.
+    4. App node must switch replicas and route the retry to storage-2, not storage-1.
+    5. Storage-2 serves the remainder of the file, allowing playback to continue seamlessly.
+    """
+    import httpx
+    from services.app.main import replica_failures
+    replica_failures.clear()
+
+    alice = register_user(api_client, "alice_failover_streamer")
+    track = api_client.get("/api/tracks").json()[0]
+    track_id = UUID(track["id"])
+
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry["storage-1"] = {
+        "node_id": "storage-1",
+        "role": "storage",
+        "endpoint_url": "http://storage-1:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    db.memory.node_registry["storage-2"] = {
+        "node_id": "storage-2",
+        "role": "storage",
+        "endpoint_url": "http://storage-2:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    await db.add_track_replica(track_id, "storage-1", status="active")
+    await db.add_track_replica(track_id, "storage-2", status="active")
+
+    chunk_1 = b"A" * 65536  # 64 KiB
+    chunk_2 = b"B" * 65536  # 64 KiB
+    total_size = len(chunk_1) + len(chunk_2)
+
+    requested_endpoints = []
+
+    class AbortingStreamResponse(httpx.Response):
+        async def aiter_bytes(self, chunk_size=None):
+            yield chunk_1
+            raise httpx.RemoteProtocolError("Connection closed unexpectedly by storage-1")
+
+    class GoodStreamResponse(httpx.Response):
+        async def aiter_bytes(self, chunk_size=None):
+            yield chunk_2
+
+    async def mock_send(self, request, *args, **kwargs):
+        endpoint = str(request.url).split("/blobs/")[0]
+        requested_endpoints.append((endpoint, request.headers.get("Range")))
+        if "storage-1" in endpoint:
+            headers = {
+                "Content-Type": "audio/mpeg",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(total_size),
+            }
+            return AbortingStreamResponse(200, headers=headers, request=request)
+        else:
+            # storage-2 serves the range request
+            headers = {
+                "Content-Type": "audio/mpeg",
+                "Accept-Ranges": "bytes",
+                "Content-Range": f"bytes 65536-{total_size - 1}/{total_size}",
+                "Content-Length": str(len(chunk_2)),
+            }
+            return GoodStreamResponse(206, headers=headers, request=request)
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # Step 1: Initial request starts streaming from storage-1 and aborts after chunk 1
+    received_chunks = []
+    with api_client.stream("GET", f"/api/tracks/{track_id}/stream") as stream_resp:
+        assert stream_resp.status_code == 200
+        for chunk in stream_resp.iter_bytes():
+            received_chunks.append(chunk)
+
+    # Client only received first 64 KiB instead of total_size (128 KiB)
+    assert len(received_chunks) == 1
+    assert received_chunks[0] == chunk_1
+    assert len(received_chunks[0]) < total_size
+    assert requested_endpoints[0][0] == "http://storage-1:8000"
+
+    # Step 2: Client retries with Range: bytes=65536-
+    with api_client.stream("GET", f"/api/tracks/{track_id}/stream", headers={"Range": "bytes=65536-"}) as retry_resp:
+        assert retry_resp.status_code == 206
+        for chunk in retry_resp.iter_bytes():
+            received_chunks.append(chunk)
+
+    # Verify the retry went to storage-2, NOT storage-1!
+    assert requested_endpoints[1][0] == "http://storage-2:8000"
+    assert requested_endpoints[1][1] == "bytes=65536-"
+
+    # Verify total file reassembled correctly
+    assert b"".join(received_chunks) == chunk_1 + chunk_2
+
+
+@pytest.mark.asyncio
+async def test_literal_search_in_track_catalog_special_characters(api_client):
+    """
+    TR: «Поиск по каталогу треков» & замечание Олега:
+    Verifies literal substring search for SQL wildcard characters ('%' and '_').
+    - Query '%' must NOT match tracks that don't contain a literal '%'.
+    - Query '_' must NOT match tracks that don't contain a literal '_'.
+    - Both memory Database and PostgreSQL strpos implementations must behave identically.
+    """
+    from services.app.db import Database, clean_postgres_dsn
+
+    # 1. Test in memory DB
+    db.memory.tracks.clear()
+    t1 = {"id": str(uuid4()), "title": "Track One", "artist": "Artist", "duration_s": 120}
+    t2 = {"id": str(uuid4()), "title": "100% Hits", "artist": "Various", "duration_s": 180}
+    t3 = {"id": str(uuid4()), "title": "Under_Score", "artist": "Band", "duration_s": 200}
+
+    db.memory.tracks[UUID(t1["id"])] = t1
+    db.memory.tracks[UUID(t2["id"])] = t2
+    db.memory.tracks[UUID(t3["id"])] = t3
+
+    res_pct = await db.search_tracks("%")
+    assert len(res_pct) == 1
+    assert res_pct[0]["title"] == "100% Hits"
+
+    res_underscore = await db.search_tracks("_")
+    assert len(res_underscore) == 1
+    assert res_underscore[0]["title"] == "Under_Score"
+
+    res_word = await db.search_tracks("track")
+    assert len(res_word) == 1
+    assert res_word[0]["title"] == "Track One"
+
+    # 2. Test in PostgreSQL if DATABASE_URL is available
+    if os.getenv("DATABASE_URL"):
+        dsn = clean_postgres_dsn(os.environ["DATABASE_URL"])
+        live_db = Database()
+        await live_db.connect(dsn)
+        try:
+            tid1, tid2, tid3 = uuid4(), uuid4(), uuid4()
+            async with live_db.pool.acquire() as conn:
+                await conn.execute(
+                    "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
+                    tid1, "Track PG Standard", "Artist", 120,
+                )
+                await conn.execute(
+                    "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
+                    tid2, "PG 100% Hits", "Various", 180,
+                )
+                await conn.execute(
+                    "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
+                    tid3, "PG Under_Score", "Band", 200,
+                )
+
+            pg_pct = await live_db.search_tracks("%")
+            pct_titles = [t["title"] for t in pg_pct]
+            assert "PG 100% Hits" in pct_titles
+            assert "Track PG Standard" not in pct_titles
+
+            pg_under = await live_db.search_tracks("_")
+            under_titles = [t["title"] for t in pg_under]
+            assert "PG Under_Score" in under_titles
+            assert "Track PG Standard" not in under_titles
+        finally:
+            await live_db.disconnect()
+

@@ -286,14 +286,13 @@ class Database:
                         "SELECT id, title, artist, duration_s FROM tracks ORDER BY title ASC"
                     )
                 else:
-                    like_expr = f"%{needle}%"
                     rows = await conn.fetch(
                         """
                         SELECT id, title, artist, duration_s FROM tracks
-                        WHERE LOWER(title) LIKE $1 OR LOWER(artist) LIKE $1
+                        WHERE strpos(LOWER(title), $1) > 0 OR strpos(LOWER(artist), $1) > 0
                         ORDER BY title ASC
                         """,
-                        like_expr,
+                        needle,
                     )
                 return [dict(r) for r in rows]
         else:
