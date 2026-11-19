@@ -37,7 +37,7 @@ os.environ["SESSION_SECRET"] = "test-session-secret-for-ci"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:8000,http://127.0.0.1:8000"
 
 from services.app.auth import hash_password
-from services.app.db import db
+from services.app.db import db, Database, clean_postgres_dsn
 from services.app.main import (
     app as app_node1,
     create_app,
@@ -302,8 +302,6 @@ async def test_live_postgres_lost_ack_failover_across_independent_nodes():
        and returns existing seq without consuming a new sequence number.
     6. Verifies exactly 1 row exists in messages table for this message and conversations.last_seq == 1.
     """
-    from services.app.db import clean_postgres_dsn, Database
-
     dsn = clean_postgres_dsn(os.environ["DATABASE_URL"])
     live_db1 = Database()
     live_db2 = Database()
