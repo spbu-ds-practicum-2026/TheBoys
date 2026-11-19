@@ -1080,12 +1080,12 @@ async def test_transient_503_both_replicas_recovers_without_catalog_change(api_c
 
 
 @pytest.mark.asyncio
-async def test_live_postgres_replica_failover_across_nodes():
+async def test_live_postgres_replica_failover_across_nodes(monkeypatch):
     """
     TR: Технический сценарий 7 «Воспроизведение с резервной реплики».
-    PostgreSQL regression test for Oleg's review:
+    Full HTTP + PostgreSQL test for Oleg's review:
     1. Two active replicas exist in PostgreSQL for a track.
-    2. Node A starts streaming from primary replica, which aborts mid-stream.
+    2. Node A starts streaming audio, storage-1 aborts mid-stream.
     3. Node A records transient failure timestamp in PostgreSQL (WITHOUT setting replicas.status='lost').
     4. Client retries with Range on Node B.
     5. Node B queries PostgreSQL, prioritizes healthy replica, and streams remaining audio seamlessly.
@@ -1095,20 +1095,23 @@ async def test_live_postgres_replica_failover_across_nodes():
         pytest.skip("Requires live PostgreSQL (DATABASE_URL or TEST_DATABASE_URL)")
 
     dsn = clean_postgres_dsn(db_url)
-    db_a = Database()
-    db_b = Database()
-    await db_a.connect(dsn)
-    await db_b.connect(dsn)
+    was_connected = db.is_connected
+    if not was_connected:
+        await db.connect(dsn)
 
     try:
+        import httpx
+        from starlette.testclient import TestClient
+
         tid = uuid4()
         node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
         ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
 
-        async with db_a.pool.acquire() as conn:
+        # Register track, nodes, and active replicas directly in PostgreSQL
+        async with db.pool.acquire() as conn:
             await conn.execute(
                 "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
-                tid, "Postgres Failover Track", "Artist", 60,
+                tid, "Live PG Stream Track", "Live Band", 60,
             )
             await conn.execute(
                 """
@@ -1127,30 +1130,119 @@ async def test_live_postgres_replica_failover_across_nodes():
                 tid, node_1, node_2,
             )
 
-        reps_a = await db_a.get_track_replicas(tid)
-        assert len(reps_a) == 2
+        chunk_1 = b"LIVE_PG_A" * 7000  # ~63 KiB
+        chunk_2 = b"LIVE_PG_B" * 7000  # ~63 KiB
+        total_size = len(chunk_1) + len(chunk_2)
 
-        # Node A attempts node_1 and fails
-        await db_a.mark_replica_failure(tid, node_id=node_1, endpoint_url=ep_1)
+        requested_endpoints = []
 
-        # Crucial: verify that replicas in PostgreSQL were NOT marked 'lost'
-        async with db_a.pool.acquire() as conn:
-            statuses = await conn.fetch("SELECT status FROM replicas WHERE track_id = $1", tid)
-            assert all(s["status"] == "active" for s in statuses), "Replicas must remain active in replicas table"
+        class AbortingStreamResponse(httpx.Response):
+            async def aiter_bytes(self, chunk_size=None):
+                yield chunk_1
+                raise httpx.ReadError("Live storage-1 connection aborted")
 
-        # Node B queries PostgreSQL for Range retry: healthy node_2 must be prioritized
-        reps_b = await db_b.get_track_replicas(tid)
-        assert len(reps_b) == 2
-        assert reps_b[0]["node_id"] == node_2, f"Node B must prioritize healthy node_2, got {reps_b[0]['node_id']}"
-        assert reps_b[1]["node_id"] == node_1
+        class GoodStreamResponse(httpx.Response):
+            async def aiter_bytes(self, chunk_size=None):
+                yield chunk_2
+
+        async def mock_send(self, request, *args, **kwargs):
+            endpoint = str(request.url).split("/blobs/")[0]
+            requested_endpoints.append((endpoint, request.headers.get("Range")))
+            if node_1 in endpoint:
+                headers = {
+                    "Content-Type": "audio/mpeg",
+                    "Accept-Ranges": "bytes",
+                }
+                return AbortingStreamResponse(200, headers=headers, request=request)
+            else:
+                headers = {
+                    "Content-Type": "audio/mpeg",
+                    "Accept-Ranges": "bytes",
+                    "Content-Range": f"bytes {len(chunk_1)}-{total_size - 1}/{total_size}",
+                    "Content-Length": str(len(chunk_2)),
+                }
+                return GoodStreamResponse(206, headers=headers, request=request)
+
+        monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+        with TestClient(app, follow_redirects=False) as client:
+            user = register_user(client, f"user_{uuid4().hex[:6]}")
+
+            # 1. Node A stream request: starts with storage-1 and aborts
+            chunks_a = []
+            aborted_a = False
+            scope_a = {
+                "type": "http",
+                "http_version": "1.1",
+                "method": "GET",
+                "path": f"/api/tracks/{tid}/stream",
+                "raw_path": f"/api/tracks/{tid}/stream".encode(),
+                "query_string": b"",
+                "headers": [
+                    (b"cookie", f"session={client.cookies['session']}".encode()),
+                ],
+            }
+            async def receive_a(): return {"type": "http.disconnect"}
+            async def send_a(msg):
+                if msg["type"] == "http.response.body" and msg.get("body"):
+                    chunks_a.append(msg["body"])
+
+            try:
+                await app(scope_a, receive_a, send_a)
+            except Exception:
+                aborted_a = True
+
+            assert aborted_a, "Node A stream must abort with error"
+            assert len(chunks_a) == 1
+            assert chunks_a[0] == chunk_1
+            assert node_1 in requested_endpoints[0][0]
+
+            # Verify replicas in PostgreSQL are STILL status='active' (neither was marked 'lost')
+            async with db.pool.acquire() as conn:
+                statuses = await conn.fetch("SELECT status FROM replicas WHERE track_id = $1", tid)
+                assert all(s["status"] == "active" for s in statuses), "Replicas must remain active in replicas table"
+
+            # 2. Node B stream retry with Range: bytes={len(chunk_1)}-
+            # In PostgreSQL, node_2 (healthy) must be prioritized over node_1 (failed)
+            reps_b = await db.get_track_replicas(tid)
+            assert reps_b[0]["node_id"] == node_2, f"Expected node_2 first, got {reps_b[0]['node_id']}"
+
+            chunks_b = []
+            clean_eof_b = False
+            scope_b = {
+                "type": "http",
+                "http_version": "1.1",
+                "method": "GET",
+                "path": f"/api/tracks/{tid}/stream",
+                "raw_path": f"/api/tracks/{tid}/stream".encode(),
+                "query_string": b"",
+                "headers": [
+                    (b"cookie", f"session={client.cookies['session']}".encode()),
+                    (b"range", f"bytes={len(chunk_1)}-".encode()),
+                ],
+            }
+            async def receive_b(): return {"type": "http.disconnect"}
+            async def send_b(msg):
+                nonlocal clean_eof_b
+                if msg["type"] == "http.response.body":
+                    if msg.get("body"):
+                        chunks_b.append(msg["body"])
+                    if not msg.get("more_body", True):
+                        clean_eof_b = True
+
+            await app(scope_b, receive_b, send_b)
+
+            assert node_2 in requested_endpoints[1][0], "Retry must route to healthy node_2"
+            assert clean_eof_b, "Retry must finish cleanly"
+            assert b"".join(chunks_a + chunks_b) == chunk_1 + chunk_2
 
     finally:
-        await db_a.disconnect()
-        await db_b.disconnect()
+        if not was_connected and db.is_connected:
+            await db.disconnect()
 
 
 @pytest.mark.asyncio
-async def test_live_postgres_transient_503_both_replicas_recovers_without_catalog_change():
+async def test_live_postgres_transient_503_both_replicas_recovers_without_catalog_change(monkeypatch):
     """
     TR: Технический сценарий 7.
     PostgreSQL regression test for Oleg's review:
@@ -1163,15 +1255,19 @@ async def test_live_postgres_transient_503_both_replicas_recovers_without_catalo
         pytest.skip("Requires live PostgreSQL (DATABASE_URL or TEST_DATABASE_URL)")
 
     dsn = clean_postgres_dsn(db_url)
-    live_db = Database()
-    await live_db.connect(dsn)
+    was_connected = db.is_connected
+    if not was_connected:
+        await db.connect(dsn)
 
     try:
+        import httpx
+        from starlette.testclient import TestClient
+
         tid = uuid4()
         node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
         ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
 
-        async with live_db.pool.acquire() as conn:
+        async with db.pool.acquire() as conn:
             await conn.execute(
                 "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
                 tid, "Postgres Recovery Track", "Artist", 60,
@@ -1193,28 +1289,46 @@ async def test_live_postgres_transient_503_both_replicas_recovers_without_catalo
                 tid, node_1, node_2,
             )
 
-        # 1. Both replicas return 503 (transient failure)
-        await live_db.mark_replica_failure(tid, node_id=node_1, endpoint_url=ep_1)
-        await live_db.mark_replica_failure(tid, node_id=node_2, endpoint_url=ep_2)
+        storage_healthy = False
+        audio_content = b"LIVE_POSTGRES_RECOVERED_AUDIO" * 50
 
-        # Verify that PostgreSQL replicas table still has 2 active replicas (neither was marked 'lost')
-        async with live_db.pool.acquire() as conn:
-            active_count = await conn.fetchval(
-                "SELECT count(*) FROM replicas WHERE track_id = $1 AND status = 'active'",
-                tid,
-            )
-            assert active_count == 2, "Both replicas must remain active in PostgreSQL catalog"
+        async def mock_send(self, request, *args, **kwargs):
+            if not storage_healthy:
+                return httpx.Response(503, content=b"Service Unavailable", request=request)
+            headers = {
+                "Content-Type": "audio/mpeg",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(len(audio_content)),
+            }
+            return httpx.Response(200, content=audio_content, headers=headers, request=request)
 
-        # 2. Both replicas are still returned by get_track_replicas
-        reps = await live_db.get_track_replicas(tid)
-        assert len(reps) == 2, "get_track_replicas must still return replicas even if transient failures occurred"
+        monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
 
-        # 3. Storage nodes recover: clearing failure restores full health
-        await live_db.clear_replica_failure(tid, node_id=node_1, endpoint_url=ep_1)
-        recovered_reps = await live_db.get_track_replicas(tid)
-        assert len(recovered_reps) == 2
-        assert recovered_reps[0]["node_id"] == node_1
+        with TestClient(app, follow_redirects=False) as client:
+            user = register_user(client, f"user_{uuid4().hex[:6]}")
+
+            # 1. Initial attempt: both replicas return 503 -> API returns 503
+            resp_1 = client.get(f"/api/tracks/{tid}/stream")
+            assert resp_1.status_code == 503
+            assert resp_1.json()["code"] == "STORAGE_UNAVAILABLE"
+
+            # Verify in PostgreSQL: both replicas STILL have status='active' (neither marked 'lost')
+            async with db.pool.acquire() as conn:
+                active_count = await conn.fetchval(
+                    "SELECT count(*) FROM replicas WHERE track_id = $1 AND status = 'active'",
+                    tid,
+                )
+                assert active_count == 2, "Both replicas must remain active in PostgreSQL catalog"
+
+            # 2. Storage nodes recover
+            storage_healthy = True
+
+            # 3. Subsequent request to stream track succeeds without ANY catalog change
+            resp_2 = client.get(f"/api/tracks/{tid}/stream")
+            assert resp_2.status_code == 200
+            assert resp_2.content == audio_content
 
     finally:
-        await live_db.disconnect()
+        if not was_connected and db.is_connected:
+            await db.disconnect()
 
