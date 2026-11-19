@@ -327,8 +327,9 @@ class Database:
         endpoint_url: str | None = None,
     ) -> None:
         """
-        Record replica failure across all application nodes (TR: Technical Scenario 7).
-        Updates shared in-memory failure registry and updates PostgreSQL replicas status to 'lost'.
+        Record transient replica failure across all application nodes (TR: Technical Scenario 7).
+        Updates shared in-memory failure registry and records timestamp in PostgreSQL replica_failures table.
+        Does NOT mark replicas as lost permanently in replicas table.
         """
         tid = UUID(str(track_id)) if track_id else None
         now_ts = time.time()
@@ -339,35 +340,77 @@ class Database:
         if node_id:
             self.memory.replica_failures[node_id] = now_ts
             InMemoryStore._shared_replica_failures[node_id] = now_ts
+        if tid and node_id:
+            self.memory.replica_failures[f"{tid}:{node_id}"] = now_ts
+            InMemoryStore._shared_replica_failures[f"{tid}:{node_id}"] = now_ts
 
-        if tid and tid in self.memory.replicas:
-            for r in self.memory.replicas[tid]:
-                if node_id and r.get("node_id") == node_id:
-                    r["status"] = "lost"
-
-        if self.pool:
+        if self.pool and tid:
             try:
                 async with self.pool.acquire() as conn:
-                    if tid and node_id:
+                    await conn.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS replica_failures (
+                            track_id UUID NOT NULL,
+                            node_id VARCHAR(64) NOT NULL,
+                            failed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                            PRIMARY KEY (track_id, node_id)
+                        );
+                        """
+                    )
+                    if node_id:
                         await conn.execute(
-                            "UPDATE replicas SET status = 'lost' WHERE track_id = $1 AND node_id = $2",
+                            """
+                            INSERT INTO replica_failures (track_id, node_id, failed_at)
+                            VALUES ($1, $2, now())
+                            ON CONFLICT (track_id, node_id) DO UPDATE SET failed_at = EXCLUDED.failed_at;
+                            """,
                             tid,
                             node_id,
                         )
-                    elif tid and endpoint_url:
+                    elif endpoint_url:
                         await conn.execute(
                             """
-                            UPDATE replicas
-                            SET status = 'lost'
-                            WHERE track_id = $1 AND node_id = (
-                                SELECT node_id FROM node_registry WHERE endpoint_url = $2 LIMIT 1
-                            )
+                            INSERT INTO replica_failures (track_id, node_id, failed_at)
+                            SELECT $1, node_id, now() FROM node_registry WHERE endpoint_url = $2
+                            ON CONFLICT (track_id, node_id) DO UPDATE SET failed_at = EXCLUDED.failed_at;
                             """,
                             tid,
                             endpoint_url.rstrip("/"),
                         )
             except Exception as e:
-                logger.warning("Failed to mark replica as lost in PostgreSQL: %s", e)
+                logger.warning("Failed to record replica failure in PostgreSQL: %s", e)
+
+    async def clear_replica_failure(
+        self,
+        track_id: UUID | str | None = None,
+        node_id: str | None = None,
+        endpoint_url: str | None = None,
+    ) -> None:
+        """
+        Clear transient failure mark when a replica successfully serves audio.
+        """
+        tid = UUID(str(track_id)) if track_id else None
+        if endpoint_url:
+            ep_clean = endpoint_url.rstrip("/")
+            self.memory.replica_failures.pop(ep_clean, None)
+            InMemoryStore._shared_replica_failures.pop(ep_clean, None)
+        if node_id:
+            self.memory.replica_failures.pop(node_id, None)
+            InMemoryStore._shared_replica_failures.pop(node_id, None)
+        if tid and node_id:
+            self.memory.replica_failures.pop(f"{tid}:{node_id}", None)
+            InMemoryStore._shared_replica_failures.pop(f"{tid}:{node_id}", None)
+
+        if self.pool and tid and node_id:
+            try:
+                async with self.pool.acquire() as conn:
+                    await conn.execute(
+                        "DELETE FROM replica_failures WHERE track_id = $1 AND node_id = $2",
+                        tid,
+                        node_id,
+                    )
+            except Exception as e:
+                logger.debug("Failed to clear replica failure in PostgreSQL: %s", e)
 
     def mark_replica_failure_sync(
         self,
@@ -384,12 +427,34 @@ class Database:
         if node_id:
             self.memory.replica_failures[node_id] = now_ts
             InMemoryStore._shared_replica_failures[node_id] = now_ts
-        if tid and tid in self.memory.replicas:
-            for r in self.memory.replicas[tid]:
-                if node_id and r.get("node_id") == node_id:
-                    r["status"] = "lost"
+        if tid and node_id:
+            self.memory.replica_failures[f"{tid}:{node_id}"] = now_ts
+            InMemoryStore._shared_replica_failures[f"{tid}:{node_id}"] = now_ts
 
-    def get_replica_penalty(self, endpoint_url: str | None = None, node_id: str | None = None) -> float:
+    def clear_replica_failure_sync(
+        self,
+        track_id: UUID | str | None = None,
+        node_id: str | None = None,
+        endpoint_url: str | None = None,
+    ) -> None:
+        tid = UUID(str(track_id)) if track_id else None
+        if endpoint_url:
+            ep_clean = endpoint_url.rstrip("/")
+            self.memory.replica_failures.pop(ep_clean, None)
+            InMemoryStore._shared_replica_failures.pop(ep_clean, None)
+        if node_id:
+            self.memory.replica_failures.pop(node_id, None)
+            InMemoryStore._shared_replica_failures.pop(node_id, None)
+        if tid and node_id:
+            self.memory.replica_failures.pop(f"{tid}:{node_id}", None)
+            InMemoryStore._shared_replica_failures.pop(f"{tid}:{node_id}", None)
+
+    def get_replica_penalty(
+        self,
+        endpoint_url: str | None = None,
+        node_id: str | None = None,
+        track_id: UUID | str | None = None,
+    ) -> float:
         now_ts = time.time()
         fail_times = []
         if endpoint_url:
@@ -403,6 +468,12 @@ class Database:
                 fail_times.append(self.memory.replica_failures[node_id])
             if node_id in InMemoryStore._shared_replica_failures:
                 fail_times.append(InMemoryStore._shared_replica_failures[node_id])
+        if track_id and node_id:
+            tid_key = f"{track_id}:{node_id}"
+            if tid_key in self.memory.replica_failures:
+                fail_times.append(self.memory.replica_failures[tid_key])
+            if tid_key in InMemoryStore._shared_replica_failures:
+                fail_times.append(InMemoryStore._shared_replica_failures[tid_key])
         if not fail_times:
             return 0.0
         last_fail = max(fail_times)
@@ -415,24 +486,41 @@ class Database:
         """
         Returns active replicas on live storage nodes with fresh heartbeat (TR: Technical Scenario 3, 7).
         Replicas are prioritized so that healthy replicas without recent failure penalties are chosen first.
+        If both replicas recently failed, both are still returned (ordered by penalty / least recently failed),
+        ensuring playback resumes automatically when storage nodes recover without manual catalog changes.
         """
         tid = UUID(str(track_id))
         if self.pool:
             async with self.pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS replica_failures (
+                        track_id UUID NOT NULL,
+                        node_id VARCHAR(64) NOT NULL,
+                        failed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                        PRIMARY KEY (track_id, node_id)
+                    );
+                    """
+                )
                 rows = await conn.fetch(
                     """
-                    SELECT r.node_id, n.endpoint_url
+                    SELECT r.node_id, n.endpoint_url,
+                           rf.failed_at
                     FROM replicas r
                     JOIN node_registry n ON n.node_id = r.node_id
+                    LEFT JOIN replica_failures rf ON rf.track_id = r.track_id AND rf.node_id = r.node_id
                     WHERE r.track_id = $1
                       AND r.status = 'active'
                       AND n.status = 'alive'
                       AND n.last_heartbeat >= now() - INTERVAL '15 seconds'
-                    ORDER BY r.id ASC
+                    ORDER BY
+                      CASE WHEN rf.failed_at IS NOT NULL AND rf.failed_at >= now() - INTERVAL '30 seconds' THEN 1 ELSE 0 END ASC,
+                      rf.failed_at ASC NULLS FIRST,
+                      r.id ASC
                     """,
                     tid,
                 )
-                res = [dict(r) for r in rows]
+                return [{"node_id": r["node_id"], "endpoint_url": r["endpoint_url"]} for r in rows]
         else:
             now = datetime.now(timezone.utc)
             reps = self.memory.replicas.get(tid, [])
@@ -446,11 +534,9 @@ class Database:
                                 "node_id": r["node_id"],
                                 "endpoint_url": node["endpoint_url"],
                             })
-            res = alive
-
-        # Prioritize healthy replicas without failure penalty
-        res.sort(key=lambda rep: self.get_replica_penalty(rep.get("endpoint_url"), rep.get("node_id")))
-        return res
+            # Prioritize healthy replicas without failure penalty
+            alive.sort(key=lambda rep: self.get_replica_penalty(rep.get("endpoint_url"), rep.get("node_id"), tid))
+            return alive
 
     async def add_track_replica(self, track_id: UUID | str, node_id: str, status: str = "active"):
         tid = UUID(str(track_id))
