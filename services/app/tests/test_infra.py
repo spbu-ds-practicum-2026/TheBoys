@@ -146,6 +146,13 @@ def test_migrations_structure_and_atomic_execution():
     assert mig_0002.exists(), "Migration 0002 must exist"
     assert mig_0003.exists(), "Migration 0003 must exist"
 
+    # Verify that all migrations record their version in schema_migrations
+    assert "INSERT INTO schema_migrations" in mig_0001.read_text(encoding="utf-8")
+    assert "INSERT INTO schema_migrations" in mig_0002.read_text(encoding="utf-8")
+    mig_0003_content = mig_0003.read_text(encoding="utf-8")
+    assert "INSERT INTO schema_migrations" in mig_0003_content
+    assert "(3, '0003_replica_failures')" in mig_0003_content
+
     # Verify that migrate.sh enforces single-transaction mode (--single-transaction)
     migrate_sh = REPO_ROOT / "infra" / "postgres" / "migrate.sh"
     assert migrate_sh.exists(), "infra/postgres/migrate.sh must exist"
