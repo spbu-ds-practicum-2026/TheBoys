@@ -11,3 +11,8 @@ CREATE TABLE IF NOT EXISTS replica_failures (
 
 CREATE INDEX IF NOT EXISTS idx_replica_failures_track_failed_at
     ON replica_failures (track_id, failed_at);
+
+-- Record migration version
+INSERT INTO schema_migrations (version, name)
+VALUES (3, '0003_replica_failures')
+ON CONFLICT (version) DO NOTHING;
