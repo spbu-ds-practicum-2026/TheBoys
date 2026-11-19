@@ -1012,3 +1012,209 @@ async def test_literal_search_in_track_catalog_special_characters(api_client):
         finally:
             await live_db.disconnect()
 
+
+@pytest.mark.asyncio
+async def test_transient_503_both_replicas_recovers_without_catalog_change(api_client, monkeypatch):
+    """
+    TR Technical Scenario 7 regression test:
+    1. Both replicas temporarily return 503.
+    2. Neither replica is marked permanently 'lost' in the catalog.
+    3. When storage nodes recover, subsequent stream request succeeds without manual catalog intervention.
+    """
+    import httpx
+    db.memory.replica_failures.clear()
+
+    alice = register_user(api_client, "alice_transient_503_user")
+    track = api_client.get("/api/tracks").json()[0]
+    track_id = UUID(track["id"])
+
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry["storage-fail-1"] = {
+        "node_id": "storage-fail-1",
+        "role": "storage",
+        "endpoint_url": "http://storage-fail-1:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    db.memory.node_registry["storage-fail-2"] = {
+        "node_id": "storage-fail-2",
+        "role": "storage",
+        "endpoint_url": "http://storage-fail-2:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    await db.add_track_replica(track_id, "storage-fail-1", status="active")
+    await db.add_track_replica(track_id, "storage-fail-2", status="active")
+
+    storage_healthy = False
+    audio_content = b"RECOVERED_AUDIO_STREAM_DATA" * 100
+
+    async def mock_send(self, request, *args, **kwargs):
+        if not storage_healthy:
+            return httpx.Response(503, content=b"Service Temporarily Unavailable", request=request)
+        headers = {
+            "Content-Type": "audio/mpeg",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(len(audio_content)),
+        }
+        return httpx.Response(200, content=audio_content, headers=headers, request=request)
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # 1. Both replicas return 503 -> Request fails with 503
+    resp_1 = api_client.get(f"/api/tracks/{track_id}/stream")
+    assert resp_1.status_code == 503
+    assert resp_1.json()["code"] == "STORAGE_UNAVAILABLE"
+
+    # Verify both replicas remain active in catalog (neither was marked 'lost')
+    replicas = await db.get_track_replicas(track_id)
+    assert len(replicas) == 2, "Both replicas must remain present in catalog after transient 503"
+
+    # 2. Storage nodes recover
+    storage_healthy = True
+
+    # 3. New request to stream track succeeds without ANY catalog change
+    resp_2 = api_client.get(f"/api/tracks/{track_id}/stream")
+    assert resp_2.status_code == 200
+    assert resp_2.content == audio_content
+
+
+@pytest.mark.asyncio
+async def test_live_postgres_replica_failover_across_nodes():
+    """
+    TR: Технический сценарий 7 «Воспроизведение с резервной реплики».
+    PostgreSQL regression test for Oleg's review:
+    1. Two active replicas exist in PostgreSQL for a track.
+    2. Node A starts streaming from primary replica, which aborts mid-stream.
+    3. Node A records transient failure timestamp in PostgreSQL (WITHOUT setting replicas.status='lost').
+    4. Client retries with Range on Node B.
+    5. Node B queries PostgreSQL, prioritizes healthy replica, and streams remaining audio seamlessly.
+    """
+    db_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if not db_url:
+        pytest.skip("Requires live PostgreSQL (DATABASE_URL or TEST_DATABASE_URL)")
+
+    dsn = clean_postgres_dsn(db_url)
+    db_a = Database()
+    db_b = Database()
+    await db_a.connect(dsn)
+    await db_b.connect(dsn)
+
+    try:
+        tid = uuid4()
+        node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
+        ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
+
+        async with db_a.pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
+                tid, "Postgres Failover Track", "Artist", 60,
+            )
+            await conn.execute(
+                """
+                INSERT INTO node_registry (node_id, role, endpoint_url, last_heartbeat, status)
+                VALUES ($1, 'storage', $2, now(), 'alive'), ($3, 'storage', $4, now(), 'alive')
+                ON CONFLICT (node_id) DO UPDATE SET last_heartbeat = now(), status = 'alive'
+                """,
+                node_1, ep_1, node_2, ep_2,
+            )
+            await conn.execute(
+                """
+                INSERT INTO replicas (track_id, node_id, status)
+                VALUES ($1, $2, 'active'), ($1, $3, 'active')
+                ON CONFLICT (track_id, node_id) DO UPDATE SET status = 'active'
+                """,
+                tid, node_1, node_2,
+            )
+
+        reps_a = await db_a.get_track_replicas(tid)
+        assert len(reps_a) == 2
+
+        # Node A attempts node_1 and fails
+        await db_a.mark_replica_failure(tid, node_id=node_1, endpoint_url=ep_1)
+
+        # Crucial: verify that replicas in PostgreSQL were NOT marked 'lost'
+        async with db_a.pool.acquire() as conn:
+            statuses = await conn.fetch("SELECT status FROM replicas WHERE track_id = $1", tid)
+            assert all(s["status"] == "active" for s in statuses), "Replicas must remain active in replicas table"
+
+        # Node B queries PostgreSQL for Range retry: healthy node_2 must be prioritized
+        reps_b = await db_b.get_track_replicas(tid)
+        assert len(reps_b) == 2
+        assert reps_b[0]["node_id"] == node_2, f"Node B must prioritize healthy node_2, got {reps_b[0]['node_id']}"
+        assert reps_b[1]["node_id"] == node_1
+
+    finally:
+        await db_a.disconnect()
+        await db_b.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_live_postgres_transient_503_both_replicas_recovers_without_catalog_change():
+    """
+    TR: Технический сценарий 7.
+    PostgreSQL regression test for Oleg's review:
+    1. Both replicas return temporary 503.
+    2. Replicas in PostgreSQL remain status='active' (NOT marked 'lost').
+    3. When storage recovers, subsequent request to stream track succeeds without any manual catalog intervention.
+    """
+    db_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if not db_url:
+        pytest.skip("Requires live PostgreSQL (DATABASE_URL or TEST_DATABASE_URL)")
+
+    dsn = clean_postgres_dsn(db_url)
+    live_db = Database()
+    await live_db.connect(dsn)
+
+    try:
+        tid = uuid4()
+        node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
+        ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
+
+        async with live_db.pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
+                tid, "Postgres Recovery Track", "Artist", 60,
+            )
+            await conn.execute(
+                """
+                INSERT INTO node_registry (node_id, role, endpoint_url, last_heartbeat, status)
+                VALUES ($1, 'storage', $2, now(), 'alive'), ($3, 'storage', $4, now(), 'alive')
+                ON CONFLICT (node_id) DO UPDATE SET last_heartbeat = now(), status = 'alive'
+                """,
+                node_1, ep_1, node_2, ep_2,
+            )
+            await conn.execute(
+                """
+                INSERT INTO replicas (track_id, node_id, status)
+                VALUES ($1, $2, 'active'), ($1, $3, 'active')
+                ON CONFLICT (track_id, node_id) DO UPDATE SET status = 'active'
+                """,
+                tid, node_1, node_2,
+            )
+
+        # 1. Both replicas return 503 (transient failure)
+        await live_db.mark_replica_failure(tid, node_id=node_1, endpoint_url=ep_1)
+        await live_db.mark_replica_failure(tid, node_id=node_2, endpoint_url=ep_2)
+
+        # Verify that PostgreSQL replicas table still has 2 active replicas (neither was marked 'lost')
+        async with live_db.pool.acquire() as conn:
+            active_count = await conn.fetchval(
+                "SELECT count(*) FROM replicas WHERE track_id = $1 AND status = 'active'",
+                tid,
+            )
+            assert active_count == 2, "Both replicas must remain active in PostgreSQL catalog"
+
+        # 2. Both replicas are still returned by get_track_replicas
+        reps = await live_db.get_track_replicas(tid)
+        assert len(reps) == 2, "get_track_replicas must still return replicas even if transient failures occurred"
+
+        # 3. Storage nodes recover: clearing failure restores full health
+        await live_db.clear_replica_failure(tid, node_id=node_1, endpoint_url=ep_1)
+        recovered_reps = await live_db.get_track_replicas(tid)
+        assert len(recovered_reps) == 2
+        assert recovered_reps[0]["node_id"] == node_1
+
+    finally:
+        await live_db.disconnect()
+

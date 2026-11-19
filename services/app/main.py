@@ -378,6 +378,7 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
             req = client.build_request("GET", blob_url, headers={**headers, "X-Internal-Secret": INTERNAL_SECRET})
             resp = await client.send(req, stream=True)
             if resp.status_code in (200, 206, 416):
+                await db.clear_replica_failure(tid, node_id=rep.get("node_id"), endpoint_url=endpoint)
                 out_headers = {
                     "Accept-Ranges": resp.headers.get("Accept-Ranges", "bytes"),
                     "Content-Type": resp.headers.get("Content-Type", "audio/mpeg"),
@@ -414,9 +415,9 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
             await client.aclose()
             continue
 
-    # 2. In explicit testing mode, fallback to synthetic audio frames
+    # 2. In explicit testing mode without registered storage replicas, fallback to synthetic audio frames
     is_test_mode = os.getenv("TESTING") == "1" or getattr(app.state, "enable_synthetic_stream", False) or getattr(app.state, "enable_persistence", False)
-    if is_test_mode:
+    if not replicas and is_test_mode:
         duration_s = track.get("duration_s", 30)
         data = MP3_FRAME * max(1, int(duration_s / FRAME_SECONDS))
         size = len(data)
