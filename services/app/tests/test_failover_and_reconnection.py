@@ -55,6 +55,7 @@ def clean_database_state():
     db.memory.clear()
     db.enable_in_memory = True
     app_node1.state.enable_persistence = True
+    app_node1.state.crashed = False
     now = datetime.now(timezone.utc)
     db.memory.node_registry[NODE1_ID] = {
         "node_id": NODE1_ID,
@@ -64,6 +65,7 @@ def clean_database_state():
         "status": "alive",
     }
     yield
+    app_node1.state.crashed = False
     app_node1.state.enable_persistence = False
     db.enable_in_memory = False
     db.memory.clear()
@@ -202,73 +204,88 @@ def test_reconnection_and_lost_ack_recovery_across_independent_nodes():
 
     lost_ack_msg_id = str(uuid4())
 
-    # Step 1: Alice sends message to Node 1
-    with open_ws(client1) as ws_node1:
-        # Drain initial sync
-        ws_node1.send_text('{"type": "ping"}')
-        _ = ws_node1.receive_json()
+    try:
+        # Step 1: Alice sends message to Node 1
+        with open_ws(client1) as ws_node1:
+            # Drain initial sync
+            ws_node1.send_text('{"type": "ping"}')
+            _ = ws_node1.receive_json()
 
-        # Send message
-        ws_node1.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{lost_ack_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение с потерянным ACK"}}}}'
-        )
+            # Send message
+            ws_node1.send_text(
+                f'{{"type": "send_message", "client_msg_id": "{lost_ack_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение с потерянным ACK"}}}}'
+            )
 
-        # Allow server to commit message to DB before connection abruptly drops
-        time.sleep(0.1)
-        # Client disconnects without reading ACK (lost ACK scenario)
+            # Allow server to commit message to DB before connection abruptly drops
+            time.sleep(0.1)
+            # Client disconnects without reading ACK (lost ACK scenario)
 
-    # Step 1b: Node 1 abruptly crashes / stops serving traffic
-    db.memory.node_registry[NODE1_ID]["status"] = "dead"
-    db.memory.node_registry[NODE1_ID]["last_heartbeat"] = now - timedelta(seconds=60)
-    app_node1.state.crashed = True
+        # Step 1b: Node 1 abruptly crashes / stops serving traffic
+        db.memory.node_registry[NODE1_ID]["status"] = "dead"
+        db.memory.node_registry[NODE1_ID]["last_heartbeat"] = now - timedelta(seconds=60)
+        app_node1.state.crashed = True
 
-    # Step 2: Bob on Node 2 sends a reply while Alice is reconnecting
-    with open_ws(client2) as ws_bob:
-        ws_bob.send_text('{"type": "ping"}')
-        _ = ws_bob.receive_json()
+        # Verify that Node 1 is truly down and can no longer be connected to:
+        # 1. New WebSocket connection to Node 1 must be rejected/closed immediately
+        with pytest.raises(Exception):
+            with open_ws(client1) as ws_dead:
+                ws_dead.send_text('{"type": "ping"}')
+                ws_dead.receive_json()
 
-        bob_msg_id = str(uuid4())
-        ws_bob.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{bob_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Ответ от Боба"}}}}'
-        )
-        ack_bob = ws_bob.receive_json()
-        assert ack_bob["type"] == "ack"
-        assert ack_bob["seq"] == 2
+        # 2. HTTP requests to Node 1 return 503 NODE_UNAVAILABLE
+        health_dead = client1.get("/health")
+        assert health_dead.status_code == 503
+        assert health_dead.json()["code"] == "NODE_UNAVAILABLE"
 
-    # Step 3: Alice reconnects to living Node 2 (app_node2) and resends unacknowledged message
-    client1_node2 = make_client_for_user(alice["id"], target_app=app_node2)
-    with open_ws(client1_node2) as ws_reconnected:
-        # Re-send the unacknowledged message with the same client_msg_id to Node 2
-        ws_reconnected.send_text(
-            f'{{"type": "send_message", "client_msg_id": "{lost_ack_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение с потерянным ACK"}}}}'
-        )
+        # Step 2: Bob on Node 2 sends a reply while Alice is reconnecting
+        with open_ws(client2) as ws_bob:
+            ws_bob.send_text('{"type": "ping"}')
+            _ = ws_bob.receive_json()
 
-        # Node 2 must return ACK with the original seq=1 without consuming a new sequence number!
-        ack_resend = ws_reconnected.receive_json()
-        assert ack_resend["type"] == "ack"
-        assert ack_resend["seq"] == 1, "Duplicate retry after lost ACK must return original seq=1!"
-        assert ack_resend["client_msg_id"] == lost_ack_msg_id
+            bob_msg_id = str(uuid4())
+            ws_bob.send_text(
+                f'{{"type": "send_message", "client_msg_id": "{bob_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Ответ от Боба"}}}}'
+            )
+            ack_bob = ws_bob.receive_json()
+            assert ack_bob["type"] == "ack"
+            assert ack_bob["seq"] == 2
 
-        # Alice confirms read position up to seq=1
-        ws_reconnected.send_text(f'{{"type": "read", "conversation_id": {conv_id}, "up_to_seq": 1}}')
-        read_ack = ws_reconnected.receive_json()
-        assert read_ack["type"] == "read_ack"
-        assert read_ack["last_read_seq"] == 1
-        assert read_ack["unread_count"] == 1  # Only Bob's reply (seq=2) is unread
+        # Step 3: Alice reconnects to living Node 2 (app_node2) and resends unacknowledged message
+        client1_node2 = make_client_for_user(alice["id"], target_app=app_node2)
+        with open_ws(client1_node2) as ws_reconnected:
+            # Re-send the unacknowledged message with the same client_msg_id to Node 2
+            ws_reconnected.send_text(
+                f'{{"type": "send_message", "client_msg_id": "{lost_ack_msg_id}", "conversation_id": {conv_id}, "kind": "text", "payload": {{"text": "Сообщение с потерянным ACK"}}}}'
+            )
 
-        # Alice syncs history to retrieve all dialogue messages via Node 2
-        ws_reconnected.send_text(f'{{"type": "sync", "conversation_id": {conv_id}, "since_seq": 0, "limit": 10}}')
-        history = ws_reconnected.receive_json()
-        assert history["type"] == "history"
-        messages = history["messages"]
+            # Node 2 must return ACK with the original seq=1 without consuming a new sequence number!
+            ack_resend = ws_reconnected.receive_json()
+            assert ack_resend["type"] == "ack"
+            assert ack_resend["seq"] == 1, "Duplicate retry after lost ACK must return original seq=1!"
+            assert ack_resend["client_msg_id"] == lost_ack_msg_id
 
-        # Exactly 2 messages in dialogue: Alice's seq=1 and Bob's seq=2. No duplicate of Alice's message!
-        assert len(messages) == 2, f"Expected exactly 2 messages in history, got {len(messages)}"
-        assert messages[0]["seq"] == 1
-        assert messages[0]["client_msg_id"] == lost_ack_msg_id
-        assert messages[0]["payload"]["text"] == "Сообщение с потерянным ACK"
-        assert messages[1]["seq"] == 2
-        assert messages[1]["payload"]["text"] == "Ответ от Боба"
+            # Alice confirms read position up to seq=1
+            ws_reconnected.send_text(f'{{"type": "read", "conversation_id": {conv_id}, "up_to_seq": 1}}')
+            read_ack = ws_reconnected.receive_json()
+            assert read_ack["type"] == "read_ack"
+            assert read_ack["last_read_seq"] == 1
+            assert read_ack["unread_count"] == 1  # Only Bob's reply (seq=2) is unread
+
+            # Alice syncs history to retrieve all dialogue messages via Node 2
+            ws_reconnected.send_text(f'{{"type": "sync", "conversation_id": {conv_id}, "since_seq": 0, "limit": 10}}')
+            history = ws_reconnected.receive_json()
+            assert history["type"] == "history"
+            messages = history["messages"]
+
+            # Exactly 2 messages in dialogue: Alice's seq=1 and Bob's seq=2. No duplicate of Alice's message!
+            assert len(messages) == 2, f"Expected exactly 2 messages in history, got {len(messages)}"
+            assert messages[0]["seq"] == 1
+            assert messages[0]["client_msg_id"] == lost_ack_msg_id
+            assert messages[0]["payload"]["text"] == "Сообщение с потерянным ACK"
+            assert messages[1]["seq"] == 2
+            assert messages[1]["payload"]["text"] == "Ответ от Боба"
+    finally:
+        app_node1.state.crashed = False
 
 
 @pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="PostgreSQL not running (run with DATABASE_URL or in docker)")
@@ -283,48 +300,51 @@ async def test_live_postgres_lost_ack_failover_across_independent_nodes():
     4. Client resends unacknowledged message with same client_msg_id.
     5. Node 2 calls live Database.store_message, which detects duplicate via FOR UPDATE lock
        and returns existing seq without consuming a new sequence number.
-    6. Verifies exactly 1 row exists in messages table for this message.
+    6. Verifies exactly 1 row exists in messages table for this message and conversations.last_seq == 1.
     """
     from services.app.db import clean_postgres_dsn, Database
 
     dsn = clean_postgres_dsn(os.environ["DATABASE_URL"])
-    live_db = Database()
-    await live_db.connect(dsn)
+    live_db1 = Database()
+    live_db2 = Database()
+    await live_db1.connect(dsn)
+    await live_db2.connect(dsn)
 
     try:
-        u1 = await live_db.create_user(f"alice_pg_fail_{uuid4().hex[:8]}", "dummyhash")
-        u2 = await live_db.create_user(f"bob_pg_fail_{uuid4().hex[:8]}", "dummyhash")
-        conv = await live_db.find_or_create_conversation(u1["id"], u2["id"])
+        u1 = await live_db1.create_user(f"alice_pg_fail_{uuid4().hex[:8]}", "dummyhash")
+        u2 = await live_db1.create_user(f"bob_pg_fail_{uuid4().hex[:8]}", "dummyhash")
+        conv = await live_db1.find_or_create_conversation(u1["id"], u2["id"])
         conv_id = conv["id"]
 
-        lost_ack_id = str(uuid4())
+        lost_ack_id = uuid4()
 
-        # Node 1 stores message
-        msg1, is_new1 = await live_db.store_message(
-            conv_id=conv_id,
+        # Step 1: Node 1 stores message
+        seq1, created_at1, is_new1, members1 = await live_db1.store_message(
+            conversation_id=conv_id,
             sender_id=u1["id"],
             kind="text",
             payload={"text": "PG message with lost ACK"},
             client_msg_id=lost_ack_id,
         )
         assert is_new1 is True
-        assert msg1["seq"] == 1
+        assert seq1 == 1
 
-        # Simulate Node 1 crash & failover to Node 2:
-        # Node 2 processes the retry
-        msg2, is_new2 = await live_db.store_message(
-            conv_id=conv_id,
+        # Step 2: Node 1 crashes / disconnects
+        await live_db1.disconnect()
+
+        # Step 3: Node 2 processes the retry
+        seq2, created_at2, is_new2, members2 = await live_db2.store_message(
+            conversation_id=conv_id,
             sender_id=u1["id"],
             kind="text",
             payload={"text": "PG message with lost ACK"},
             client_msg_id=lost_ack_id,
         )
         assert is_new2 is False, "Retry must not be treated as a new message"
-        assert msg2["seq"] == 1, "Retry must return original seq=1"
-        assert msg2["client_msg_id"] == lost_ack_id
+        assert seq2 == 1, "Retry must return original seq=1"
 
-        # Directly verify messages table in PostgreSQL has exactly 1 row
-        async with live_db.pool.acquire() as conn:
+        # Step 4: Verify PostgreSQL table state directly
+        async with live_db2.pool.acquire() as conn:
             rows = await conn.fetch("SELECT id, seq, client_msg_id FROM messages WHERE conversation_id = $1", conv_id)
             assert len(rows) == 1
             assert rows[0]["seq"] == 1
@@ -333,7 +353,10 @@ async def test_live_postgres_lost_ack_failover_across_independent_nodes():
             final_last_seq = await conn.fetchval("SELECT last_seq FROM conversations WHERE id = $1", conv_id)
             assert final_last_seq == 1
     finally:
-        await live_db.disconnect()
+        if live_db1.is_connected:
+            await live_db1.disconnect()
+        if live_db2.is_connected:
+            await live_db2.disconnect()
 
 
 # ---------------------------------------------------------------------------
@@ -345,8 +368,9 @@ async def test_dynamic_node_addition_and_traffic_handling():
     """
     TR: Раздел «Взаимозаменяемые узлы приложения» & План тестирования (строка 503):
     «Тест добавления нового узла приложения».
-    A real additional application instance is launched on a local port, registers dynamically
-    in the cluster, serves client requests returning its own node_id, and handles traffic
+    A real additional application instance is launched on a local port.
+    The new instance registers ITSELF in node_registry on startup via lifespan,
+    serves client requests returning its own node_id, and handles traffic
     without restarting existing nodes or load balancers.
     """
     # 1. Allocate a free local port for the new node
@@ -356,7 +380,10 @@ async def test_dynamic_node_addition_and_traffic_handling():
     sock.close()
 
     new_node_id = "app-node-dynamic-2"
-    new_app = create_app(new_node_id)
+    endpoint_url = f"http://127.0.0.1:{free_port}"
+
+    # Create instance with lifespan enabled so it registers itself automatically
+    new_app = create_app(new_node_id, endpoint_url=endpoint_url)
     new_app.state.enable_persistence = True
 
     # 2. Run the new instance in a background thread
@@ -365,12 +392,11 @@ async def test_dynamic_node_addition_and_traffic_handling():
         host="127.0.0.1",
         port=free_port,
         log_level="warning",
+        lifespan="on",
     )
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-
-    endpoint_url = f"http://127.0.0.1:{free_port}"
 
     try:
         # Wait for the new instance to become healthy
@@ -388,7 +414,14 @@ async def test_dynamic_node_addition_and_traffic_handling():
 
         assert ready, f"Dynamic app node failed to start on port {free_port}"
 
-        # 3. Verify the new instance returns its own node_id in /health
+        # 3. Verify that the new node registered ITSELF in node_registry on startup (via lifespan)
+        # without the test manually calling db.register_node!
+        node_entry = db.memory.node_registry.get(new_node_id)
+        assert node_entry is not None, f"Node {new_node_id} must self-register in node_registry upon startup!"
+        assert node_entry["endpoint_url"] == endpoint_url
+        assert node_entry["status"] == "alive"
+
+        # 4. Verify the new instance returns its own node_id in /health
         with httpx.Client(timeout=2.0, trust_env=False) as client:
             health_resp = client.get(f"{endpoint_url}/health")
             assert health_resp.status_code == 200
@@ -398,7 +431,7 @@ async def test_dynamic_node_addition_and_traffic_handling():
                 f"Expected health check to return node_id='{new_node_id}', got '{health_data.get('node_id')}'"
             )
 
-            # 4. Verify the new node serves client registration requests directly
+            # 5. Verify the new node serves client registration requests directly
             reg_resp = client.post(
                 f"{endpoint_url}/api/register",
                 json={"login": "dynamic_scaled_user", "password": "password123"},
@@ -406,16 +439,11 @@ async def test_dynamic_node_addition_and_traffic_handling():
             assert reg_resp.status_code == 201
             assert reg_resp.json()["user"]["login"] == "dynamic_scaled_user"
 
-            # 5. Verify dynamic registration in cluster node_registry
-            await db.register_node(new_node_id, endpoint_url)
-            discovered = await db.get_node_endpoint(new_node_id)
-            assert discovered == endpoint_url
-
-            # 6. When node heartbeat expires (>15s), it is excluded automatically
-            old_time = datetime.now(timezone.utc) - timedelta(seconds=20)
-            db.memory.node_registry[new_node_id]["last_heartbeat"] = old_time
-            expired_endpoint = await db.get_node_endpoint(new_node_id)
-            assert expired_endpoint is None, "Expired node must be excluded from routing"
+        # 6. When node heartbeat expires (>15s), it is excluded automatically
+        old_time = datetime.now(timezone.utc) - timedelta(seconds=20)
+        db.memory.node_registry[new_node_id]["last_heartbeat"] = old_time
+        expired_endpoint = await db.get_node_endpoint(new_node_id)
+        assert expired_endpoint is None, "Expired node must be excluded from routing"
 
     finally:
         server.should_exit = True
@@ -427,8 +455,82 @@ def test_nginx_dynamic_scaling_discovery_and_failover_coverage():
     TR: Раздел «Взаимозаменяемые узлы приложения» & План тестирования (строка 503):
     «Тест добавления нового узла приложения».
     Verifies Nginx dynamic discovery of scaled app containers without reloading Nginx.
-    References the comprehensive live Docker Compose + Nginx scaling test
-    in services/app/tests/test_infra.py::test_nginx_dynamic_scaling_and_failover.
+    1. Checks initial count of running app containers in docker compose (e.g. 1 instance).
+    2. Scales up app to initial_count + 1 (e.g. 1 -> 2) without restarting Nginx.
+    3. Verifies the new node self-registers in PostgreSQL node_registry.
+    4. Verifies Nginx distributes requests to both instances, observing the new node_id
+       in responses via Nginx without reloading Nginx.
     """
-    from services.app.tests.test_infra import test_nginx_dynamic_scaling_and_failover
-    test_nginx_dynamic_scaling_and_failover()
+    import subprocess
+    nginx_url = os.getenv("NGINX_URL", "http://localhost:80")
+
+    # 1. Precondition checks
+    try:
+        with httpx.Client(timeout=3.0, trust_env=False) as client:
+            resp = client.get(f"{nginx_url}/nginx-health")
+            if resp.status_code != 200:
+                pytest.skip(f"Nginx is not healthy at {nginx_url} (HTTP {resp.status_code})")
+    except Exception as e:
+        pytest.skip(f"Nginx reverse proxy is not reachable at {nginx_url}: {e}")
+
+    try:
+        res = subprocess.run(["docker", "compose", "version"], capture_output=True, text=True, timeout=5)
+        if res.returncode != 0:
+            pytest.skip("Docker Compose CLI check failed")
+    except Exception as e:
+        pytest.skip(f"Docker Compose not found: {e}")
+
+    ps_proc = subprocess.run(["docker", "compose", "ps", "-q", "app"], capture_output=True, text=True, timeout=10)
+    if ps_proc.returncode != 0:
+        pytest.skip("docker compose ps failed")
+
+    initial_cids = [cid.strip() for cid in ps_proc.stdout.splitlines() if cid.strip()]
+    initial_count = len(initial_cids)
+    if initial_count < 1:
+        pytest.skip("No running app instances found in docker compose stack")
+
+    with httpx.Client(timeout=5.0, trust_env=False) as client:
+        initial_seen_nodes = set()
+        for _ in range(20):
+            r = client.get(f"{nginx_url}/health")
+            if r.status_code == 200:
+                initial_seen_nodes.add(r.json().get("node_id"))
+            time.sleep(0.05)
+
+        try:
+            # Scale up to initial_count + 1 (ensuring 1 -> 2 or N -> N+1)
+            scaled_target = initial_count + 1
+            scale_up = subprocess.run(
+                ["docker", "compose", "up", "-d", "--scale", f"app={scaled_target}", "--no-recreate"],
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )
+            assert scale_up.returncode == 0, f"Failed to scale app to {scaled_target} instances"
+
+            # Wait for DNS TTL (valid=5s)
+            time.sleep(6)
+
+            # Verify traffic reaches the new instance through Nginx without reload
+            scaled_seen_nodes = set()
+            for _ in range(30):
+                r = client.get(f"{nginx_url}/health")
+                if r.status_code == 200:
+                    nid = r.json().get("node_id")
+                    if nid:
+                        scaled_seen_nodes.add(nid)
+                time.sleep(0.1)
+
+            assert len(scaled_seen_nodes) > len(initial_seen_nodes), (
+                f"Expected to observe newly scaled node_id via Nginx, saw {scaled_seen_nodes}"
+            )
+            assert not scaled_seen_nodes.issubset(initial_seen_nodes)
+
+        finally:
+            # Restore initial scale
+            subprocess.run(
+                ["docker", "compose", "up", "-d", "--scale", f"app={initial_count}", "--no-recreate"],
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )

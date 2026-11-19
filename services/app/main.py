@@ -244,20 +244,50 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse({"code": "INVALID_INPUT", "message": "Некорректные входные данные."}, status_code=422)
 
 
+@app.middleware("http")
+async def check_crashed_middleware(request: Request, call_next):
+    if getattr(request.app.state, "crashed", False):
+        return JSONResponse(
+            {"code": "NODE_UNAVAILABLE", "message": "Узел аварийно остановлен."},
+            status_code=503,
+        )
+    return await call_next(request)
+
+
 # Mount web UI (Jinja2 + HTMX)
 mount_web(app, get_user_from_request)
 
 
-def create_app(node_id: str | None = None) -> FastAPI:
+def create_app(node_id: str | None = None, endpoint_url: str | None = None) -> FastAPI:
     nid = node_id or NODE_ID
+
+    @asynccontextmanager
+    async def node_lifespan(app_inst: FastAPI):
+        # Startup: register node in cluster registry and begin heartbeats
+        if not db.is_connected:
+            await db.connect()
+        ep = endpoint_url or getattr(app_inst.state, "endpoint_url", None) or os.getenv("NODE_ENDPOINT_URL", f"http://{nid}:8000")
+        await db.register_node(nid, ep)
+        heartbeat_task = asyncio.create_task(heartbeat_loop(nid))
+        yield
+        # Shutdown
+        heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
+        await db.unregister_node(nid)
+
     app_instance = FastAPI(
         title=f"TheBoys Application Node ({nid})",
         version="1.0.0",
-        lifespan=lifespan if nid == NODE_ID else None,
+        lifespan=node_lifespan,
     )
     app_instance.state.node_id = nid
+    app_instance.state.endpoint_url = endpoint_url
     app_instance.state.active_connections = {}
     app_instance.state.user_connections = {}
+    app_instance.middleware("http")(check_crashed_middleware)
     # Include all routes from the main app (API, Web, WebSocket)
     for route in app.routes:
         app_instance.routes.append(route)
@@ -627,6 +657,12 @@ async def _send_remote_deliver(node_id: str, targets: list[DeliveryTarget], even
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    # 0. Check if node is crashed / stopped
+    if getattr(websocket.app.state, "crashed", False):
+        await websocket.accept()
+        await websocket.close(code=1001, reason="Node unavailable")
+        return
+
     # 1. Check Origin
     origin = websocket.headers.get("origin")
     allowed_origins = get_allowed_origins()
