@@ -347,16 +347,6 @@ class Database:
         if self.pool and tid:
             try:
                 async with self.pool.acquire() as conn:
-                    await conn.execute(
-                        """
-                        CREATE TABLE IF NOT EXISTS replica_failures (
-                            track_id UUID NOT NULL,
-                            node_id VARCHAR(64) NOT NULL,
-                            failed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                            PRIMARY KEY (track_id, node_id)
-                        );
-                        """
-                    )
                     if node_id:
                         await conn.execute(
                             """
@@ -492,16 +482,6 @@ class Database:
         tid = UUID(str(track_id))
         if self.pool:
             async with self.pool.acquire() as conn:
-                await conn.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS replica_failures (
-                        track_id UUID NOT NULL,
-                        node_id VARCHAR(64) NOT NULL,
-                        failed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        PRIMARY KEY (track_id, node_id)
-                    );
-                    """
-                )
                 rows = await conn.fetch(
                     """
                     SELECT r.node_id, n.endpoint_url,

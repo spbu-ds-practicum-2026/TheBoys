@@ -138,8 +138,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS unique_active_job_per_track
     ON jobs (track_id, task_type)
     WHERE status IN ('pending', 'running');
 
+-- 10. Transient Replica Failures (Dynamic failover cooldown without marking lost)
+CREATE TABLE IF NOT EXISTS replica_failures (
+    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+    node_id VARCHAR(64) NOT NULL REFERENCES node_registry(node_id) ON DELETE CASCADE,
+    failed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (track_id, node_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_replica_failures_track_failed_at
+    ON replica_failures (track_id, failed_at);
+
 -- Register initial migration versions for newly initialized databases
 INSERT INTO schema_migrations (version, name) VALUES
     (1, '0001_initial_schema'),
-    (2, '0002_constraints_and_idempotency')
+    (2, '0002_constraints_and_idempotency'),
+    (3, '0003_replica_failures')
 ON CONFLICT (version) DO NOTHING;
