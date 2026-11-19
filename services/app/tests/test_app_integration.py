@@ -716,31 +716,234 @@ async def test_stream_playback_failover_to_second_replica_after_midstream_abort(
 
     monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
 
-    # Step 1: Initial request starts streaming from storage-1 and aborts after chunk 1
-    received_chunks = []
-    with api_client.stream("GET", f"/api/tracks/{track_id}/stream") as stream_resp:
-        assert stream_resp.status_code == 200
-        for chunk in stream_resp.iter_bytes():
-            received_chunks.append(chunk)
+    # Step 1: Initial request starts streaming from storage-1 and aborts after chunk 1.
+    # We verify that the client receives the first 64 KiB, but the connection aborts with an error
+    # instead of completing cleanly with EOF (TR: Technical Scenario 7).
+    chunks_1 = []
+    clean_eof_1 = False
+    scope_1 = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "path": f"/api/tracks/{track_id}/stream",
+        "raw_path": f"/api/tracks/{track_id}/stream".encode(),
+        "query_string": b"",
+        "headers": [
+            (b"cookie", f"session={api_client.cookies['session']}".encode()),
+        ],
+    }
+    async def receive_1():
+        return {"type": "http.disconnect"}
+    async def send_1(msg):
+        nonlocal clean_eof_1
+        if msg["type"] == "http.response.body":
+            if msg.get("body"):
+                chunks_1.append(msg["body"])
+            if not msg.get("more_body", True):
+                clean_eof_1 = True
 
-    # Client only received first 64 KiB instead of total_size (128 KiB)
-    assert len(received_chunks) == 1
-    assert received_chunks[0] == chunk_1
-    assert len(received_chunks[0]) < total_size
+    aborted_1 = False
+    try:
+        await app(scope_1, receive_1, send_1)
+    except Exception:
+        aborted_1 = True
+
+    assert len(chunks_1) == 1
+    assert chunks_1[0] == chunk_1
+    assert not clean_eof_1, "Aborted stream must NOT send clean EOF"
+    assert aborted_1, "Stream must abort with an exception upon storage node failure"
     assert requested_endpoints[0][0] == "http://storage-1:8000"
 
     # Step 2: Client retries with Range: bytes=65536-
-    with api_client.stream("GET", f"/api/tracks/{track_id}/stream", headers={"Range": "bytes=65536-"}) as retry_resp:
-        assert retry_resp.status_code == 206
-        for chunk in retry_resp.iter_bytes():
-            received_chunks.append(chunk)
+    chunks_2 = []
+    clean_eof_2 = False
+    scope_2 = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "path": f"/api/tracks/{track_id}/stream",
+        "raw_path": f"/api/tracks/{track_id}/stream".encode(),
+        "query_string": b"",
+        "headers": [
+            (b"cookie", f"session={api_client.cookies['session']}".encode()),
+            (b"range", b"bytes=65536-"),
+        ],
+    }
+    async def receive_2():
+        return {"type": "http.disconnect"}
+    async def send_2(msg):
+        nonlocal clean_eof_2
+        if msg["type"] == "http.response.body":
+            if msg.get("body"):
+                chunks_2.append(msg["body"])
+            if not msg.get("more_body", True):
+                clean_eof_2 = True
+
+    await app(scope_2, receive_2, send_2)
 
     # Verify the retry went to storage-2, NOT storage-1!
     assert requested_endpoints[1][0] == "http://storage-2:8000"
     assert requested_endpoints[1][1] == "bytes=65536-"
+    assert clean_eof_2, "Successful retry must finish with clean EOF"
 
     # Verify total file reassembled correctly
-    assert b"".join(received_chunks) == chunk_1 + chunk_2
+    assert b"".join(chunks_1 + chunks_2) == chunk_1 + chunk_2
+
+
+@pytest.mark.asyncio
+async def test_stream_playback_failover_across_nodes_without_content_length(api_client, monkeypatch):
+    """
+    TR: Технический сценарий 7 «Воспроизведение с резервной реплики».
+    Regression test addressing Oleg's review comments:
+    1. Upstream storage response does NOT provide Content-Length header.
+    2. Primary replica (storage-1) aborts mid-stream after sending chunk 1 (64 KiB).
+    3. The application node (Node A) must NOT complete the stream cleanly (no clean EOF),
+       propagating the abort error so the client knows it is incomplete.
+    4. Storage-1 failure is recorded in shared Database so subsequent queries on other
+       nodes (Node B) do NOT re-select the broken replica.
+    5. Client issues Range retry to Node B (with Range: bytes=65536-).
+    6. Node B queries replicas, deprioritizes/excludes storage-1, selects storage-2,
+       and delivers the remainder of the audio seamlessly.
+    """
+    import httpx
+    db.memory.replica_failures.clear()
+
+    alice = register_user(api_client, "alice_cross_node_streamer")
+    track = api_client.get("/api/tracks").json()[0]
+    track_id = UUID(track["id"])
+
+    now = datetime.now(timezone.utc)
+    db.memory.node_registry["storage-1"] = {
+        "node_id": "storage-1",
+        "role": "storage",
+        "endpoint_url": "http://storage-1:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    db.memory.node_registry["storage-2"] = {
+        "node_id": "storage-2",
+        "role": "storage",
+        "endpoint_url": "http://storage-2:8000",
+        "last_heartbeat": now,
+        "status": "alive",
+    }
+    await db.add_track_replica(track_id, "storage-1", status="active")
+    await db.add_track_replica(track_id, "storage-2", status="active")
+
+    chunk_1 = b"X" * 65536  # 64 KiB
+    chunk_2 = b"Y" * 65536  # 64 KiB
+    total_size = len(chunk_1) + len(chunk_2)
+
+    requested_endpoints = []
+
+    class NoLengthAbortingStream(httpx.Response):
+        async def aiter_bytes(self, chunk_size=None):
+            yield chunk_1
+            raise httpx.ReadError("Upstream storage-1 connection reset mid-stream")
+
+    class NoLengthGoodStream(httpx.Response):
+        async def aiter_bytes(self, chunk_size=None):
+            yield chunk_2
+
+    async def mock_send(self, request, *args, **kwargs):
+        endpoint = str(request.url).split("/blobs/")[0]
+        requested_endpoints.append((endpoint, request.headers.get("Range")))
+        if "storage-1" in endpoint:
+            # Note: No Content-Length header per Oleg's review requirement
+            headers = {
+                "Content-Type": "audio/mpeg",
+                "Accept-Ranges": "bytes",
+            }
+            return NoLengthAbortingStream(200, headers=headers, request=request)
+        else:
+            # storage-2 serves the range request
+            headers = {
+                "Content-Type": "audio/mpeg",
+                "Accept-Ranges": "bytes",
+                "Content-Range": f"bytes 65536-{total_size - 1}/{total_size}",
+                "Content-Length": str(len(chunk_2)),
+            }
+            return NoLengthGoodStream(206, headers=headers, request=request)
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # 1. Request to Node A: streams chunk 1 and aborts mid-stream
+    chunks_node_a = []
+    clean_eof_a = False
+    scope_a = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "path": f"/api/tracks/{track_id}/stream",
+        "raw_path": f"/api/tracks/{track_id}/stream".encode(),
+        "query_string": b"",
+        "headers": [
+            (b"cookie", f"session={api_client.cookies['session']}".encode()),
+        ],
+    }
+    async def receive_a():
+        return {"type": "http.disconnect"}
+    async def send_a(msg):
+        nonlocal clean_eof_a
+        if msg["type"] == "http.response.body":
+            if msg.get("body"):
+                chunks_node_a.append(msg["body"])
+            if not msg.get("more_body", True):
+                clean_eof_a = True
+
+    aborted_a = False
+    try:
+        await app(scope_a, receive_a, send_a)
+    except Exception:
+        aborted_a = True
+
+    assert len(chunks_node_a) == 1
+    assert chunks_node_a[0] == chunk_1
+    assert not clean_eof_a, "Without Content-Length, aborted stream must NOT emit clean EOF"
+    assert aborted_a, "Node A must propagate abort error so client knows stream was interrupted"
+    assert requested_endpoints[0][0] == "http://storage-1:8000"
+
+    # Verify that storage-1 failure was registered in shared DB
+    assert db.get_replica_penalty("http://storage-1:8000", "storage-1") > 0
+
+    # 2. Retry routed to Node B with Range: bytes=65536-
+    # Node B simulates another application node querying shared DB replicas
+    node_b_replicas = await db.get_track_replicas(track_id)
+    assert node_b_replicas[0]["node_id"] == "storage-2", "Node B must prioritize healthy storage-2 over broken storage-1"
+
+    chunks_node_b = []
+    clean_eof_b = False
+    scope_b = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "path": f"/api/tracks/{track_id}/stream",
+        "raw_path": f"/api/tracks/{track_id}/stream".encode(),
+        "query_string": b"",
+        "headers": [
+            (b"cookie", f"session={api_client.cookies['session']}".encode()),
+            (b"range", b"bytes=65536-"),
+        ],
+    }
+    async def receive_b():
+        return {"type": "http.disconnect"}
+    async def send_b(msg):
+        nonlocal clean_eof_b
+        if msg["type"] == "http.response.body":
+            if msg.get("body"):
+                chunks_node_b.append(msg["body"])
+            if not msg.get("more_body", True):
+                clean_eof_b = True
+
+    await app(scope_b, receive_b, send_b)
+
+    assert requested_endpoints[1][0] == "http://storage-2:8000"
+    assert requested_endpoints[1][1] == "bytes=65536-"
+    assert clean_eof_b, "Node B response must complete with clean EOF"
+
+    # 3. Audio stream reassembled perfectly
+    full_audio = b"".join(chunks_node_a + chunks_node_b)
+    assert full_audio == chunk_1 + chunk_2
 
 
 @pytest.mark.asyncio

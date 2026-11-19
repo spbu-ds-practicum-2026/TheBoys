@@ -81,19 +81,15 @@ active_connections: dict[UUID, WebSocket] = {}
 user_connections: dict[int, set[UUID]] = {}
 
 # Track replica failures to deprioritize broken replicas on subsequent range retries (TR: Scenario 7)
-replica_failures: dict[str, float] = {}
+replica_failures: dict[str, float] = db.memory.replica_failures
 
 
-def mark_replica_failure(endpoint_url: str) -> None:
-    replica_failures[endpoint_url] = time.time()
+def mark_replica_failure(endpoint_url: str, node_id: str | None = None, track_id: UUID | str | None = None) -> None:
+    db.mark_replica_failure_sync(track_id=track_id, node_id=node_id, endpoint_url=endpoint_url)
 
 
-def get_replica_penalty(endpoint_url: str) -> float:
-    last_fail = replica_failures.get(endpoint_url, 0)
-    elapsed = time.time() - last_fail
-    if elapsed < 30.0:
-        return 30.0 - elapsed
-    return 0.0
+def get_replica_penalty(endpoint_url: str, node_id: str | None = None) -> float:
+    return db.get_replica_penalty(endpoint_url=endpoint_url, node_id=node_id)
 
 incoming_event_adapter = TypeAdapter(ClientIncomingEvent)
 outgoing_event_adapter = TypeAdapter(ServerOutgoingEvent)
@@ -358,14 +354,14 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
                 if "Content-Length" in resp.headers:
                     out_headers["Content-Length"] = resp.headers["Content-Length"]
 
-                async def stream_chunks(r=resp, c=client, ep=endpoint):
+                async def stream_chunks(r=resp, c=client, ep=endpoint, rep_node=rep.get("node_id")):
                     try:
                         async for chunk in r.aiter_bytes(chunk_size=65536):
                             yield chunk
                     except Exception as stream_err:
                         logger.warning("Storage stream aborted on %s: %s", ep, stream_err)
-                        mark_replica_failure(ep)
-                        return
+                        await db.mark_replica_failure(tid, node_id=rep_node, endpoint_url=ep)
+                        raise
                     finally:
                         await r.aclose()
                         await c.aclose()
@@ -376,12 +372,12 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
                     headers=out_headers,
                 )
             else:
-                mark_replica_failure(endpoint)
+                await db.mark_replica_failure(tid, node_id=rep.get("node_id"), endpoint_url=endpoint)
                 await resp.aclose()
                 await client.aclose()
         except Exception as exc:
             logger.warning("Replica on storage node %s failed: %s. Trying next replica...", rep.get("node_id"), exc)
-            mark_replica_failure(endpoint)
+            await db.mark_replica_failure(tid, node_id=rep.get("node_id"), endpoint_url=endpoint)
             await client.aclose()
             continue
 
