@@ -14,6 +14,7 @@ import os
 from datetime import datetime, timezone, timedelta
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -61,6 +62,12 @@ def api_client():
 
 def register_user(client: TestClient, login: str, password: str = "secret") -> dict:
     resp = client.post("/api/register", json={"login": login, "password": password})
+    assert resp.status_code == 201, resp.text
+    return resp.json()["user"]
+
+
+async def register_user_async(client: httpx.AsyncClient, login: str, password: str = "secret") -> dict:
+    resp = await client.post("/api/register", json={"login": login, "password": password})
     assert resp.status_code == 201, resp.text
     return resp.json()["user"]
 
@@ -1163,36 +1170,29 @@ async def test_live_postgres_replica_failover_across_nodes(monkeypatch):
 
         monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
 
-        with TestClient(app, follow_redirects=False) as client:
-            user = register_user(client, f"user_{uuid4().hex[:6]}")
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            user = await register_user_async(client, f"user_{uuid4().hex[:6]}")
 
-            # 1. Node A stream request: starts with storage-1 and aborts
+            # 1. Node A stream request: starts with storage-1 and aborts mid-stream
             chunks_a = []
-            aborted_a = False
-            scope_a = {
-                "type": "http",
-                "http_version": "1.1",
-                "method": "GET",
-                "path": f"/api/tracks/{tid}/stream",
-                "raw_path": f"/api/tracks/{tid}/stream".encode(),
-                "query_string": b"",
-                "headers": [
-                    (b"cookie", f"session={client.cookies['session']}".encode()),
-                ],
-            }
-            async def receive_a(): return {"type": "http.disconnect"}
-            async def send_a(msg):
-                if msg["type"] == "http.response.body" and msg.get("body"):
-                    chunks_a.append(msg["body"])
+            received_status = None
+            stream_aborted = False
 
             try:
-                await app(scope_a, receive_a, send_a)
+                async with client.stream("GET", f"/api/tracks/{tid}/stream") as resp_a:
+                    received_status = resp_a.status_code
+                    assert received_status == 200, f"Expected 200 OK from storage-1 before stream abort, got {received_status}"
+                    assert resp_a.headers.get("content-type") == "audio/mpeg"
+                    async for chunk in resp_a.aiter_bytes():
+                        chunks_a.append(chunk)
             except Exception:
-                aborted_a = True
+                stream_aborted = True
 
-            assert aborted_a, "Node A stream must abort with error"
-            assert len(chunks_a) == 1
-            assert chunks_a[0] == chunk_1
+            assert received_status == 200, f"Node A must respond with 200 before streaming aborts, got {received_status}"
+            assert stream_aborted, "Node A stream must abort mid-stream due to storage disconnection"
+            assert len(chunks_a) == 1, "Client must receive first part of audio before stream aborts"
+            assert chunks_a[0] == chunk_1, "Received audio chunk must match chunk_1"
             assert node_1 in requested_endpoints[0][0]
 
             # Verify replicas in PostgreSQL are STILL status='active' (neither was marked 'lost')
@@ -1206,32 +1206,13 @@ async def test_live_postgres_replica_failover_across_nodes(monkeypatch):
             assert reps_b[0]["node_id"] == node_2, f"Expected node_2 first, got {reps_b[0]['node_id']}"
 
             chunks_b = []
-            clean_eof_b = False
-            scope_b = {
-                "type": "http",
-                "http_version": "1.1",
-                "method": "GET",
-                "path": f"/api/tracks/{tid}/stream",
-                "raw_path": f"/api/tracks/{tid}/stream".encode(),
-                "query_string": b"",
-                "headers": [
-                    (b"cookie", f"session={client.cookies['session']}".encode()),
-                    (b"range", f"bytes={len(chunk_1)}-".encode()),
-                ],
-            }
-            async def receive_b(): return {"type": "http.disconnect"}
-            async def send_b(msg):
-                nonlocal clean_eof_b
-                if msg["type"] == "http.response.body":
-                    if msg.get("body"):
-                        chunks_b.append(msg["body"])
-                    if not msg.get("more_body", True):
-                        clean_eof_b = True
-
-            await app(scope_b, receive_b, send_b)
+            headers_b = {"Range": f"bytes={len(chunk_1)}-"}
+            async with client.stream("GET", f"/api/tracks/{tid}/stream", headers=headers_b) as resp_b:
+                assert resp_b.status_code == 206, f"Expected 206 Partial Content, got {resp_b.status_code}"
+                async for chunk in resp_b.aiter_bytes():
+                    chunks_b.append(chunk)
 
             assert node_2 in requested_endpoints[1][0], "Retry must route to healthy node_2"
-            assert clean_eof_b, "Retry must finish cleanly"
             assert b"".join(chunks_a + chunks_b) == chunk_1 + chunk_2
 
     finally:
@@ -1258,9 +1239,6 @@ async def test_live_postgres_transient_503_both_replicas_recovers_without_catalo
         await db.connect(dsn)
 
     try:
-        import httpx
-        from starlette.testclient import TestClient
-
         tid = uuid4()
         node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
         ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
@@ -1302,11 +1280,12 @@ async def test_live_postgres_transient_503_both_replicas_recovers_without_catalo
 
         monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
 
-        with TestClient(app, follow_redirects=False) as client:
-            user = register_user(client, f"user_{uuid4().hex[:6]}")
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            user = await register_user_async(client, f"user_{uuid4().hex[:6]}")
 
             # 1. Initial attempt: both replicas return 503 -> API returns 503
-            resp_1 = client.get(f"/api/tracks/{tid}/stream")
+            resp_1 = await client.get(f"/api/tracks/{tid}/stream")
             assert resp_1.status_code == 503
             assert resp_1.json()["code"] == "STORAGE_UNAVAILABLE"
 
@@ -1322,7 +1301,7 @@ async def test_live_postgres_transient_503_both_replicas_recovers_without_catalo
             storage_healthy = True
 
             # 3. Subsequent request to stream track succeeds without ANY catalog change
-            resp_2 = client.get(f"/api/tracks/{tid}/stream")
+            resp_2 = await client.get(f"/api/tracks/{tid}/stream")
             assert resp_2.status_code == 200
             assert resp_2.content == audio_content
 
