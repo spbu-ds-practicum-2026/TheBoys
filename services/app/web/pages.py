@@ -31,8 +31,14 @@ def _wants_fragment(request: Request) -> bool:
 def create_router(get_user: GetUser) -> APIRouter:
     router = APIRouter()
 
-    def section(request: Request, name: str) -> Response:
+    async def _get_current_user(request: Request) -> dict | None:
         user = get_user(request)
+        if hasattr(user, "__await__"):
+            return await user
+        return user
+
+    async def section(request: Request, name: str) -> Response:
+        user = await _get_current_user(request)
         if user is None:
             if _wants_fragment(request):
                 # Сессия кончилась посреди работы: вместо замены раздела страницей входа уводим на неё целиком.
@@ -49,23 +55,25 @@ def create_router(get_user: GetUser) -> APIRouter:
         return response
 
     @router.get("/", include_in_schema=False)
-    def index(request: Request):
-        target = "/music" if get_user(request) else "/login"
+    async def index(request: Request):
+        user = await _get_current_user(request)
+        target = "/music" if user else "/login"
         return RedirectResponse(target, status_code=303)
 
     @router.get("/login", include_in_schema=False)
-    def login_page(request: Request):
-        if get_user(request):
+    async def login_page(request: Request):
+        user = await _get_current_user(request)
+        if user:
             return RedirectResponse("/music", status_code=303)
         return templates.TemplateResponse(request, "login.html", {})
 
     @router.get("/music", include_in_schema=False)
-    def music(request: Request):
-        return section(request, "music")
+    async def music(request: Request):
+        return await section(request, "music")
 
     @router.get("/chats", include_in_schema=False)
-    def chats(request: Request):
-        return section(request, "chats")
+    async def chats(request: Request):
+        return await section(request, "chats")
 
     return router
 
