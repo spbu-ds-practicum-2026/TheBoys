@@ -64,7 +64,22 @@ class InMemoryStore:
         self.replica_failures: dict[str, float] = {}
         self.user_ids = count(1)
         self.conversation_ids = count(1)
-        self._lock = asyncio.Lock()
+        self._real_lock: asyncio.Lock | None = None
+
+    @property
+    def _lock(self) -> asyncio.Lock:
+        curr_loop = None
+        try:
+            curr_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        if self._real_lock is None or (
+            curr_loop is not None
+            and getattr(self._real_lock, "_loop", None) is not None
+            and self._real_lock._loop is not curr_loop
+        ):
+            self._real_lock = asyncio.Lock()
+        return self._real_lock
 
     def clear(self):
         self.users.clear()
@@ -75,6 +90,7 @@ class InMemoryStore:
         self.node_registry.clear()
         self.tracks = {t["id"]: dict(t) for t in INITIAL_TRACKS}
         self.replicas.clear()
+        self._real_lock = None
         self.replica_failures.clear()
         InMemoryStore._shared_replica_failures.clear()
 
@@ -784,6 +800,10 @@ class Database:
                 for m in msgs:
                     if m["sender_id"] == sender_id and m["client_msg_id"] == client_msg_id:
                         return m["seq"], m["created_at"], False, members
+
+                # Realistic async context switch point: guarantees that atomicity
+                # and lack of duplicate seqs is strictly enforced by self.memory._lock.
+                await asyncio.sleep(0.0001)
 
                 conv["last_seq"] += 1
                 seq = conv["last_seq"]

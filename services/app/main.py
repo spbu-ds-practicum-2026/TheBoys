@@ -80,6 +80,18 @@ FRAME_SECONDS = 1152 / 44100
 active_connections: dict[UUID, WebSocket] = {}
 user_connections: dict[int, set[UUID]] = {}
 
+def get_active_connections(target_app: FastAPI | None = None) -> dict[UUID, WebSocket]:
+    if target_app and hasattr(target_app.state, "active_connections"):
+        return target_app.state.active_connections
+    return active_connections
+
+
+def get_user_connections(target_app: FastAPI | None = None) -> dict[int, set[UUID]]:
+    if target_app and hasattr(target_app.state, "user_connections"):
+        return target_app.state.user_connections
+    return user_connections
+
+
 # Track replica failures to deprioritize broken replicas on subsequent range retries (TR: Scenario 7)
 replica_failures: dict[str, float] = db.memory.replica_failures
 
@@ -230,6 +242,27 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # Mount web UI (Jinja2 + HTMX)
 mount_web(app, get_user_from_request)
+
+
+def create_app(node_id: str | None = None) -> FastAPI:
+    nid = node_id or NODE_ID
+    app_instance = FastAPI(
+        title=f"TheBoys Application Node ({nid})",
+        version="1.0.0",
+        lifespan=lifespan if nid == NODE_ID else None,
+    )
+    app_instance.state.node_id = nid
+    app_instance.state.active_connections = {}
+    app_instance.state.user_connections = {}
+    # Include all routes from the main app (API, Web, WebSocket)
+    for route in app.routes:
+        app_instance.routes.append(route)
+    return app_instance
+
+
+app.state.node_id = NODE_ID
+app.state.active_connections = active_connections
+app.state.user_connections = user_connections
 
 
 # ---------------------------------------------------------------------------
@@ -479,10 +512,10 @@ async def list_conversations(request: Request):
 # ---------------------------------------------------------------------------
 
 @app.get("/health")
-async def health_check():
+async def health_check(request: Request):
     return {
         "status": "ok",
-        "node_id": NODE_ID,
+        "node_id": getattr(request.app.state, "node_id", NODE_ID),
         "db_connected": db.is_connected,
     }
 
@@ -493,7 +526,8 @@ async def health_check():
     summary="Internal inter-node message delivery",
 )
 async def deliver_internal(
-    request: InternalDeliverRequest,
+    request: Request,
+    deliver_req: InternalDeliverRequest,
     x_internal_secret: Annotated[str | None, Header(alias="X-Internal-Secret")] = None,
 ):
     if not x_internal_secret or not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
@@ -504,11 +538,14 @@ async def deliver_internal(
 
     delivered: list[UUID] = []
     missed: list[UUID] = []
-    event_json = request.event.model_dump_json()
+    event_json = deliver_req.event.model_dump_json()
 
-    for target in request.targets:
-        ws = active_connections.get(target.connection_id)
-        belongs_to_user = target.connection_id in user_connections.get(target.user_id, set())
+    active_conns = get_active_connections(request.app)
+    user_conns = get_user_connections(request.app)
+
+    for target in deliver_req.targets:
+        ws = active_conns.get(target.connection_id)
+        belongs_to_user = target.connection_id in user_conns.get(target.user_id, set())
         if ws is not None and belongs_to_user:
             try:
                 await ws.send_text(event_json)
@@ -529,6 +566,7 @@ async def _dispatch_to_sessions(
     members: tuple[int, int],
     event: ServerOutgoingEvent,
     skip_conn_id: UUID | None = None,
+    source_app: FastAPI | None = None,
 ):
     """
     Delivers event to all active sessions of conversation members:
@@ -537,15 +575,17 @@ async def _dispatch_to_sessions(
     """
     sessions = await db.get_active_sessions_for_users(list(members))
     remote_by_node: dict[str, list[DeliveryTarget]] = {}
+    current_node = getattr(source_app.state, "node_id", NODE_ID) if source_app else NODE_ID
+    active_conns = get_active_connections(source_app)
 
     for s in sessions:
         conn_id = s["connection_id"]
         target_uid = s["user_id"]
         node = s["node_id"]
 
-        if node == NODE_ID:
+        if node == current_node:
             if conn_id != skip_conn_id:
-                ws = active_connections.get(conn_id)
+                ws = active_conns.get(conn_id)
                 if ws:
                     try:
                         await ws.send_text(event.model_dump_json())
@@ -568,7 +608,7 @@ async def _send_remote_deliver(node_id: str, targets: list[DeliveryTarget], even
     url = f"{endpoint.rstrip('/')}/internal/deliver"
     payload = InternalDeliverRequest(targets=targets, event=event).model_dump(mode="json")
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
+        async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
             await client.post(
                 url,
                 json=payload,
@@ -604,9 +644,13 @@ async def websocket_endpoint(websocket: WebSocket):
     # 3. Connection accepted & registered in active node connections
     await websocket.accept()
     connection_id = uuid4()
-    active_connections[connection_id] = websocket
-    user_connections.setdefault(user_id, set()).add(connection_id)
-    await db.register_session(connection_id, user_id, NODE_ID)
+    active_conns = get_active_connections(websocket.app)
+    user_conns = get_user_connections(websocket.app)
+    current_node = getattr(websocket.app.state, "node_id", NODE_ID)
+
+    active_conns[connection_id] = websocket
+    user_conns.setdefault(user_id, set()).add(connection_id)
+    await db.register_session(connection_id, user_id, current_node)
 
     is_live = db.is_connected or getattr(app.state, "enable_persistence", False)
 
@@ -745,7 +789,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             payload=TrackPayload(**msg_payload) if event.kind == "track" else TextPayload(**msg_payload),
                             created_at=created_at,
                         )
-                        await _dispatch_to_sessions(members, chat_msg, skip_conn_id=connection_id)
+                        await _dispatch_to_sessions(members, chat_msg, skip_conn_id=connection_id, source_app=websocket.app)
 
                 except Exception as exc:
                     err = ServerErrorMessage(
@@ -837,6 +881,8 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
-        active_connections.pop(connection_id, None)
-        user_connections.get(user_id, set()).discard(connection_id)
+        active_conns = get_active_connections(websocket.app)
+        user_conns = get_user_connections(websocket.app)
+        active_conns.pop(connection_id, None)
+        user_conns.get(user_id, set()).discard(connection_id)
         await db.remove_session(connection_id)
