@@ -484,21 +484,14 @@ def test_nginx_dynamic_scaling_discovery_and_failover_coverage():
     if ps_proc.returncode != 0:
         pytest.skip("docker compose ps failed")
 
-    initial_cids = [cid.strip() for cid in ps_proc.stdout.splitlines() if cid.strip()]
+    initial_cids = set(cid.strip() for cid in ps_proc.stdout.splitlines() if cid.strip())
     initial_count = len(initial_cids)
     if initial_count < 1:
         pytest.skip("No running app instances found in docker compose stack")
 
     with httpx.Client(timeout=5.0, trust_env=False) as client:
-        initial_seen_nodes = set()
-        for _ in range(20):
-            r = client.get(f"{nginx_url}/health")
-            if r.status_code == 200:
-                initial_seen_nodes.add(r.json().get("node_id"))
-            time.sleep(0.05)
-
         try:
-            # Scale up to initial_count + 1 (ensuring 1 -> 2 or N -> N+1)
+            # 1. Scale up to initial_count + 1 (ensuring 1 -> 2 or N -> N+1) without reloading Nginx
             scaled_target = initial_count + 1
             scale_up = subprocess.run(
                 ["docker", "compose", "up", "-d", "--scale", f"app={scaled_target}", "--no-recreate"],
@@ -508,23 +501,75 @@ def test_nginx_dynamic_scaling_discovery_and_failover_coverage():
             )
             assert scale_up.returncode == 0, f"Failed to scale app to {scaled_target} instances"
 
-            # Wait for DNS TTL (valid=5s)
-            time.sleep(6)
+            # 2. Identify the newly added container independently
+            ps_after = subprocess.run(["docker", "compose", "ps", "-q", "app"], capture_output=True, text=True, timeout=10)
+            current_cids = set(cid.strip() for cid in ps_after.stdout.splitlines() if cid.strip())
+            added_cids = current_cids - initial_cids
+            assert len(added_cids) == 1, f"Expected exactly 1 added app container, found: {added_cids}"
+            added_cid = list(added_cids)[0]
 
-            # Verify traffic reaches the new instance through Nginx without reload
-            scaled_seen_nodes = set()
+            # 3. Determine the node_id of the added container independently of Nginx responses
+            env_proc = subprocess.run(
+                ["docker", "exec", added_cid, "sh", "-c", "echo -n ${NODE_ID:-$(hostname)}"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if env_proc.returncode == 0 and env_proc.stdout.strip():
+                added_node_id = env_proc.stdout.strip()
+            else:
+                insp_proc = subprocess.run(
+                    ["docker", "inspect", "--format", "{{.Config.Hostname}}", added_cid],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                added_node_id = insp_proc.stdout.strip()
+
+            assert added_node_id, f"Could not determine node_id for added container {added_cid}"
+
+            # 4. Verify its self-registration in PostgreSQL node_registry (status = 'alive')
+            registered = False
             for _ in range(30):
-                r = client.get(f"{nginx_url}/health")
-                if r.status_code == 200:
-                    nid = r.json().get("node_id")
-                    if nid:
-                        scaled_seen_nodes.add(nid)
+                for pg_user in ["theboys_user", "postgres"]:
+                    psql_res = subprocess.run(
+                        [
+                            "docker", "compose", "exec", "-T", "postgres",
+                            "psql", "-U", pg_user, "-d", "theboys", "-tAc",
+                            f"SELECT status FROM node_registry WHERE node_id = '{added_node_id}';",
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if psql_res.returncode == 0 and "alive" in psql_res.stdout:
+                        registered = True
+                        break
+                if registered:
+                    break
+                time.sleep(0.5)
+
+            assert registered, f"Added node {added_node_id} did not self-register in PostgreSQL node_registry"
+
+            # 5. Poll /health through Nginx without restarting/reloading until the added_node_id is returned
+            observed_added_node = False
+            start_poll = time.time()
+            while time.time() - start_poll < 35:
+                try:
+                    r = client.get(f"{nginx_url}/health")
+                    if r.status_code == 200:
+                        nid = r.json().get("node_id")
+                        if nid == added_node_id:
+                            observed_added_node = True
+                            break
+                except Exception:
+                    pass
                 time.sleep(0.1)
 
-            assert len(scaled_seen_nodes) > len(initial_seen_nodes), (
-                f"Expected to observe newly scaled node_id via Nginx, saw {scaled_seen_nodes}"
+            assert observed_added_node, (
+                f"Expected Nginx to route traffic to added node {added_node_id} without reload, "
+                f"but /health did not return this node_id within timeout"
             )
-            assert not scaled_seen_nodes.issubset(initial_seen_nodes)
 
         finally:
             # Restore initial scale
