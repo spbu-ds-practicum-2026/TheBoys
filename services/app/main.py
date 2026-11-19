@@ -80,7 +80,6 @@ FRAME_SECONDS = 1152 / 44100
 active_connections: dict[UUID, WebSocket] = {}
 user_connections: dict[int, set[UUID]] = {}
 
-
 def get_active_connections(target_app: FastAPI | None = None) -> dict[UUID, WebSocket]:
     if target_app and hasattr(target_app.state, "active_connections"):
         return target_app.state.active_connections
@@ -91,6 +90,22 @@ def get_user_connections(target_app: FastAPI | None = None) -> dict[int, set[UUI
     if target_app and hasattr(target_app.state, "user_connections"):
         return target_app.state.user_connections
     return user_connections
+
+
+# Track replica failures to deprioritize broken replicas on subsequent range retries (TR: Scenario 7)
+replica_failures: dict[str, float] = {}
+
+
+def mark_replica_failure(endpoint_url: str) -> None:
+    replica_failures[endpoint_url] = time.time()
+
+
+def get_replica_penalty(endpoint_url: str) -> float:
+    last_fail = replica_failures.get(endpoint_url, 0)
+    elapsed = time.time() - last_fail
+    if elapsed < 30.0:
+        return 30.0 - elapsed
+    return 0.0
 
 incoming_event_adapter = TypeAdapter(ClientIncomingEvent)
 outgoing_event_adapter = TypeAdapter(ServerOutgoingEvent)
@@ -352,6 +367,8 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
 
     # 1. Look up active replicas on live storage nodes (TR: Scenario 3, Scenario 7)
     replicas = await db.get_track_replicas(tid)
+    # Sort replicas so that healthy replicas without recent failures are prioritized (TR: Scenario 7)
+    replicas = sorted(replicas, key=lambda rep: get_replica_penalty(rep["endpoint_url"].rstrip("/")))
     headers = {"Accept-Ranges": "bytes"}
     if range:
         headers["Range"] = range
@@ -374,13 +391,17 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
                 if "Content-Length" in resp.headers:
                     out_headers["Content-Length"] = resp.headers["Content-Length"]
 
-                async def stream_chunks():
+                async def stream_chunks(r=resp, c=client, ep=endpoint):
                     try:
-                        async for chunk in resp.aiter_bytes(chunk_size=65536):
+                        async for chunk in r.aiter_bytes(chunk_size=65536):
                             yield chunk
+                    except Exception as stream_err:
+                        logger.warning("Storage stream aborted on %s: %s", ep, stream_err)
+                        mark_replica_failure(ep)
+                        return
                     finally:
-                        await resp.aclose()
-                        await client.aclose()
+                        await r.aclose()
+                        await c.aclose()
 
                 return StreamingResponse(
                     stream_chunks(),
@@ -388,10 +409,12 @@ async def stream_track(track_id: str, request: Request, range: str | None = Head
                     headers=out_headers,
                 )
             else:
+                mark_replica_failure(endpoint)
                 await resp.aclose()
                 await client.aclose()
         except Exception as exc:
             logger.warning("Replica on storage node %s failed: %s. Trying next replica...", rep.get("node_id"), exc)
+            mark_replica_failure(endpoint)
             await client.aclose()
             continue
 
