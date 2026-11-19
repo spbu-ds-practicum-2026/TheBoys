@@ -10,12 +10,16 @@ Verifies full alignment with Technical Requirements (docs/tr.md):
 - Inter-node message delivery and failure detection heartbeat
 """
 
+import asyncio
 import os
 from datetime import datetime, timezone, timedelta
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import httpx
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 # Ensure test secrets are present
@@ -1084,230 +1088,248 @@ async def test_transient_503_both_replicas_recovers_without_catalog_change(api_c
     assert resp_2.content == audio_content
 
 
-@pytest.mark.asyncio
-async def test_live_postgres_replica_failover_across_nodes(monkeypatch):
-    """
-    TR: Технический сценарий 7 «Воспроизведение с резервной реплики».
-    Full HTTP + PostgreSQL test for Oleg's review:
-    1. Two active replicas exist in PostgreSQL for a track.
-    2. Node A starts streaming audio, storage-1 aborts mid-stream.
-    3. Node A records transient failure timestamp in PostgreSQL (WITHOUT setting replicas.status='lost').
-    4. Client retries with Range on Node B.
-    5. Node B queries PostgreSQL, prioritizes healthy replica, and streams remaining audio seamlessly.
-    """
-    db_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if not db_url:
-        pytest.skip("Requires live PostgreSQL (DATABASE_URL or TEST_DATABASE_URL)")
+@pytest_asyncio.fixture
+async def live_replica_track(monkeypatch):
+    dsn = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if not dsn:
+        pytest.skip("Нужна PostgreSQL (DATABASE_URL или TEST_DATABASE_URL)")
 
-    dsn = clean_postgres_dsn(db_url)
-    was_connected = db.is_connected
-    if not was_connected:
-        await db.connect(dsn)
+    monkeypatch.setenv("DATABASE_URL", dsn)
+    monkeypatch.delenv("TESTING", raising=False)
+    monkeypatch.setattr(db, "enable_in_memory", False)
+    monkeypatch.setattr(app.state, "enable_persistence", False)
 
-    try:
-        import httpx
-        from starlette.testclient import TestClient
+    track_id = uuid4()
+    hosts = [f"storage-{index}-{track_id.hex}" for index in (1, 2)]
+    login = f"user_{track_id.hex}"
 
-        tid = uuid4()
-        node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
-        ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
-
-        # Register track, nodes, and active replicas directly in PostgreSQL
-        async with db.pool.acquire() as conn:
+    async with app.router.lifespan_context(app):
+        assert db.is_connected
+        async with db.pool.acquire() as conn, conn.transaction():
             await conn.execute(
-                "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
-                tid, "Live PG Stream Track", "Live Band", 60,
+                "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, 'Track', 'Artist', 60)",
+                track_id,
             )
-            await conn.execute(
+            await conn.executemany(
                 """
-                INSERT INTO node_registry (node_id, role, endpoint_url, last_heartbeat, status)
-                VALUES ($1, 'storage', $2, now(), 'alive'), ($3, 'storage', $4, now(), 'alive')
-                ON CONFLICT (node_id) DO UPDATE SET last_heartbeat = now(), status = 'alive'
+                INSERT INTO node_registry (node_id, role, endpoint_url, status)
+                VALUES ($1, 'storage', $2, 'alive')
                 """,
-                node_1, ep_1, node_2, ep_2,
+                [(host, f"http://{host}:8000") for host in hosts],
             )
-            await conn.execute(
-                """
-                INSERT INTO replicas (track_id, node_id, status)
-                VALUES ($1, $2, 'active'), ($1, $3, 'active')
-                ON CONFLICT (track_id, node_id) DO UPDATE SET status = 'active'
-                """,
-                tid, node_1, node_2,
+            await conn.executemany(
+                "INSERT INTO replicas (track_id, node_id, status) VALUES ($1, $2, 'active')",
+                [(track_id, host) for host in hosts],
             )
 
-        chunk_1 = b"LIVE_PG_A" * 7000  # ~63 KiB
-        chunk_2 = b"LIVE_PG_B" * 7000  # ~63 KiB
-        total_size = len(chunk_1) + len(chunk_2)
+        try:
+            yield track_id, hosts, login
+        finally:
+            async with db.pool.acquire() as conn, conn.transaction():
+                await conn.execute("DELETE FROM users WHERE login = $1", login)
+                await conn.execute("DELETE FROM tracks WHERE id = $1", track_id)
+                await conn.execute("DELETE FROM node_registry WHERE node_id = ANY($1)", hosts)
 
-        requested_endpoints = []
 
-        class AbortingStreamResponse(httpx.Response):
-            async def aiter_bytes(self, chunk_size=None):
-                yield chunk_1
-                raise httpx.ReadError("Live storage-1 connection aborted")
+@pytest_asyncio.fixture
+async def live_app_node_b(live_replica_track, monkeypatch):
+    track_id, _, _ = live_replica_track
+    node_id = f"app-b-{track_id.hex}"
+    # Загружаем приложение и слой БД заново, чтобы у узла был свой пул
+    # и отдельная память, включая кеш уровня класса InMemoryStore.
+    app_dir = Path(__file__).resolve().parents[1]
+    db_spec = spec_from_file_location(f"{node_id}.db", app_dir / "db.py")
+    node_db = module_from_spec(db_spec)
+    db_spec.loader.exec_module(node_db)
 
-        class GoodStreamResponse(httpx.Response):
-            async def aiter_bytes(self, chunk_size=None):
-                yield chunk_2
+    app_spec = spec_from_file_location(f"{node_id}.main", app_dir / "main.py")
+    node = module_from_spec(app_spec)
+    with monkeypatch.context() as environment:
+        environment.setenv("NODE_ID", node_id)
+        app_spec.loader.exec_module(node)
+    node.db = node_db.db
+    node.UserAlreadyExistsError = node_db.UserAlreadyExistsError
+    node.replica_failures = node_db.db.memory.replica_failures
+    async with node.app.router.lifespan_context(node.app):
+        yield node
 
-        async def mock_send(self, request, *args, **kwargs):
-            endpoint = str(request.url).split("/blobs/")[0]
-            requested_endpoints.append((endpoint, request.headers.get("Range")))
-            if node_1 in endpoint:
-                headers = {
-                    "Content-Type": "audio/mpeg",
-                    "Accept-Ranges": "bytes",
-                }
-                return AbortingStreamResponse(200, headers=headers, request=request)
-            else:
-                headers = {
-                    "Content-Type": "audio/mpeg",
-                    "Accept-Ranges": "bytes",
-                    "Content-Range": f"bytes {len(chunk_1)}-{total_size - 1}/{total_size}",
-                    "Content-Length": str(len(chunk_2)),
-                }
-                return GoodStreamResponse(206, headers=headers, request=request)
 
-        monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+def mock_storage_http(monkeypatch, hosts, respond):
+    real_request = httpx.AsyncHTTPTransport.handle_async_request
 
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            user = await register_user_async(client, f"user_{uuid4().hex[:6]}")
+    async def handle_request(transport, request):
+        if request.url.host in hosts:
+            return respond(request)
+        return await real_request(transport, request)
 
-            # 1. Node A stream request: starts with storage-1 and aborts mid-stream
-            chunks_a = []
-            received_status = None
-            stream_aborted = False
-
-            try:
-                async with client.stream("GET", f"/api/tracks/{tid}/stream") as resp_a:
-                    received_status = resp_a.status_code
-                    assert received_status == 200, f"Expected 200 OK from storage-1 before stream abort, got {received_status}"
-                    assert resp_a.headers.get("content-type") == "audio/mpeg"
-                    async for chunk in resp_a.aiter_bytes():
-                        chunks_a.append(chunk)
-            except Exception:
-                stream_aborted = True
-
-            assert received_status == 200, f"Node A must respond with 200 before streaming aborts, got {received_status}"
-            assert stream_aborted, "Node A stream must abort mid-stream due to storage disconnection"
-            assert len(chunks_a) == 1, "Client must receive first part of audio before stream aborts"
-            assert chunks_a[0] == chunk_1, "Received audio chunk must match chunk_1"
-            assert node_1 in requested_endpoints[0][0]
-
-            # Verify replicas in PostgreSQL are STILL status='active' (neither was marked 'lost')
-            async with db.pool.acquire() as conn:
-                statuses = await conn.fetch("SELECT status FROM replicas WHERE track_id = $1", tid)
-                assert all(s["status"] == "active" for s in statuses), "Replicas must remain active in replicas table"
-
-            # 2. Node B stream retry with Range: bytes={len(chunk_1)}-
-            # In PostgreSQL, node_2 (healthy) must be prioritized over node_1 (failed)
-            reps_b = await db.get_track_replicas(tid)
-            assert reps_b[0]["node_id"] == node_2, f"Expected node_2 first, got {reps_b[0]['node_id']}"
-
-            chunks_b = []
-            headers_b = {"Range": f"bytes={len(chunk_1)}-"}
-            async with client.stream("GET", f"/api/tracks/{tid}/stream", headers=headers_b) as resp_b:
-                assert resp_b.status_code == 206, f"Expected 206 Partial Content, got {resp_b.status_code}"
-                async for chunk in resp_b.aiter_bytes():
-                    chunks_b.append(chunk)
-
-            assert node_2 in requested_endpoints[1][0], "Retry must route to healthy node_2"
-            assert b"".join(chunks_a + chunks_b) == chunk_1 + chunk_2
-
-    finally:
-        if not was_connected and db.is_connected:
-            await db.disconnect()
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", handle_request)
 
 
 @pytest.mark.asyncio
-async def test_live_postgres_transient_503_both_replicas_recovers_without_catalog_change(monkeypatch):
-    """
-    TR: Технический сценарий 7.
-    PostgreSQL regression test for Oleg's review:
-    1. Both replicas return temporary 503.
-    2. Replicas in PostgreSQL remain status='active' (NOT marked 'lost').
-    3. When storage recovers, subsequent request to stream track succeeds without any manual catalog intervention.
-    """
-    db_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if not db_url:
-        pytest.skip("Requires live PostgreSQL (DATABASE_URL or TEST_DATABASE_URL)")
+async def test_live_postgres_replica_failover_across_nodes(
+    live_replica_track, live_app_node_b, monkeypatch
+):
+    """Сценарий 7 ТР. После обрыва потока узел B продолжает чтение со второй реплики."""
+    track_id, hosts, login = live_replica_track
+    primary, secondary = hosts
+    stream_path = f"/api/tracks/{track_id}/stream"
+    blob_path = f"/blobs/{track_id}"
+    audio = bytes(range(256)) * 300
+    # Прокси читает блоками по 64 КиБ. Первый блок успевает уйти клиенту.
+    split_at = 65536
+    calls = []
+    storage_error = httpx.ReadError("Соединение с первым хранилищем оборвалось")
 
-    dsn = clean_postgres_dsn(db_url)
-    was_connected = db.is_connected
-    if not was_connected:
-        await db.connect(dsn)
+    class AbortingStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield audio[:split_at]
+            raise storage_error
 
-    try:
-        tid = uuid4()
-        node_1, node_2 = f"storage-1-{uuid4().hex[:6]}", f"storage-2-{uuid4().hex[:6]}"
-        ep_1, ep_2 = f"http://{node_1}:8000", f"http://{node_2}:8000"
+    def storage_response(request):
+        calls.append((request.method, request.url.host, request.url.path, request.headers.get("range")))
+        if request.url.host == primary:
+            return httpx.Response(
+                200,
+                headers={"Content-Length": str(len(audio))},
+                stream=AbortingStream(),
+            )
+        return httpx.Response(
+            206,
+            headers={"Content-Range": f"bytes {split_at}-{len(audio) - 1}/{len(audio)}"},
+            content=audio[split_at:],
+        )
+
+    mock_storage_http(monkeypatch, hosts, storage_response)
+    node_b = live_app_node_b
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client_a:
+        assert node_b.db.is_connected
+        assert node_b.db.pool is not db.pool
+        await register_user_async(client_a, login)
+
+        request = client_a.build_request("GET", stream_path)
+        events = []
+
+        async def send(event):
+            events.append(event)
+
+        request_received = False
+
+        async def receive():
+            nonlocal request_received
+            if not request_received:
+                request_received = True
+                return {"type": "http.request", "body": b"", "more_body": False}
+            # Соединение остаётся открытым. Обрыв должен прийти от хранилища.
+            await asyncio.Future()
+
+        scope = {
+            "type": "http",
+            "asgi": {"version": "3.0", "spec_version": "2.3"},
+            "http_version": "1.1",
+            "method": request.method,
+            "scheme": request.url.scheme,
+            "path": request.url.path,
+            "raw_path": request.url.raw_path,
+            "query_string": request.url.query,
+            "root_path": "",
+            "server": ("test", 80),
+            "client": ("127.0.0.1", 12345),
+            "headers": [(name.lower(), value) for name, value in request.headers.raw],
+        }
+        # ASGITransport буферизует ответ до завершения обработчика.
+        aborted = False
+        try:
+            await app(scope, receive, send)
+        except* httpx.ReadError as errors:
+            # Starlette может передать ошибку чтения внутри ExceptionGroup.
+            aborted = errors.subgroup(lambda error: error is storage_error) is not None
+
+        assert aborted
+        start, body = events
+        assert start["type"] == "http.response.start"
+        assert start["status"] == 200
+        assert body["type"] == "http.response.body"
+        assert body["more_body"] is True
+        prefix = body["body"]
+        assert prefix == audio[:split_at]
 
         async with db.pool.acquire() as conn:
-            await conn.execute(
-                "INSERT INTO tracks (id, title, artist, duration_s) VALUES ($1, $2, $3, $4)",
-                tid, "Postgres Recovery Track", "Artist", 60,
+            failures = await conn.fetch(
+                "SELECT node_id FROM replica_failures WHERE track_id = $1", track_id
             )
-            await conn.execute(
+            active = await conn.fetch(
+                "SELECT node_id FROM replicas WHERE track_id = $1 AND status = 'active'", track_id
+            )
+        assert [row["node_id"] for row in failures] == [primary]
+        assert {row["node_id"] for row in active} == set(hosts)
+
+        byte_range = f"bytes={len(prefix)}-"
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=node_b.app),
+            base_url="http://test",
+            cookies=client_a.cookies,
+        ) as client_b:
+            resumed = await client_b.get(stream_path, headers={"Range": byte_range})
+
+        assert resumed.status_code == 206
+        assert resumed.headers["Content-Range"] == f"bytes {split_at}-{len(audio) - 1}/{len(audio)}"
+        assert prefix + resumed.content == audio
+        assert calls == [
+            ("GET", primary, blob_path, None),
+            ("GET", secondary, blob_path, byte_range),
+        ]
+
+
+@pytest.mark.asyncio
+async def test_live_postgres_transient_503_both_replicas_recovers_without_catalog_change(
+    live_replica_track, monkeypatch
+):
+    """После временного 503 обеих реплик тот же запрос работает без правок каталога."""
+    track_id, hosts, login = live_replica_track
+    stream_path = f"/api/tracks/{track_id}/stream"
+    blob_path = f"/blobs/{track_id}"
+    storage_healthy = False
+    audio = b"LIVE_POSTGRES_RECOVERED_AUDIO" * 50
+    calls = []
+
+    def storage_response(request):
+        calls.append((request.method, request.url.host, request.url.path))
+        if not storage_healthy:
+            return httpx.Response(503)
+        return httpx.Response(200, content=audio)
+
+    mock_storage_http(monkeypatch, hosts, storage_response)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await register_user_async(client, login)
+
+        unavailable = await client.get(stream_path)
+        assert unavailable.status_code == 503
+        assert unavailable.json()["code"] == "STORAGE_UNAVAILABLE"
+        assert calls == [("GET", host, blob_path) for host in hosts]
+
+        async with db.pool.acquire() as conn:
+            replicas = await conn.fetch(
                 """
-                INSERT INTO node_registry (node_id, role, endpoint_url, last_heartbeat, status)
-                VALUES ($1, 'storage', $2, now(), 'alive'), ($3, 'storage', $4, now(), 'alive')
-                ON CONFLICT (node_id) DO UPDATE SET last_heartbeat = now(), status = 'alive'
+                SELECT r.node_id, r.status, f.failed_at
+                FROM replicas r
+                LEFT JOIN replica_failures f USING (track_id, node_id)
+                WHERE r.track_id = $1
                 """,
-                node_1, ep_1, node_2, ep_2,
+                track_id,
             )
-            await conn.execute(
-                """
-                INSERT INTO replicas (track_id, node_id, status)
-                VALUES ($1, $2, 'active'), ($1, $3, 'active')
-                ON CONFLICT (track_id, node_id) DO UPDATE SET status = 'active'
-                """,
-                tid, node_1, node_2,
-            )
+        assert {row["node_id"] for row in replicas} == set(hosts)
+        assert all(row["status"] == "active" and row["failed_at"] is not None for row in replicas)
 
-        storage_healthy = False
-        audio_content = b"LIVE_POSTGRES_RECOVERED_AUDIO" * 50
-
-        async def mock_send(self, request, *args, **kwargs):
-            if not storage_healthy:
-                return httpx.Response(503, content=b"Service Unavailable", request=request)
-            headers = {
-                "Content-Type": "audio/mpeg",
-                "Accept-Ranges": "bytes",
-                "Content-Length": str(len(audio_content)),
-            }
-            return httpx.Response(200, content=audio_content, headers=headers, request=request)
-
-        monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
-
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            user = await register_user_async(client, f"user_{uuid4().hex[:6]}")
-
-            # 1. Initial attempt: both replicas return 503 -> API returns 503
-            resp_1 = await client.get(f"/api/tracks/{tid}/stream")
-            assert resp_1.status_code == 503
-            assert resp_1.json()["code"] == "STORAGE_UNAVAILABLE"
-
-            # Verify in PostgreSQL: both replicas STILL have status='active' (neither marked 'lost')
-            async with db.pool.acquire() as conn:
-                active_count = await conn.fetchval(
-                    "SELECT count(*) FROM replicas WHERE track_id = $1 AND status = 'active'",
-                    tid,
-                )
-                assert active_count == 2, "Both replicas must remain active in PostgreSQL catalog"
-
-            # 2. Storage nodes recover
-            storage_healthy = True
-
-            # 3. Subsequent request to stream track succeeds without ANY catalog change
-            resp_2 = await client.get(f"/api/tracks/{tid}/stream")
-            assert resp_2.status_code == 200
-            assert resp_2.content == audio_content
-
-    finally:
-        if not was_connected and db.is_connected:
-            await db.disconnect()
+        storage_healthy = True
+        recovered = await client.get(stream_path)
+        assert recovered.status_code == 200
+        assert recovered.content == audio
+        assert len(calls) == 3
+        method, host, path = calls[-1]
+        assert (method, path) == ("GET", blob_path)
+        assert host in hosts
 
 
 @pytest.mark.asyncio
